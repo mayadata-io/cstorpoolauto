@@ -1,0 +1,46 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: cstorpoolautos.dao.mayadata.io
+spec:
+  group: dao.mayadata.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: cstorpoolautos
+    singular: cstorpoolauto
+    kind: CStorPoolAuto
+    shortNames:
+    - cspauto
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cspauto
+  namespace: dao
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cspauto
+  template:
+    metadata:
+      labels:
+        app: cspauto
+    spec:
+      containers:
+      - name: controller
+        image: quay.io/amitkumardas/cspauto:latest
+        command: ["cspauto"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cspauto
+  namespace: dao
+spec:
+  selector:
+    app: csp-auto
+  ports:
+  - port: 80
+    targetPort: 8080
