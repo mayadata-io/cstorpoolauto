@@ -1,4 +1,4 @@
-module cspauto
+module cspcauto
 
 go 1.12
 

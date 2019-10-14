@@ -21,7 +21,7 @@ import (
 	"log"
 	"net/http"
 
-	"cspauto"
+	"cspcauto/lib"
 
 	"k8s.io/apimachinery/pkg/util/json"
 )
@@ -29,14 +29,14 @@ import (
 func genericHookHandle(
 	w http.ResponseWriter,
 	r *http.Request,
-	ghFn func(*cspauto.GenericHookRequest) (*cspauto.GenericHookResponse, error),
+	ghFn func(*lib.GenericHookRequest) (*lib.GenericHookResponse, error),
 ) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	request := &cspauto.GenericHookRequest{}
+	request := &lib.GenericHookRequest{}
 	if err := json.Unmarshal(body, request); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -56,7 +56,7 @@ func genericHookHandle(
 }
 
 func sync(w http.ResponseWriter, r *http.Request) {
-	genericHookHandle(w, r, cspauto.Sync)
+	genericHookHandle(w, r, lib.SyncCSPCAuto)
 }
 
 // this is a api service that handles http requests
