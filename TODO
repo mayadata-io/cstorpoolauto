@@ -1,0 +1,46 @@
+### Design v0.2.0
+
+### Old Design - v0.1.0
+
+#### Sync CSPCAutoKeeper
+    - watch - CSPCAuto
+    - attachments - BlockDevices (available & annotated)
+    - sync - Create/Apply CSPCAutoKeeper with BlockDevices that are annotated
+
+#### Sync Storage & BlockDevices
+    - watch - CSPCAuto
+    - attachments - BlockDevices (available)
+    - attachments - Storage (annotated)
+    - sync - Iterate BlockDevices:
+        - Build map of BlockDevices with Annotation
+        - Build map of BlockDevices without Annotation
+    - sync - Iterate Storage
+        - Build map of Storages with Annotation
+    - sync - Build missing CSPIList:
+        - Create Storage with Annotation
+    - sync - Update BlockDevices map with Annotation
+
+#### Sync CSPC
+    - watch - cspcauto
+    - attachments - CSPCAutoKeeper
+    - attachments - CSPC (annotated/name)
+    - sync - Skip reconcile if CSPC is already available
+    - sync - Create CSPC if & only if CSPIList matches CSPCAutoKeeper
+
+```yaml
+kind: CSPCAutoKeeper
+spec:
+  cspiList:
+    items:
+    - nodeLabel: map[string]string
+      diskCount: *int                   # desired disk count
+      diskCapacity: resource.Quantity   # desired disk capacity
+      blockDevices: []string            # actual block devices
+      lastUpdatedTimestamp: *time       # TODO
+      lastTransitionTimestamp: *time    # TODO
+```
+
+### TODO
+- Validations against pool type
+- UT on slice selector
+- UT for all sync/reconcile functions

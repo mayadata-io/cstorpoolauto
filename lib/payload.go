@@ -63,4 +63,11 @@ type GenericHookResponse struct {
 	// Finalized should only be used by the finalize hook. If
 	// true then this response will be applied by metacontroller.
 	Finalized bool `json:"finalized"`
+
+	// TODO (@amitkumardas):
+	// Build this logic in metac
+	//
+	// When set to true, SkipReconcile indicates metacontroller
+	// to skip reconciliation of attachments
+	SkipReconcile bool `json:"skipReconcile"`
 }

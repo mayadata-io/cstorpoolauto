@@ -78,9 +78,9 @@ func (m AnyUnstructRegistry) Len() int {
 	return count
 }
 
-// FindByGroupKindName finds the resource based on the given
-// apigroup, kind and name
-func (m AnyUnstructRegistry) FindByGroupKindName(
+// FindResourceByGroupKindName finds the resource based on
+// the given apigroup, kind and name
+func (m AnyUnstructRegistry) FindResourceByGroupKindName(
 	apiGroup, kind, name string,
 ) *unstructured.Unstructured {
 	// The registry is keyed by apiVersion & kind, but we don't know
@@ -98,6 +98,48 @@ func (m AnyUnstructRegistry) FindByGroupKindName(
 		}
 	}
 	return nil
+}
+
+// FilterResourceMapByGroupKind filters the registry for the
+// resources based on the given apigroup and kind and returns
+// them mapped by their namespace &/ name.
+func (m AnyUnstructRegistry) FilterResourceMapByGroupKind(
+	apiGroup, kind string,
+) map[string]*unstructured.Unstructured {
+	// The registry is keyed by apiVersion & kind, but we don't know
+	// the version. So, check inside any GVK that matches the group and
+	// kind, ignoring version.
+	for key, resources := range m {
+		if apiVer, k := ParseKeyToAPIVersionKind(key); k == kind {
+			if g, _ := ParseAPIVersionToGroupVersion(apiVer); g == apiGroup {
+				return resources
+			}
+		}
+	}
+	return nil
+}
+
+// FilterResourceListByGroupKind filters the registry for the
+// resources based on the given apigroup and kind and
+// returns them
+func (m AnyUnstructRegistry) FilterResourceListByGroupKind(
+	apiGroup, kind string,
+) []*unstructured.Unstructured {
+	rMap := m.FilterResourceMapByGroupKind(apiGroup, kind)
+	if len(rMap) == 0 {
+		return nil
+	}
+	var resources []*unstructured.Unstructured
+	for _, res := range rMap {
+		resources = append(resources, res)
+	}
+	return resources
+}
+
+// IsEmptyGroupKind returns true if resources with the provided
+// apiGroup & kind are not available in this registry
+func (m AnyUnstructRegistry) IsEmptyGroupKind(apiGroup, kind string) bool {
+	return m.FilterResourceMapByGroupKind(apiGroup, kind) == nil
 }
 
 // relativeName returns the name of the attachment relative to the provided
