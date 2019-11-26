@@ -21,27 +21,29 @@ import (
 	"log"
 	"net/http"
 
-	"cspauto"
+	"cstorpoolauto/lib"
 
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
-func genericHookHandle(
+// genericHandle caters to handling http requests
+// based on metac's GenericController
+func genericHandle(
 	w http.ResponseWriter,
 	r *http.Request,
-	ghFn func(*cspauto.GenericHookRequest) (*cspauto.GenericHookResponse, error),
+	handleFn func(*lib.GenericHookRequest) (*lib.GenericHookResponse, error),
 ) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	request := &cspauto.GenericHookRequest{}
+	request := &lib.GenericHookRequest{}
 	if err := json.Unmarshal(body, request); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	response, err := ghFn(request)
+	response, err := handleFn(request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -55,13 +57,23 @@ func genericHookHandle(
 	w.Write(body)
 }
 
-func sync(w http.ResponseWriter, r *http.Request) {
-	genericHookHandle(w, r, cspauto.Sync)
+func syncCSPCAutoKeeper(w http.ResponseWriter, r *http.Request) {
+	genericHandle(w, r, lib.SyncCSPCAutoKeeper)
 }
 
-// this is a api service that handles http requests
+func syncCSPC(w http.ResponseWriter, r *http.Request) {
+	genericHandle(w, r, lib.SyncCSPC)
+}
+
+func syncStorageAndBlockDevice(w http.ResponseWriter, r *http.Request) {
+	genericHandle(w, r, lib.SyncStorageAndBlockDevice)
+}
+
+// main exposes the http service endpoints
 func main() {
-	http.HandleFunc("/sync", sync)
+	http.HandleFunc("/v1/sync-stor-bd-ann", syncStorageAndBlockDevice)
+	http.HandleFunc("/v1/sync-cspcauto-keeper", syncCSPCAutoKeeper)
+	http.HandleFunc("/v1/sync-cspc", syncCSPC)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

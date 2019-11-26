@@ -20,4 +20,4 @@ spec:
   hooks:
     sync:
       webhook:
-        url: http://cspauto.dao/sync
+        url: http://cspauto.dao/sync-cspcauto

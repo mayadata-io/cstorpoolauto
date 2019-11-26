@@ -6,7 +6,7 @@ ALL_SRC = $(shell find . -name "*.go" | grep -v -e "vendor")
 
 PACKAGE_VERSION ?= latest
 REGISTRY ?= quay.io/amitkumardas
-IMG_NAME ?= cspauto
+IMG_NAME ?= cstorpoolauto
 
 all: bins
 

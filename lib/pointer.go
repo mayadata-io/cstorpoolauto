@@ -14,9 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cspauto
+package lib
 
-// Sync reconciles cspauto request
-func Sync(req *GenericHookRequest) (*GenericHookResponse, error) {
-	return &GenericHookResponse{}, nil
+// BoolPtr returns a pointer to the given bool
+func BoolPtr(b bool) *bool {
+	o := b
+	return &o
+}
+
+// IntPtr returns a pointer to the given int
+func IntPtr(i int) *int {
+	o := i
+	return &o
+}
+
+// Int32Ptr returns a pointer to the given int32
+func Int32Ptr(i int32) *int32 {
+	o := i
+	return &o
+}
+
+// Int64Ptr returns a pointer to the given int64
+func Int64Ptr(i int64) *int64 {
+	o := i
+	return &o
+}
+
+// StringPtr returns a pointer to the given string
+func StringPtr(s string) *string {
+	o := s
+	return &o
 }

@@ -1,8 +1,9 @@
-module cspauto
+module cstorpoolauto
 
 go 1.12
 
 require (
+	github.com/pkg/errors v0.8.1
 	golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cspauto
+package lib
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -63,4 +63,11 @@ type GenericHookResponse struct {
 	// Finalized should only be used by the finalize hook. If
 	// true then this response will be applied by metacontroller.
 	Finalized bool `json:"finalized"`
+
+	// TODO (@amitkumardas):
+	// Build this logic in metac
+	//
+	// When set to true, SkipReconcile indicates metacontroller
+	// to skip reconciliation of attachments
+	SkipReconcile bool `json:"skipReconcile"`
 }

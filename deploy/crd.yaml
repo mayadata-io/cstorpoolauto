@@ -1,0 +1,16 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: cspcautos.dao.mayadata.io
+spec:
+  group: dao.mayadata.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: cspcautos
+    singular: cspcauto
+    kind: CSPCAuto
+    shortNames:
+    - cspcauto
+---

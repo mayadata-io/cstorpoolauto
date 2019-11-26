@@ -35,6 +35,6 @@ RUN apt-get update && \
   apt-get install --no-install-recommends -y ca-certificates && \
   rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /cspauto /usr/bin/
+COPY --from=builder /cstorpoolauto /usr/bin/
 
-CMD ["/usr/bin/cspauto"]
+CMD ["/usr/bin/cstorpoolauto"]
