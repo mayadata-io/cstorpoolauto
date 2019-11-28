@@ -20,17 +20,19 @@ spec:
     #
     # Defaults to the minimum value from below:
     # - number of allowed nodes or 
-    # - number of kubernetes nodes or 
+    # - number of available kubernetes nodes or 
     # - 3
-    minPools:
-    
+    minPoolCount:
+
     # Maximum number of cstor pool instances
     #
     # Default: minPools + 2
     # Note: can be same as minimum count of pools
-    maxPools:
+    maxPoolCount:
     
     # Eligible nodes that can hold cstor pool instances
+    #
+    # Note: User needs to fill these
     allowedNodes:
         nodeSelectorTerms:
         -   matchLabels:
@@ -44,12 +46,6 @@ spec:
         # - defaults to 2 if mirror or stripe
         # - default to 3 if raidz
         minCount:
-
-        # Maximum number of disks to be used per cstor pool instance
-        #
-        # Default: How to calculate?
-        # Note: Can be same as minimum count of disks
-        maxCount:
         
         # capacity of each disk that participates in cstor pool instance
         #
@@ -58,10 +54,11 @@ spec:
         
         # provisioner controller used to provision cloud disks
         # 
-        # auto detect !!
+        # Note: User needs to fill these
         externalProvisioner:
             csiAttacherName:
             storageClassName:
+
     poolConfig:
         # Write cache determines if all pool instances should have a write cache
         writeCache: # auto detect !!
@@ -76,10 +73,11 @@ spec:
         # If all pool instances should have a spare
         spare:
         
-        # Specify the RAID type i.e. mirror, stripe, raidz
+        # Specify the RAID type i.e. stripe, mirror, raidz
+        # for each pool instance
         #
-        # default to mirror
-        defaultRAIDType:
+        # Defaults to stripe
+        raidType:
 
         poolExpansion:
             disable:
@@ -94,16 +92,8 @@ spec:
                 memory:
                 cpu:
 status:
-    # Init - controller has not kicked in
-    # Error - controller resulted in some failures
-    # InProgress - cstor pool creation is in progress
-    # Running - cstor pool is running
     phase: 
     conditions: 
-    # planning
-    # replanning
-    # defaulting
-    # detecting
 ```
 
 ```yaml
