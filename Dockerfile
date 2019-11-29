@@ -22,8 +22,8 @@ COPY Makefile Makefile
 # copy source files
 COPY cmd/ ./cmd/
 COPY k8s/ ./k8s/
-COPY lib/ ./lib/
 COPY types/ ./types/
+COPY controller/ ./controller/
 
 # build cspauto binary
 RUN make

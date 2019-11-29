@@ -16,17 +16,21 @@ limitations under the License.
 
 package types
 
-import "time"
+import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // CStorClusterConfigConditionType is a custom datatype that
 // refers to various conditions supported in this operator
 type CStorClusterConfigConditionType string
 
 const (
-	// CStorClusterConfigConditionErrorSettingDefault is used to
+	// CStorClusterConfigConditionErrorSettingDefaults is used to
 	// indicate presence or absence of error while setting
 	// defaults against CStorClusterConfig
-	CStorClusterConfigConditionErrorSettingDefault CStorClusterConfigConditionType = "ErrorSettingDefault"
+	CStorClusterConfigConditionErrorSettingDefaults CStorClusterConfigConditionType = "ErrorSettingDefaults"
 )
 
 // CStorClusterConfigConditionStatus is a custom datatype that
@@ -43,30 +47,49 @@ const (
 	CStorClusterConfigConditionIsAbsent CStorClusterConfigConditionStatus = "False"
 )
 
-// MakeErrorSettingDefaultCondition builds a new
+// MakeErrorSettingDefaultsCondition builds a new
 // CStorClusterConfigConditionErrorSettingDefault condition
 // suitable to be used in API status.conditions
 //
 // NOTE:
 // 	SetDefaultError points to cases when there is some error
 // while setting defaults against CStorClusterConfig
-func MakeErrorSettingDefaultCondition(err error) map[string]string {
+func MakeErrorSettingDefaultsCondition(err error) map[string]string {
 	return map[string]string{
-		"type":             string(CStorClusterConfigConditionErrorSettingDefault),
+		"type":             string(CStorClusterConfigConditionErrorSettingDefaults),
 		"status":           string(CStorClusterConfigConditionIsPresent),
 		"reason":           err.Error(),
 		"lastObservedTime": time.Now().String(),
 	}
 }
 
-// MakeNoErrorSettingDefaultCondition builds a new no
+// MakeNoErrorSettingDefaultsCondition builds a new no
 // CStorClusterConfigConditionErrorSettingDefault condition. This
 // should be used in such a way that it voids previous errors
 // if any during setting of defaults against CStorClusterConfig.
-func MakeNoErrorSettingDefaultCondition() map[string]string {
+func MakeNoErrorSettingDefaultsCondition() map[string]string {
 	return map[string]string{
-		"type":             string(CStorClusterConfigConditionErrorSettingDefault),
+		"type":             string(CStorClusterConfigConditionErrorSettingDefaults),
 		"status":           string(CStorClusterConfigConditionIsAbsent),
 		"lastObservedTime": time.Now().String(),
 	}
+}
+
+// SetNoErrorSettingDefaultsCondition sets
+// CStorClusterConfigConditionErrorSettingDefault condition to false.
+func SetNoErrorSettingDefaultsCondition(obj *CStorClusterConfig) {
+	noErrCond := CStorClusterConfigStatusCondition{
+		Type:             CStorClusterConfigConditionErrorSettingDefaults,
+		Status:           CStorClusterConfigConditionIsAbsent,
+		LastObservedTime: metav1.Now(),
+	}
+	var newConds []CStorClusterConfigStatusCondition
+	for _, old := range obj.Status.Conditions {
+		if old.Type == CStorClusterConfigConditionErrorSettingDefaults {
+			continue
+		}
+		newConds = append(newConds, old)
+	}
+	newConds = append(newConds, noErrCond)
+	obj.Status.Conditions = newConds
 }
