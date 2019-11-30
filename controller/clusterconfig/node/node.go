@@ -65,11 +65,11 @@ func (l List) FindNodeFromNameAndUID(name string, uid k8stypes.UID) *unstructure
 	return nil
 }
 
-// RemoveRecentByCountFromStatusNodes removes the newly created
+// RemoveRecentByCountFromPlannedNodes removes the newly created
 // nodes based on the given count from the given list
-func (l List) RemoveRecentByCountFromStatusNodes(
-	count int64, given []types.CStorClusterConfigStatusNode,
-) ([]types.CStorClusterConfigStatusNode, error) {
+func (l List) RemoveRecentByCountFromPlannedNodes(
+	count int64, given []types.CStorClusterConfigPlanNode,
+) ([]types.CStorClusterConfigPlanNode, error) {
 	var kNodes []*unstructured.Unstructured
 	for _, givenNode := range given {
 		kNode := l.FindNodeFromNameAndUID(givenNode.Name, givenNode.UID)
@@ -87,16 +87,16 @@ func (l List) RemoveRecentByCountFromStatusNodes(
 	// remove based on the given count
 	var updatedList []*unstructured.Unstructured
 	newList := List(append(updatedList, kNodes[count:]...))
-	return newList.AsCStorClusterConfigStatusNodes(), nil
+	return newList.AsCStorClusterConfigPlanNodes(), nil
 }
 
-// PickByCountThatExcludeStatusNodes returns a list of nodes
+// PickByCountThatExcludePlannedNodes returns a list of nodes
 // as per the given count & are not part of the provided
 // nodes
-func (l List) PickByCountThatExcludeStatusNodes(
-	count int64, given []types.CStorClusterConfigStatusNode,
-) ([]types.CStorClusterConfigStatusNode, error) {
-	var otherNodes []types.CStorClusterConfigStatusNode
+func (l List) PickByCountThatExcludePlannedNodes(
+	count int64, given []types.CStorClusterConfigPlanNode,
+) ([]types.CStorClusterConfigPlanNode, error) {
+	var otherNodes []types.CStorClusterConfigPlanNode
 	var fillCount int64
 	for _, givenNode := range given {
 		for _, availableNode := range l {
@@ -104,7 +104,7 @@ func (l List) PickByCountThatExcludeStatusNodes(
 				givenNode.UID != availableNode.GetUID() {
 				// no match implies this is not part of given nodes
 				otherNodes = append(otherNodes,
-					types.CStorClusterConfigStatusNode{
+					types.CStorClusterConfigPlanNode{
 						Name: availableNode.GetName(),
 						UID:  availableNode.GetUID(),
 					},
@@ -120,28 +120,28 @@ func (l List) PickByCountThatExcludeStatusNodes(
 	return nil, errors.Errorf("Can't find %d number of nodes", count)
 }
 
-// PickByCountThatIncludeStatusNodes returns a list of nodes
+// PickByCountThatIncludePlannedNodes returns a list of nodes
 // based on the given count & should include all the provided
 // nodes. In other words, the return list is a superset of
 // given nodes i.e. includes.
-func (l List) PickByCountThatIncludeStatusNodes(
-	count int64, includes []types.CStorClusterConfigStatusNode,
-) ([]types.CStorClusterConfigStatusNode, error) {
+func (l List) PickByCountThatIncludePlannedNodes(
+	count int64, includes []types.CStorClusterConfigPlanNode,
+) ([]types.CStorClusterConfigPlanNode, error) {
 
 	var includeCount int64
-	var finalNodes []types.CStorClusterConfigStatusNode
+	var finalNodes []types.CStorClusterConfigPlanNode
 
 	includeCount = int64(len(includes))
 	finalNodes = append(finalNodes, includes...)
 	if count < includeCount {
 		return nil, errors.Errorf(
-			"Can't pick status nodes: Expected count less than expected status nodes",
+			"Can't pick planned nodes: Expected count less than expected planned nodes",
 		)
 	}
 	if count == includeCount {
 		return finalNodes, nil
 	}
-	otherNodes, err := l.PickByCountThatExcludeStatusNodes(count-includeCount, includes)
+	otherNodes, err := l.PickByCountThatExcludePlannedNodes(count-includeCount, includes)
 	if err != nil {
 		return nil, err
 	}
@@ -159,12 +159,12 @@ func (l List) HasNameAndUID(name string, uid k8stypes.UID) bool {
 	return false
 }
 
-// AsCStorClusterConfigStatusNodes tranforms itself as a list
-// types.CStorClusterConfigStatusNode instances
-func (l List) AsCStorClusterConfigStatusNodes() []types.CStorClusterConfigStatusNode {
-	var statusNodes []types.CStorClusterConfigStatusNode
+// AsCStorClusterConfigPlanNodes tranforms itself as a list
+// types.CStorClusterConfigPlanNode instances
+func (l List) AsCStorClusterConfigPlanNodes() []types.CStorClusterConfigPlanNode {
+	var statusNodes []types.CStorClusterConfigPlanNode
 	for _, node := range l {
-		statusNodes = append(statusNodes, types.CStorClusterConfigStatusNode{
+		statusNodes = append(statusNodes, types.CStorClusterConfigPlanNode{
 			Name: node.GetName(),
 			UID:  node.GetUID(),
 		})
@@ -186,7 +186,7 @@ type CStorClusterConfigNodeEvaluator struct {
 // to help in evaluating desired nodes to form the cstor
 // pool cluster
 type EvaluationConfig struct {
-	ObservedNodes []types.CStorClusterConfigStatusNode
+	ObservedNodes []types.CStorClusterConfigPlanNode
 	MinPoolCount  resource.Quantity
 	MaxPoolCount  resource.Quantity
 }
@@ -275,7 +275,7 @@ func (s *CStorClusterConfigNodeEvaluator) GetEligibleNodeCount() (int64, error) 
 // pool cluster
 func (s *CStorClusterConfigNodeEvaluator) EvaluateDesiredNodes(
 	conf EvaluationConfig,
-) ([]types.CStorClusterConfigStatusNode, error) {
+) ([]types.CStorClusterConfigPlanNode, error) {
 	eligibleNodes, err := s.GetEligibleNodesOrCached()
 	if err != nil {
 		return nil, err
@@ -284,12 +284,12 @@ func (s *CStorClusterConfigNodeEvaluator) EvaluateDesiredNodes(
 	if len(conf.ObservedNodes) == 0 {
 		// this is the first time desired nodes are getting evaluated
 		desired := eligibleNodeList.PickByCount(conf.MinPoolCount.Value())
-		return List(desired).AsCStorClusterConfigStatusNodes(), nil
+		return List(desired).AsCStorClusterConfigPlanNodes(), nil
 	}
 	// logic for observed nodes i.e. these nodes were evaluated
 	// to be fit to form cstor pool cluster during previous
 	// reconciliations
-	var includes []types.CStorClusterConfigStatusNode
+	var includes []types.CStorClusterConfigPlanNode
 	var includeCount int64
 	for _, observedNode := range conf.ObservedNodes {
 		if eligibleNodeList.HasNameAndUID(observedNode.Name, observedNode.UID) {
@@ -310,14 +310,13 @@ func (s *CStorClusterConfigNodeEvaluator) EvaluateDesiredNodes(
 	}
 	if includeCount > conf.MaxPoolCount.Value() {
 		// need to remove some nodes from the list
-		// since this number has been capped by
-		// max pool count
-		return eligibleNodeList.RemoveRecentByCountFromStatusNodes(
+		// since this max nodes is capped by max pool count
+		return eligibleNodeList.RemoveRecentByCountFromPlannedNodes(
 			includeCount-conf.MaxPoolCount.Value(),
 			includes,
 		)
 	}
-	return eligibleNodeList.PickByCountThatIncludeStatusNodes(
+	return eligibleNodeList.PickByCountThatIncludePlannedNodes(
 		conf.MinPoolCount.Value(),
 		includes,
 	)
