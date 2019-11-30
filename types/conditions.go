@@ -27,10 +27,10 @@ import (
 type CStorClusterConfigConditionType string
 
 const (
-	// CStorClusterConfigConditionErrorSettingDefaults is used to
-	// indicate presence or absence of error while setting
-	// defaults against CStorClusterConfig
-	CStorClusterConfigConditionErrorSettingDefaults CStorClusterConfigConditionType = "ErrorSettingDefaults"
+	// CStorClusterConfigConditionReconcileError is used to
+	// indicate presence or absence of error while reconciling
+	// CStorClusterConfig
+	CStorClusterConfigConditionReconcileError CStorClusterConfigConditionType = "ReconcileError"
 )
 
 // CStorClusterConfigConditionStatus is a custom datatype that
@@ -47,45 +47,42 @@ const (
 	CStorClusterConfigConditionIsAbsent CStorClusterConfigConditionStatus = "False"
 )
 
-// MakeErrorSettingDefaultsCondition builds a new
-// CStorClusterConfigConditionErrorSettingDefault condition
+// MakeReconcileErrorCondition builds a new
+// CStorClusterConfigConditionReconcileError condition
 // suitable to be used in API status.conditions
-//
-// NOTE:
-// 	SetDefaultError points to cases when there is some error
-// while setting defaults against CStorClusterConfig
-func MakeErrorSettingDefaultsCondition(err error) map[string]string {
+func MakeReconcileErrorCondition(err error) map[string]string {
 	return map[string]string{
-		"type":             string(CStorClusterConfigConditionErrorSettingDefaults),
+		"type":             string(CStorClusterConfigConditionReconcileError),
 		"status":           string(CStorClusterConfigConditionIsPresent),
 		"reason":           err.Error(),
 		"lastObservedTime": time.Now().String(),
 	}
 }
 
-// MakeNoErrorSettingDefaultsCondition builds a new no
-// CStorClusterConfigConditionErrorSettingDefault condition. This
-// should be used in such a way that it voids previous errors
-// if any during setting of defaults against CStorClusterConfig.
-func MakeNoErrorSettingDefaultsCondition() map[string]string {
+// MakeNoReconcileErrorCondition builds a new no
+// CStorClusterConfigConditionReconcileError condition. This
+// should be used in such a way that it voids previous occurrence of
+// this error if any.
+func MakeNoReconcileErrorCondition() map[string]string {
 	return map[string]string{
-		"type":             string(CStorClusterConfigConditionErrorSettingDefaults),
+		"type":             string(CStorClusterConfigConditionReconcileError),
 		"status":           string(CStorClusterConfigConditionIsAbsent),
 		"lastObservedTime": time.Now().String(),
 	}
 }
 
-// SetNoErrorSettingDefaultsCondition sets
-// CStorClusterConfigConditionErrorSettingDefault condition to false.
-func SetNoErrorSettingDefaultsCondition(obj *CStorClusterConfig) {
+// MergeNoReconcileErrorOnCStorClusterConfig sets
+// CStorClusterConfigConditionReconcileError condition to false.
+func MergeNoReconcileErrorOnCStorClusterConfig(obj *CStorClusterConfig) {
 	noErrCond := CStorClusterConfigStatusCondition{
-		Type:             CStorClusterConfigConditionErrorSettingDefaults,
+		Type:             CStorClusterConfigConditionReconcileError,
 		Status:           CStorClusterConfigConditionIsAbsent,
 		LastObservedTime: metav1.Now(),
 	}
 	var newConds []CStorClusterConfigStatusCondition
 	for _, old := range obj.Status.Conditions {
-		if old.Type == CStorClusterConfigConditionErrorSettingDefaults {
+		if old.Type == CStorClusterConfigConditionReconcileError {
+			// ignore previous occurrence of ReconcileError
 			continue
 		}
 		newConds = append(newConds, old)

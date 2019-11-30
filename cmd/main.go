@@ -20,11 +20,11 @@ import (
 	"openebs.io/metac/controller/generic"
 	"openebs.io/metac/start"
 
-	ccdefault "cstorpoolauto/controller/clusterconfig/default"
+	ccreconciler "cstorpoolauto/controller/clusterconfig/reconciler"
 )
 
 func main() {
-	generic.AddToInlineRegistry("sync/cstorclusterconfig/default", ccdefault.Sync)
+	generic.AddToInlineRegistry("sync/cstorclusterconfig/default", ccreconciler.Sync)
 
 	start.Start()
 }
