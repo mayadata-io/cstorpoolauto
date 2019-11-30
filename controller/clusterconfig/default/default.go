@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package defaultconfig
+package ccdefault
 
 import (
 	"github.com/golang/glog"
@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
+	"cstorpoolauto/controller/clusterconfig/node"
 	"cstorpoolauto/k8s"
 	"cstorpoolauto/types"
 )
@@ -63,7 +64,7 @@ func (h *cstorClusterConfigDefaultErrHandler) handle(err error) {
 	)
 
 	conds, mergeErr :=
-		k8s.MergeStatusConditions(h.clusterConfig, types.MakeErrorSettingDefaultCondition(err))
+		k8s.MergeStatusConditions(h.clusterConfig, types.MakeErrorSettingDefaultsCondition(err))
 	if mergeErr != nil {
 		glog.Errorf(
 			"Failed to set status conditions: CStorClusterConfig %s: %v",
@@ -87,7 +88,7 @@ func (h *cstorClusterConfigDefaultErrHandler) handle(err error) {
 	h.hookResponse.SkipReconcile = true
 }
 
-// Set implements the idempotent logic to set CStorClusterConfig
+// Sync implements the idempotent logic to set CStorClusterConfig
 // with its defaults. CStorClusterConfig updated with defaults is
 // sent as response attachment. However, any error while updating
 // with defaults is sent as response status.
@@ -102,7 +103,7 @@ func (h *cstorClusterConfigDefaultErrHandler) handle(err error) {
 // SyncHookResponse has the resources that forms the desired state
 // w.r.t the watched resource. In this case CStorClusterConfig again
 // is the resource that forms the response.
-func Set(request *generic.SyncHookRequest, response *generic.SyncHookResponse) error {
+func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) error {
 	response = &generic.SyncHookResponse{}
 
 	// nothing needs to be done if request is empty
@@ -134,7 +135,7 @@ func Set(request *generic.SyncHookRequest, response *generic.SyncHookResponse) e
 			return nil
 		}
 
-		cstorClusterConfigWithDefaults, err := dSetter.SetThenGet()
+		cstorClusterConfigWithDefaults, err := dSetter.sync()
 		if err != nil {
 			errHandler.handle(err)
 			return nil
@@ -151,6 +152,8 @@ func Set(request *generic.SyncHookRequest, response *generic.SyncHookResponse) e
 type CStorClusterConfigDefaultSetter struct {
 	CStorClusterConfig *types.CStorClusterConfig
 	Attachments        []*unstructured.Unstructured
+
+	NodeEvaluator *node.CStorClusterConfigNodeEvaluator
 }
 
 // NewCStorClusterConfigDefaultSetter returns a new instance of
@@ -171,17 +174,31 @@ func NewCStorClusterConfigDefaultSetter(
 	return &CStorClusterConfigDefaultSetter{
 		CStorClusterConfig: &cstorClusterConfig,
 		Attachments:        attachments,
+		NodeEvaluator: &node.CStorClusterConfigNodeEvaluator{
+			CStorClusterConfig: &cstorClusterConfig,
+			Attachments:        attachments,
+		},
 	}, nil
 }
 
-// SetThenGet sets CStorClusterConfig with defaults & returns
-// the updated one
-func (s *CStorClusterConfigDefaultSetter) SetThenGet() (*unstructured.Unstructured, error) {
-	// run through the defaults
-	err := s.setDefaults()
-	if err != nil {
-		return nil, err
+func (s *CStorClusterConfigDefaultSetter) sync() (*unstructured.Unstructured, error) {
+	syncFns := []func() error{
+		s.setDefaults,
+		s.setDesiredPoolNodes,
 	}
+	for _, syncFn := range syncFns {
+		err := syncFn()
+		if err != nil {
+			return nil, err
+		}
+	}
+	s.resetDefaultingErrorIfAny()
+	return s.getUpdated()
+}
+
+// getUpdated gets the CStorClusterConfig instance updated with
+// defaults & status
+func (s *CStorClusterConfigDefaultSetter) getUpdated() (*unstructured.Unstructured, error) {
 	// get the updated CStorClusterConfig & return
 	raw, err := json.Marshal(s.CStorClusterConfig)
 	if err != nil {
@@ -193,6 +210,26 @@ func (s *CStorClusterConfigDefaultSetter) SetThenGet() (*unstructured.Unstructur
 		return nil, err
 	}
 	return &cstorClusterConfigWithDefaults, nil
+}
+
+// resetDefaultingErrorIfAny removes any error associated while
+// setting defaults if it ever happened during in previous attempts.
+func (s *CStorClusterConfigDefaultSetter) resetDefaultingErrorIfAny() {
+	types.SetNoErrorSettingDefaultsCondition(s.CStorClusterConfig)
+}
+
+// setDesiredPoolNodes sets CStorClusterConfig with desired nodes
+func (s *CStorClusterConfigDefaultSetter) setDesiredPoolNodes() error {
+	desired, err := s.NodeEvaluator.EvaluateDesiredNodes(node.EvaluationConfig{
+		ObservedNodes: s.CStorClusterConfig.Status.Nodes,
+		MinPoolCount:  s.CStorClusterConfig.Spec.MinPoolCount,
+		MaxPoolCount:  s.CStorClusterConfig.Spec.MaxPoolCount,
+	})
+	if err != nil {
+		return err
+	}
+	s.CStorClusterConfig.Status.Nodes = desired
+	return nil
 }
 
 func (s *CStorClusterConfigDefaultSetter) setDefaults() error {
@@ -216,13 +253,10 @@ func (s *CStorClusterConfigDefaultSetter) setDefaults() error {
 }
 
 // setMinPoolCountIfNotSet sets the min pool counts. Minimum pool
-// count is set to the lowest value among the following:
+// count is set to the lowest value amongst the following:
 // - Number of worker nodes
 // - Number of eligible nodes from node selector policy
-// - A constant value of 3
-//
-// TODO (@amitkumardas):
-// Write the logic for node selector policy
+// - A default min value
 func (s *CStorClusterConfigDefaultSetter) setMinPoolCountIfNotSet() error {
 	if s.CStorClusterConfig.Spec.MinPoolCount.CmpInt64(0) == -1 {
 		return errors.Errorf(
@@ -234,17 +268,22 @@ func (s *CStorClusterConfigDefaultSetter) setMinPoolCountIfNotSet() error {
 		// don't set default value if it is already configured
 		return nil
 	}
-	var nodeCount int64
-	for _, a := range s.Attachments {
-		if a.GetKind() == string(k8s.NodeKind) {
-			nodeCount++
-		}
+	availableNodeCount := s.NodeEvaluator.GetNodeCount()
+	eligibleNodeCount, err := s.NodeEvaluator.GetEligibleNodeCount()
+	if err != nil {
+		return err
 	}
-	var minPoolCount int64
-	minPoolCount = DefaultMinPoolCount
-	if nodeCount < DefaultMinPoolCount {
+	// start by setting min pool count to default value
+	minPoolCount := DefaultMinPoolCount
+	if availableNodeCount < minPoolCount {
 		// use the lowest value
-		minPoolCount = nodeCount
+		minPoolCount = availableNodeCount
+	}
+	if eligibleNodeCount < minPoolCount {
+		minPoolCount = eligibleNodeCount
+	}
+	if minPoolCount <= 0 {
+		return errors.Errorf("Min pool count can't be 0: Preferred nodes not found")
 	}
 	// set min
 	s.CStorClusterConfig.Spec.MinPoolCount.Set(minPoolCount)

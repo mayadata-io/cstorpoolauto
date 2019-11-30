@@ -19,6 +19,7 @@ package types
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	metac "openebs.io/metac/apis/metacontroller/v1alpha1"
 )
@@ -123,6 +124,7 @@ type ExternalProvisioner struct {
 type CStorClusterConfigStatus struct {
 	Phase      CStorClusterConfigStatusPhase       `json:"phase"`
 	Conditions []CStorClusterConfigStatusCondition `json:"conditions"`
+	Nodes      []CStorClusterConfigStatusNode      `json:"nodes"`
 }
 
 // CStorClusterConfigStatusPhase reports the current phase of
@@ -144,6 +146,14 @@ const (
 type CStorClusterConfigStatusCondition struct {
 	Type             CStorClusterConfigConditionType   `json:"type"`
 	Status           CStorClusterConfigConditionStatus `json:"status"`
-	Reason           string                            `json:"reason"`
+	Reason           string                            `json:"reason,omitempty"`
 	LastObservedTime metav1.Time                       `json:"lastObservedTime"`
+}
+
+// CStorClusterConfigStatusNode represents the eligible node.
+// In other words this node is suitable to be used as a cstor
+// pool instance.
+type CStorClusterConfigStatusNode struct {
+	Name string    `json:"name"`
+	UID  types.UID `json:"uid"`
 }

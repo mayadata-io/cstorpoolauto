@@ -14,17 +14,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
-
-import (
-	"openebs.io/metac/controller/generic"
-	"openebs.io/metac/start"
-
-	ccdefault "cstorpoolauto/controller/clusterconfig/default"
-)
-
-func main() {
-	generic.AddToInlineRegistry("sync/cstorclusterconfig/default", ccdefault.Sync)
-
-	start.Start()
-}
+package nodeinfo

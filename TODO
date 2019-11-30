@@ -1,7 +1,21 @@
 ### Design v0.2.0
 - rename the module to cstorclusterconfig
 - rename the repo to cstorclusterconfig
-
+- pool spread logic might be required
+    - e.g. pool nodes should be unique in a cluster
+    - e.g. spread pools across zones, DCs etc
+    - e.g. pool node priority
+    - Note: this is different from NodeSelector
+- below is a sample yaml fragment for pool spread logic
+```yaml
+poolSpreadPolicy:
+    type: roundrobin
+    terms:
+    - name: ABC
+      percent: 0.2
+    - name: DEF
+      percent: 0.8
+```
 
 ### Old Design - v0.1.0
 
