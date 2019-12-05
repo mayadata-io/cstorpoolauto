@@ -47,12 +47,12 @@ var RAIDTypeToDefaultMinDiskCount = map[types.PoolRAIDType]int64{
 	types.PoolRAIDTypeRAIDZ2: 6,
 }
 
-type cstorClusterConfigReconcileErrHandler struct {
+type reconcileErrHandler struct {
 	clusterConfig *unstructured.Unstructured
 	hookResponse  *generic.SyncHookResponse
 }
 
-func (h *cstorClusterConfigReconcileErrHandler) handle(err error) {
+func (h *reconcileErrHandler) handle(err error) {
 	// Error has been handled elaborately. This logic ensures
 	// error message is propagated to the resource & hence seen via
 	// 'kubectl get CStorClusterConfig -oyaml'.
@@ -64,7 +64,9 @@ func (h *cstorClusterConfigReconcileErrHandler) handle(err error) {
 	)
 
 	conds, mergeErr :=
-		k8s.MergeStatusConditions(h.clusterConfig, types.MakeReconcileErrorCondition(err))
+		k8s.MergeStatusConditions(
+			h.clusterConfig, types.MakeCStorClusterConfigReconcileErrCond(err),
+		)
 	if mergeErr != nil {
 		glog.Errorf(
 			"Failed to reconcile CStorClusterConfig %s: Can't set status conditions: %v",
@@ -118,7 +120,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	}
 
 	// construct the error handler
-	errHandler := &cstorClusterConfigReconcileErrHandler{
+	errHandler := &reconcileErrHandler{
 		clusterConfig: request.Watch,
 		hookResponse:  response,
 	}
@@ -135,22 +137,11 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 			continue
 		}
 		if attachment.GetKind() == "CStorClusterConfigPlan" {
-			uid, _, err := unstructured.NestedString(
-				attachment.UnstructuredContent(), "spec", "clusterConfigReference", "uid",
+			uid, _ := k8s.GetAnnotationForKey(
+				attachment.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
 			)
-			if err != nil {
-				errHandler.handle(
-					errors.Wrapf(
-						err,
-						"Can't find clusterConfigReference.uid: CStorClusterConfigPlan %s %s",
-						attachment.GetNamespace(), attachment.GetName(),
-					),
-				)
-				return nil
-			}
 			if string(request.Watch.GetUID()) == uid {
-				// keep this to update during reconcile & add the
-				// updated copy to the response's attachments
+				// this is the desired CStorClusterConfigPlan
 				cstorClusterConfigPlanObj = attachment
 				continue
 			}
@@ -185,30 +176,30 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 
 	// add updated CStorClusterConfig & CStorClusterConfigPlan to response
 	response.Attachments = append(response.Attachments, op.CStorClusterConfig)
-	response.Attachments = append(response.Attachments, op.CStorClusterConfigPlan)
+	response.Attachments = append(response.Attachments, op.CStorClusterPlan)
 
 	return nil
 }
 
 // Reconciler enables reconciliation of CStorClusterConfig instance
 type Reconciler struct {
-	CStorClusterConfig     *types.CStorClusterConfig
-	CStorClusterConfigPlan *types.CStorClusterConfigPlan
-	Attachments            []*unstructured.Unstructured
-	NodeEvaluator          *node.CStorClusterConfigNodeEvaluator
+	CStorClusterConfig *types.CStorClusterConfig
+	CStorClusterPlan   *types.CStorClusterPlan
+	Attachments        []*unstructured.Unstructured
+	NodeEvaluator      *node.CStorClusterConfigNodeEvaluator
 }
 
 // ReconcileResponse is a helper struct used to form the response
 // of a successful reconciliation
 type ReconcileResponse struct {
-	CStorClusterConfig     *unstructured.Unstructured
-	CStorClusterConfigPlan *unstructured.Unstructured
+	CStorClusterConfig *unstructured.Unstructured
+	CStorClusterPlan   *unstructured.Unstructured
 }
 
 // NewReconciler returns a new instance of Reconciler
 func NewReconciler(
 	clusterConfig *unstructured.Unstructured,
-	clusterConfigPlan *unstructured.Unstructured,
+	clusterPlan *unstructured.Unstructured,
 	attachments []*unstructured.Unstructured,
 ) (*Reconciler, error) {
 	// transform cluster config from unstructured to typed
@@ -223,22 +214,22 @@ func NewReconciler(
 	}
 
 	// transforms cluster config plan from unstructured to typed
-	var cstorClusterConfigPlanTyped *types.CStorClusterConfigPlan
-	if clusterConfigPlan != nil {
-		cstorClusterConfigPlanRaw, err := clusterConfigPlan.MarshalJSON()
+	var cstorClusterPlanTyped *types.CStorClusterPlan
+	if clusterPlan != nil {
+		cstorClusterPlanRaw, err := clusterPlan.MarshalJSON()
 		if err != nil {
-			return nil, errors.Wrapf(err, "Can't marshal CStorClusterConfigPlan")
+			return nil, errors.Wrapf(err, "Can't marshal CStorClusterPlan")
 		}
-		err = json.Unmarshal(cstorClusterConfigPlanRaw, cstorClusterConfigPlanTyped)
+		err = json.Unmarshal(cstorClusterPlanRaw, cstorClusterPlanTyped)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterConfigPlan")
+			return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterPlan")
 		}
 	}
 
 	return &Reconciler{
-		CStorClusterConfig:     &cstorClusterConfigTyped,
-		CStorClusterConfigPlan: cstorClusterConfigPlanTyped,
-		Attachments:            attachments,
+		CStorClusterConfig: &cstorClusterConfigTyped,
+		CStorClusterPlan:   cstorClusterPlanTyped,
+		Attachments:        attachments,
 		NodeEvaluator: &node.CStorClusterConfigNodeEvaluator{
 			CStorClusterConfig: &cstorClusterConfigTyped,
 			Attachments:        attachments,
@@ -253,7 +244,7 @@ func NewReconciler(
 func (s *Reconciler) Reconcile() (ReconcileResponse, error) {
 	syncFns := []func() error{
 		s.validateClusterConfigAndSetDefaultsIfNotSet,
-		s.buildClusterConfigPlan,
+		s.buildClusterPlan,
 	}
 	for _, syncFn := range syncFns {
 		err := syncFn()
@@ -278,7 +269,7 @@ func (s *Reconciler) makeReconcileResponse() (ReconcileResponse, error) {
 		return ReconcileResponse{}, err
 	}
 	// convert updated CStorClusterConfigPlan from typed to unstruct
-	clusterConfigPlanRaw, err := json.Marshal(s.CStorClusterConfigPlan)
+	clusterConfigPlanRaw, err := json.Marshal(s.CStorClusterPlan)
 	if err != nil {
 		return ReconcileResponse{}, err
 	}
@@ -289,8 +280,8 @@ func (s *Reconciler) makeReconcileResponse() (ReconcileResponse, error) {
 	}
 
 	return ReconcileResponse{
-		CStorClusterConfig:     &clusterConfig,
-		CStorClusterConfigPlan: &clusterConfigPlan,
+		CStorClusterConfig: &clusterConfig,
+		CStorClusterPlan:   &clusterConfigPlan,
 	}, nil
 }
 
@@ -302,17 +293,23 @@ func (s *Reconciler) resetClusterConfigReconcileErrorIfAny() {
 	types.MergeNoReconcileErrorOnCStorClusterConfig(s.CStorClusterConfig)
 }
 
-// buildClusterConfigPlan sets CStorClusterConfig with desired nodes
-func (s *Reconciler) buildClusterConfigPlan() error {
+// buildClusterPlan builds a CStorClusterPlan resource
+func (s *Reconciler) buildClusterPlan() error {
 
-	var observedNodes []types.CStorClusterConfigPlanNode
-	if s.CStorClusterConfigPlan != nil {
-		observedNodes = s.CStorClusterConfigPlan.Spec.Nodes
+	var observedNodes []types.CStorClusterPlanNode
+	if s.CStorClusterPlan != nil {
+		observedNodes = s.CStorClusterPlan.Spec.Nodes
 	} else {
-		s.CStorClusterConfigPlan = &types.CStorClusterConfigPlan{}
-		s.CStorClusterConfigPlan.SetName(s.CStorClusterConfig.GetName())
-		s.CStorClusterConfigPlan.SetNamespace(s.CStorClusterConfig.GetNamespace())
-		s.CStorClusterConfigPlan.Spec.ClusterConfigReference.UID = s.CStorClusterConfig.GetUID()
+		s.CStorClusterPlan = &types.CStorClusterPlan{}
+		s.CStorClusterPlan.SetName(s.CStorClusterConfig.GetName())
+		s.CStorClusterPlan.SetNamespace(s.CStorClusterConfig.GetNamespace())
+		s.CStorClusterPlan.SetAnnotations(
+			k8s.MergeToAnnotations(
+				types.AnnKeyCStorClusterConfigUID,
+				string(s.CStorClusterConfig.GetUID()),
+				s.CStorClusterPlan.GetAnnotations(),
+			),
+		)
 	}
 
 	desired, err := s.NodeEvaluator.EvaluateDesiredNodes(node.EvaluationConfig{
@@ -323,7 +320,7 @@ func (s *Reconciler) buildClusterConfigPlan() error {
 	if err != nil {
 		return err
 	}
-	s.CStorClusterConfigPlan.Spec.Nodes = desired
+	s.CStorClusterPlan.Spec.Nodes = desired
 	return nil
 }
 

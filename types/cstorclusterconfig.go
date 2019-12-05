@@ -60,6 +60,21 @@ type CStorClusterConfigSpec struct {
 	PoolConfig   PoolConfig             `json:"poolConfig"`
 }
 
+// DiskConfig has disk information related to
+// one cstor pool instance
+type DiskConfig struct {
+	MinCount            resource.Quantity   `json:"minCount"`
+	MinCapacity         resource.Quantity   `json:"minCapacity"`
+	ExternalProvisioner ExternalProvisioner `json:"externalProvisioner"`
+}
+
+// ExternalProvisioner has the details required to provision
+// a disk
+type ExternalProvisioner struct {
+	CSIAttacherName  string `json:"csiAttacherName"`
+	StorageClassName string `json:"storageClassName"`
+}
+
 // PoolConfig defines various options to configure a
 // cstor pool cluster
 type PoolConfig struct {
@@ -103,21 +118,6 @@ const (
 	PoolRAIDTypeDefault PoolRAIDType = PoolRAIDTypeMirror
 )
 
-// DiskConfig has disk information related to
-// one cstor pool instance
-type DiskConfig struct {
-	MinCount            resource.Quantity   `json:"minCount"`
-	MinCapacity         resource.Quantity   `json:"minCapacity"`
-	ExternalProvisioner ExternalProvisioner `json:"externalProvisioner"`
-}
-
-// ExternalProvisioner has the details required to provision
-// a disk
-type ExternalProvisioner struct {
-	CSIAttacherName  string `json:"csiAttacherName"`
-	StorageClassName string `json:"storageClassName"`
-}
-
 // CStorClusterConfigStatus represents the current state of
 // CStorClusterConfig
 type CStorClusterConfigStatus struct {
@@ -142,8 +142,8 @@ const (
 // CStorClusterConfigStatusCondition represents a condition
 // that represents the current state of CStorClusterConfig
 type CStorClusterConfigStatusCondition struct {
-	Type             CStorClusterConfigConditionType   `json:"type"`
-	Status           CStorClusterConfigConditionStatus `json:"status"`
-	Reason           string                            `json:"reason,omitempty"`
-	LastObservedTime metav1.Time                       `json:"lastObservedTime"`
+	Type             ConditionType   `json:"type"`
+	Status           ConditionStatus `json:"status"`
+	Reason           string          `json:"reason,omitempty"`
+	LastObservedTime metav1.Time     `json:"lastObservedTime"`
 }

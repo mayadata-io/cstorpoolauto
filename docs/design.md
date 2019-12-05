@@ -18,7 +18,7 @@ metadata:
 spec:
     # Minimum number of cstor pool instances
     #
-    # Defaults to the minimum value from below:
+    # Defaults to the minimum value amongst the below:
     # - number of allowed nodes or 
     # - number of available kubernetes nodes or 
     # - 3
@@ -98,75 +98,53 @@ status:
 
 ```yaml
 # CStorClusterPlan gets created based on CStorClusterConfig and is
-# used as a reference to create/update CStorPoolCluster
+# used to plan the resources especially nodes to form CStorPoolCluster
+#
+# NOTE:
+#   This resource & corresponding controller is expected to manage
+# the cluster disruption in a way that lets one to scale up or down
+# cstor cluster without impacting the application consuming cstor
+# storage.
 kind: CStorClusterPlan
 metadata:
-    name:
+    # NOTE: Name will be deterministic
+    name:  # same name as that of CStorClusterConfig
     namespace:
+    annotations:
+        # UID of CStorClusterConfig that triggered this resource
+        dao.mayadata.io/cstorclusterconfig-uid:
 spec:
-    poolClusterPlan:
-        # Pool type to be used for all cstor pool instances
-        # e.g. stripe, mirror, raidz, etc
-        poolType:
-        # Disk configuration to be applied across all cstor pool instances
-        diskConfig:
-            # Number of disks per cstor pool instance
-            diskCount:
-            # Capacity of each disk of a cstor pool instance
-            diskCapacity:
-        # Worker nodes that form a cstor pool cluster. Each node will become
-        # a cstor pool instance
-        nodePlanList:
-        -   nodeDetail:
-                # Name of the node
-                nodeName:
-                # UID of the node
-                nodeUID:
-            # Devices that form one cstor pool instance
-            deviceDetailList:
-            -   blockDeviceName:
-status:
-    phase:
-    conditions:
+    nodes:
+    - name:  # Name of the node to participate in CStorPoolCluster
+      uid:   # UID of the node to participate in CStorPoolCluster
 ```
 
 ```yaml
-# CStorClusterRePlan is used to update CStorClusterPlan
-# after satisfying CStorClusterConfig. Once CStorClusterPlan 
-# is updated this resource is purged.
-kind: CStorClusterRePlan
+# CStorClusterStorageSet is used to provision storage for
+# one node of cstor cluster
+#
+# NOTE:
+#   This resource & its corresponding controller is expected to
+# manage resizing the capacity w.r.t one node within the cstor
+# cluster.
+kind: CStorClusterStorageSet
 metadata:
-    name:
+    # NOTE: Name will be deterministic
+    name: # <Name of CStorClusterConfig>-ss0
     namespace:
+    annotations:
+        # UID of CStorClusterPlan that triggered this resource
+        dao.mayadata.io/cstorclusterplan-uid:
 spec:
-    # A new node i.e. new cstor pool instance is added to the
-    # existing cstor pool cluster
-    nodeAdd:
-    -   nodeName:
-    # Remove an existing node i.e. an existing cstor pool instance
-    # from the cstor pool cluster
-    nodeRemove:
-    -   nodeName:
-    # Node replacement will detach the disks from the current
-    # node and attach them to the target node
-    nodeReplace:
-    -   currentNodeName:
-        targetNodeName:
-    # Device replacement will detach the current device and
-    # attach the target device in its place
-    deviceReplace:
-    -   nodeName:
-        currentDeviceName:
-        targetDeviceName:
-    # Disk resize will resize the given device to the given
-    # capacity.
-    diskResize:
-    -   nodeName:
-        deviceName:
-        diskCapacity:
-status:
-    phase:
-    conditions:
+    node:
+        name:
+        uid:
+    disk:
+        capacity:
+        count:
+    externalProvisioner:
+        csiAttacherName:
+        storageClassName:
 ```
 
 ## High Level Design & Workflows

@@ -14,4 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package nodeinfo
+package types
+
+const (
+	// AnnotationNamespace is the common namespace used across all
+	// the annotations supported in this project
+	AnnotationNamespace string = "dao.mayadata.io"
+
+	// AnnKeyCStorClusterConfigUID is the annotation that refers to
+	// CStorClusterConfig's UID
+	AnnKeyCStorClusterConfigUID string = AnnotationNamespace + "/cstorclusterconfig-uid"
+
+	// AnnKeyCStorClusterPlanUID is the annotation that refers to
+	// CStorClusterPlan's UID
+	AnnKeyCStorClusterPlanUID string = AnnotationNamespace + "/cstorclusterplan-uid"
+)
