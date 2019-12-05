@@ -17,57 +17,70 @@ limitations under the License.
 package types
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CStorClusterConfigConditionType is a custom datatype that
+// ConditionType is a custom datatype that
 // refers to various conditions supported in this operator
-type CStorClusterConfigConditionType string
+type ConditionType string
 
 const (
 	// CStorClusterConfigConditionReconcileError is used to
 	// indicate presence or absence of error while reconciling
 	// CStorClusterConfig
-	CStorClusterConfigConditionReconcileError CStorClusterConfigConditionType = "ReconcileError"
+	CStorClusterConfigConditionReconcileError ConditionType = "CStorClusterConfigReconcileError"
+
+	// CStorClusterPlanConditionReconcileError is used to
+	// indicate presence or absence of error while reconciling
+	// CStorClusterConfigPlan
+	CStorClusterPlanConditionReconcileError ConditionType = "CStorClusterPlanReconcileError"
 )
 
-// CStorClusterConfigConditionStatus is a custom datatype that
+// ConditionStatus is a custom datatype that
 // refers to presence or absence of any condition
-type CStorClusterConfigConditionStatus string
+type ConditionStatus string
 
 const (
-	// CStorClusterConfigConditionIsPresent refers to presence
-	// of any CStorClusterConfig condition
-	CStorClusterConfigConditionIsPresent CStorClusterConfigConditionStatus = "True"
+	// ConditionIsPresent refers to presence of any condition
+	ConditionIsPresent ConditionStatus = "True"
 
-	// CStorClusterConfigConditionIsAbsent refers to absence
-	// of any CStorClusterConfig condition
-	CStorClusterConfigConditionIsAbsent CStorClusterConfigConditionStatus = "False"
+	// ConditionIsAbsent refers to absence of any condition
+	ConditionIsAbsent ConditionStatus = "False"
 )
 
-// MakeReconcileErrorCondition builds a new
+// MakeCStorClusterConfigReconcileErrCond builds a new
 // CStorClusterConfigConditionReconcileError condition
 // suitable to be used in API status.conditions
-func MakeReconcileErrorCondition(err error) map[string]string {
+func MakeCStorClusterConfigReconcileErrCond(err error) map[string]string {
 	return map[string]string{
 		"type":             string(CStorClusterConfigConditionReconcileError),
-		"status":           string(CStorClusterConfigConditionIsPresent),
+		"status":           string(ConditionIsPresent),
 		"reason":           err.Error(),
-		"lastObservedTime": time.Now().String(),
+		"lastObservedTime": metav1.Now().String(),
 	}
 }
 
-// MakeNoReconcileErrorCondition builds a new no
+// MakeCStorClusterPlanReconcileErrCond builds a new
+// CStorClusterConfigPlanConditionReconcileError condition
+// suitable to be used in API status.conditions
+func MakeCStorClusterPlanReconcileErrCond(err error) map[string]string {
+	return map[string]string{
+		"type":             string(CStorClusterPlanConditionReconcileError),
+		"status":           string(ConditionIsPresent),
+		"reason":           err.Error(),
+		"lastObservedTime": metav1.Now().String(),
+	}
+}
+
+// MakeNoCStorClusterConfigReconcileErrCond builds a new no
 // CStorClusterConfigConditionReconcileError condition. This
 // should be used in such a way that it voids previous occurrence of
 // this error if any.
-func MakeNoReconcileErrorCondition() map[string]string {
+func MakeNoCStorClusterConfigReconcileErrCond() map[string]string {
 	return map[string]string{
 		"type":             string(CStorClusterConfigConditionReconcileError),
-		"status":           string(CStorClusterConfigConditionIsAbsent),
-		"lastObservedTime": time.Now().String(),
+		"status":           string(ConditionIsAbsent),
+		"lastObservedTime": metav1.Now().String(),
 	}
 }
 
@@ -76,7 +89,7 @@ func MakeNoReconcileErrorCondition() map[string]string {
 func MergeNoReconcileErrorOnCStorClusterConfig(obj *CStorClusterConfig) {
 	noErrCond := CStorClusterConfigStatusCondition{
 		Type:             CStorClusterConfigConditionReconcileError,
-		Status:           CStorClusterConfigConditionIsAbsent,
+		Status:           ConditionIsAbsent,
 		LastObservedTime: metav1.Now(),
 	}
 	var newConds []CStorClusterConfigStatusCondition

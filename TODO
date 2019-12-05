@@ -16,6 +16,12 @@ poolSpreadPolicy:
     - name: DEF
       percent: 0.8
 ```
+- Cluster disruption budget may be required
+```
+clusterDisruptionBudget:
+    maxAvailable:
+    minAvailable:
+```
 
 ### Old Design - v0.1.0
 

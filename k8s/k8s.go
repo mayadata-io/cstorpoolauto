@@ -40,8 +40,9 @@ func GetNestedSlice(obj *unstructured.Unstructured, fields ...string) ([]interfa
 	return nestedSlice, nil
 }
 
-// MergeNestedSlice merges the new value with the existing values at the
-// given field path & returns the updated values
+// MergeNestedSlice merges the given map against a
+// slice of maps found at given field path & returns the
+// updated slice.
 //
 // TODO (@amitkumardas): Unit Tests
 func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]string, fields ...string) ([]interface{}, error) {
@@ -54,9 +55,14 @@ func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]string, fie
 	for k, v := range new {
 		// One of these keys can be used to merge
 		//
-		// Note: There is no ordering with these keys. It is expected
-		// that the provided new object to have only one of these keys.
-		if k == "uid" || k == "id" || k == "name" {
+		// Note:
+		//	One can't rely on ordering amongst these keys.
+		//
+		// Note:
+		//	It is expected that the provided map to have only one
+		// of these keys that can uniquely identify this map amongst
+		// the slice of maps.
+		if k == "uid" || k == "id" || k == "name" || k == "type" {
 			indexKey = k
 			indexValue = v
 			break
@@ -90,8 +96,9 @@ func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]string, fie
 	return nestedSlice, nil
 }
 
-// MergeAndSetNestedSlice merges the provided conditions with existing
-// ones if any against the provided object
+// MergeAndSetNestedSlice merges the provided map against a slice
+// of maps at given field path. It then sets the updated slice against
+// the provided object.
 func MergeAndSetNestedSlice(obj *unstructured.Unstructured, new map[string]string, fields ...string) ([]interface{}, error) {
 	updatedSlice, err := MergeNestedSlice(obj, new, fields...)
 	if err != nil {
@@ -139,4 +146,25 @@ func GetNestedMapOrEmpty(obj *unstructured.Unstructured, fields ...string) (map[
 		nestedMap = map[string]interface{}{}
 	}
 	return nestedMap, err
+}
+
+// MergeToAnnotations merges the given key value pair against the
+// provided annotations
+func MergeToAnnotations(key, value string, given map[string]string) map[string]string {
+	if given == nil {
+		given = map[string]string{}
+	}
+	// this will add the key or update if key is already present
+	given[key] = value
+	return given
+}
+
+// GetAnnotationForKey fetches the annotation value from the given
+// annotations & annotation key
+func GetAnnotationForKey(given map[string]string, key string) (string, bool) {
+	if len(given) == 0 {
+		return "", false
+	}
+	val, found := given[key]
+	return val, found
 }
