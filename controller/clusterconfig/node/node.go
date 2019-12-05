@@ -195,7 +195,7 @@ type EvaluationConfig struct {
 func (s *CStorClusterConfigNodeEvaluator) GetNodes() []*unstructured.Unstructured {
 	var nodes []*unstructured.Unstructured
 	for _, attachment := range s.Attachments {
-		if attachment.GetKind() == string(k8s.NodeKind) {
+		if attachment.GetKind() == string(k8s.KindNode) {
 			nodes = append(nodes, attachment)
 		}
 	}
@@ -207,7 +207,7 @@ func (s *CStorClusterConfigNodeEvaluator) GetNodes() []*unstructured.Unstructure
 func (s *CStorClusterConfigNodeEvaluator) GetNodeCount() int64 {
 	var count int64
 	for _, attachment := range s.Attachments {
-		if attachment.GetKind() == string(k8s.NodeKind) {
+		if attachment.GetKind() == string(k8s.KindNode) {
 			count++
 		}
 	}

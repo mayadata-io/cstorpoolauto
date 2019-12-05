@@ -82,7 +82,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	} else {
 		// response status will be set against the watch's status by metac
 		h.hookResponse.Status = map[string]interface{}{}
-		h.hookResponse.Status["phase"] = "Error"
+		h.hookResponse.Status["phase"] = types.CStorClusterConfigStatusPhaseError
 		h.hookResponse.Status["conditions"] = conds
 	}
 
@@ -126,7 +126,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	}
 
 	var cstorClusterConfigObj *unstructured.Unstructured
-	var cstorClusterConfigPlanObj *unstructured.Unstructured
+	var cstorClusterPlanObj *unstructured.Unstructured
 
 	for _, attachment := range request.Attachments.List() {
 		// watched resource is also present in attachments
@@ -136,13 +136,13 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 			cstorClusterConfigObj = attachment
 			continue
 		}
-		if attachment.GetKind() == "CStorClusterConfigPlan" {
+		if attachment.GetKind() == string(k8s.KindCStorClusterPlan) {
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
-				// this is the desired CStorClusterConfigPlan
-				cstorClusterConfigPlanObj = attachment
+				// this is the desired CStorClusterPlan
+				cstorClusterPlanObj = attachment
 				continue
 			}
 		}
@@ -160,7 +160,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	reconciler, err :=
 		NewReconciler(
 			cstorClusterConfigObj,
-			cstorClusterConfigPlanObj,
+			cstorClusterPlanObj,
 			request.Attachments.List(),
 		)
 	if err != nil {
