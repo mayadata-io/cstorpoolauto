@@ -27,7 +27,8 @@ type CStorClusterStorageSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec CStorClusterStorageSetSpec `json:"spec"`
+	Spec   CStorClusterStorageSetSpec   `json:"spec"`
+	Status CStorClusterStorageSetStatus `json:"status"`
 }
 
 // CStorClusterStorageSetSpec has the storage details required
@@ -44,4 +45,34 @@ type CStorClusterStorageSetSpec struct {
 type CStorClusterStorageSetDisk struct {
 	Capacity resource.Quantity `json:"capacity"`
 	Count    resource.Quantity `json:"count"`
+}
+
+// CStorClusterStorageSetStatus represents the current state of
+// CStorClusterStorageSet
+type CStorClusterStorageSetStatus struct {
+	Phase      CStorClusterStorageSetStatusPhase       `json:"phase"`
+	Conditions []CStorClusterStorageSetStatusCondition `json:"conditions"`
+}
+
+// CStorClusterStorageSetStatusPhase reports the current phase of
+// CStorClusterStorageSet
+type CStorClusterStorageSetStatusPhase string
+
+const (
+	// CStorClusterStorageSetStatusPhaseError indicates error in
+	// CStorClusterStorageSet
+	CStorClusterStorageSetStatusPhaseError CStorClusterStorageSetStatusPhase = "Error"
+
+	// CStorClusterStorageSetStatusPhaseOnline indicates
+	// CStorClusterStorageSet in Online state i.e. no error or warning
+	CStorClusterStorageSetStatusPhaseOnline CStorClusterStorageSetStatusPhase = "Online"
+)
+
+// CStorClusterStorageSetStatusCondition represents a condition
+// that represents the current state of CStorClusterStorageSet
+type CStorClusterStorageSetStatusCondition struct {
+	Type             ConditionType   `json:"type"`
+	Status           ConditionStatus `json:"status"`
+	Reason           string          `json:"reason,omitempty"`
+	LastObservedTime metav1.Time     `json:"lastObservedTime"`
 }

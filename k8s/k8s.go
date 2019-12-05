@@ -26,8 +26,20 @@ import (
 type Kind string
 
 const (
-	// NodeKind refers to kubernetes node's kind value
-	NodeKind Kind = "Node"
+	// KindNode refers to kubernetes node (a native resource)
+	// kind value
+	KindNode Kind = "Node"
+
+	// KindCStorClusterPlan refers to custom resource with
+	// kind CStorClusterPlan
+	KindCStorClusterPlan Kind = "CStorClusterPlan"
+
+	// KindCStorClusterStorageSet refers to custom resource with
+	// kind CStorClusterStorageSet
+	KindCStorClusterStorageSet Kind = "CStorClusterStorageSet"
+
+	// KindStorage refers to custom resource with kind Storage
+	KindStorage Kind = "Storage"
 )
 
 // GetNestedSlice returns the slice found at given field path

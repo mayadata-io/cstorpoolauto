@@ -51,7 +51,7 @@ type CStorClusterConfigReference struct {
 }
 
 // CStorClusterPlanStatus represents the current state of
-// CStorClusterConfigPlan
+// CStorClusterPlan
 type CStorClusterPlanStatus struct {
 	Phase      CStorClusterPlanStatusPhase       `json:"phase"`
 	Conditions []CStorClusterPlanStatusCondition `json:"conditions"`

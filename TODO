@@ -1,6 +1,27 @@
 ### Design v0.2.0
-- rename the module to cstorclusterconfig
-- rename the repo to cstorclusterconfig
+#### TODO
+- TODO - 1
+    - refactor clusterconfig reconciler
+    - manage status/conditions of clusterconfig
+    - refactor reconcile logic to:
+        - CStorClusterPlanner & 
+        - NodePlanner
+- TODO - 2
+    - update storage provisioner codebase
+- TODO - 3
+    - test
+- TODO - 4
+    - Unit Tests for cstorpoolauto
+- TODO - 5
+    - refactor storage provisioner to use metac
+- TODO - 6
+    - Unit Test storage provisioner
+- TODO - 7
+    - e2e tests for cstorpoolauto
+- TODO - 8
+    - e2e tests for storage provisioner
+
+#### FUTURE
 - pool spread logic might be required
     - e.g. pool nodes should be unique in a cluster
     - e.g. spread pools across zones, DCs etc

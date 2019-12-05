@@ -34,6 +34,11 @@ const (
 	// indicate presence or absence of error while reconciling
 	// CStorClusterConfigPlan
 	CStorClusterPlanConditionReconcileError ConditionType = "CStorClusterPlanReconcileError"
+
+	// CStorClusterStorageSetConditionReconcileError is used to
+	// indicate presence or absence of error while reconciling
+	// CStorClusterStorageSet
+	CStorClusterStorageSetConditionReconcileError ConditionType = "CStorClusterStorageSetError"
 )
 
 // ConditionStatus is a custom datatype that
@@ -61,11 +66,23 @@ func MakeCStorClusterConfigReconcileErrCond(err error) map[string]string {
 }
 
 // MakeCStorClusterPlanReconcileErrCond builds a new
-// CStorClusterConfigPlanConditionReconcileError condition
+// CStorClusterPlanConditionReconcileError condition
 // suitable to be used in API status.conditions
 func MakeCStorClusterPlanReconcileErrCond(err error) map[string]string {
 	return map[string]string{
 		"type":             string(CStorClusterPlanConditionReconcileError),
+		"status":           string(ConditionIsPresent),
+		"reason":           err.Error(),
+		"lastObservedTime": metav1.Now().String(),
+	}
+}
+
+// MakeCStorClusterStorageSetReconcileErrCond builds a new
+// CStorClusterStorageSetConditionReconcileError condition
+// suitable to be used in API status.conditions
+func MakeCStorClusterStorageSetReconcileErrCond(err error) map[string]string {
+	return map[string]string{
+		"type":             string(CStorClusterStorageSetConditionReconcileError),
 		"status":           string(ConditionIsPresent),
 		"reason":           err.Error(),
 		"lastObservedTime": metav1.Now().String(),
@@ -102,4 +119,67 @@ func MergeNoReconcileErrorOnCStorClusterConfig(obj *CStorClusterConfig) {
 	}
 	newConds = append(newConds, noErrCond)
 	obj.Status.Conditions = newConds
+}
+
+// MergeNoReconcileErrorOnCStorClusterPlan sets
+// CStorClusterPlanConditionReconcileError condition to false.
+func MergeNoReconcileErrorOnCStorClusterPlan(obj *CStorClusterPlan) {
+	noErrCond := CStorClusterPlanStatusCondition{
+		Type:             CStorClusterPlanConditionReconcileError,
+		Status:           ConditionIsAbsent,
+		LastObservedTime: metav1.Now(),
+	}
+	var newConds []CStorClusterPlanStatusCondition
+	for _, old := range obj.Status.Conditions {
+		if old.Type == CStorClusterPlanConditionReconcileError {
+			// ignore previous occurrence of ReconcileError
+			continue
+		}
+		newConds = append(newConds, old)
+	}
+	newConds = append(newConds, noErrCond)
+	obj.Status.Conditions = newConds
+}
+
+// MergeNoReconcileErrorOnCStorClusterStorageSet sets
+// CStorClusterStorageSetConditionReconcileError condition to false.
+func MergeNoReconcileErrorOnCStorClusterStorageSet(obj *CStorClusterStorageSet) {
+	noErrCond := CStorClusterStorageSetStatusCondition{
+		Type:             CStorClusterStorageSetConditionReconcileError,
+		Status:           ConditionIsAbsent,
+		LastObservedTime: metav1.Now(),
+	}
+	var newConds []CStorClusterStorageSetStatusCondition
+	for _, old := range obj.Status.Conditions {
+		if old.Type == CStorClusterStorageSetConditionReconcileError {
+			// ignore previous occurrence of ReconcileError
+			continue
+		}
+		newConds = append(newConds, old)
+	}
+	newConds = append(newConds, noErrCond)
+	obj.Status.Conditions = newConds
+}
+
+// MakeCStorClusterPlanStatusToOnline sets the given CStorClusterPlan
+// status to online and returns this newly formed status object.
+func MakeCStorClusterPlanStatusToOnline(obj *CStorClusterPlan) map[string]interface{} {
+	MergeNoReconcileErrorOnCStorClusterPlan(obj)
+	obj.Status.Phase = CStorClusterPlanStatusPhaseOnline
+	return map[string]interface{}{
+		"phase":      CStorClusterPlanStatusPhaseOnline,
+		"conditions": obj.Status.Conditions,
+	}
+}
+
+// MakeCStorClusterStorageSetStatusToOnline sets the given
+// CStorClusterStorageSet status to online and
+// returns this newly formed status object.
+func MakeCStorClusterStorageSetStatusToOnline(obj *CStorClusterStorageSet) map[string]interface{} {
+	MergeNoReconcileErrorOnCStorClusterStorageSet(obj)
+	obj.Status.Phase = CStorClusterStorageSetStatusPhaseOnline
+	return map[string]interface{}{
+		"phase":      CStorClusterStorageSetStatusPhaseOnline,
+		"conditions": obj.Status.Conditions,
+	}
 }

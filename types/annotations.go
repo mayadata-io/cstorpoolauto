@@ -22,10 +22,14 @@ const (
 	AnnotationNamespace string = "dao.mayadata.io"
 
 	// AnnKeyCStorClusterConfigUID is the annotation that refers to
-	// CStorClusterConfig's UID
+	// CStorClusterConfig UID
 	AnnKeyCStorClusterConfigUID string = AnnotationNamespace + "/cstorclusterconfig-uid"
 
 	// AnnKeyCStorClusterPlanUID is the annotation that refers to
-	// CStorClusterPlan's UID
+	// CStorClusterPlan UID
 	AnnKeyCStorClusterPlanUID string = AnnotationNamespace + "/cstorclusterplan-uid"
+
+	// AnnKeyCStorClusterStorageSetUID is the annotation that refers to
+	// CStorClusterStorageSet UID
+	AnnKeyCStorClusterStorageSetUID string = AnnotationNamespace + "/cstorclusterstorageset-uid"
 )

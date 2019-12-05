@@ -63,7 +63,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	} else {
 		// response status will be set against the watch's status by metac
 		h.hookResponse.Status = map[string]interface{}{}
-		h.hookResponse.Status["phase"] = "Error"
+		h.hookResponse.Status["phase"] = types.CStorClusterPlanStatusPhaseError
 		h.hookResponse.Status["conditions"] = conds
 	}
 
@@ -97,24 +97,24 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		hookResponse: response,
 	}
 
-	var storageSet []*unstructured.Unstructured
+	var observedStorageSet []*unstructured.Unstructured
 	var cstorClusterConfig *unstructured.Unstructured
 	for _, attachment := range request.Attachments.List() {
-		if attachment.GetKind() == "CStorClusterStorageSet" {
-			// verify further if this belongs to the current watch
+		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
+			// verify further if CStorClusterStorageSet belongs to current watch
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
 				// this is a desired CStorClusterStorageSet
-				storageSet = append(storageSet, attachment)
+				observedStorageSet = append(observedStorageSet, attachment)
 				// we don't want to add this CStorClusterStorageSet now
 				// but later after reconciliation
 				continue
 			}
 		}
-		if attachment.GetKind() == "CStorClusterConfig" {
-			// verify further if this belongs to the current watch
+		if attachment.GetKind() == string(types.KindCStorClusterConfig) {
+			// verify further if CStorClusterConfig belongs to current watch
 			uid, _ := k8s.GetAnnotationForKey(
 				request.Watch.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
 			)
@@ -126,13 +126,12 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		// add attachments as-is if they are not of kind CStorClusterStorageSet
 		response.Attachments = append(response.Attachments, attachment)
 	}
-
 	if cstorClusterConfig == nil {
 		errHandler.handle(errors.Errorf("Missing CStorClusterConfig attachment"))
 		return nil
 	}
 
-	reconciler, err := NewReconciler(request.Watch, cstorClusterConfig, storageSet)
+	reconciler, err := NewReconciler(request.Watch, cstorClusterConfig, observedStorageSet)
 	if err != nil {
 		errHandler.handle(err)
 		return nil
@@ -142,28 +141,30 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		errHandler.handle(err)
 		return nil
 	}
-	response.Attachments = append(response.Attachments, op.CStorClusterStorageSet...)
+	response.Attachments = append(response.Attachments, op.DesiredStorageSet...)
+	response.Status = op.Status
 	return nil
 }
 
 // Reconciler enables reconciliation of CStorClusterPlan instance
 type Reconciler struct {
-	CStorClusterPlan       *types.CStorClusterPlan
-	CStorClusterConfig     *types.CStorClusterConfig
-	CStorClusterStorageSet []*unstructured.Unstructured
+	CStorClusterPlan   *types.CStorClusterPlan
+	CStorClusterConfig *types.CStorClusterConfig
+	ObservedStorageSet []*unstructured.Unstructured
 }
 
 // ReconcileResponse forms the response due to reconciliation of
 // CStorClusterPlan
 type ReconcileResponse struct {
-	CStorClusterStorageSet []*unstructured.Unstructured
+	DesiredStorageSet []*unstructured.Unstructured
+	Status            map[string]interface{}
 }
 
 // NewReconciler returns a new instance of reconciler
 func NewReconciler(
 	plan *unstructured.Unstructured,
 	clusterConfig *unstructured.Unstructured,
-	storageSet []*unstructured.Unstructured,
+	observedStorageSet []*unstructured.Unstructured,
 ) (*Reconciler, error) {
 	// transforms cluster plan from unstructured to typed
 	var cstorClusterPlanTyped *types.CStorClusterPlan
@@ -187,34 +188,35 @@ func NewReconciler(
 	}
 	// use above constructed objects to build Reconciler instance
 	return &Reconciler{
-		CStorClusterPlan:       cstorClusterPlanTyped,
-		CStorClusterConfig:     cstorClusterConfigTyped,
-		CStorClusterStorageSet: storageSet,
+		CStorClusterPlan:   cstorClusterPlanTyped,
+		CStorClusterConfig: cstorClusterConfigTyped,
+		ObservedStorageSet: observedStorageSet,
 	}, nil
 }
 
-// Reconcile observed state of CStorClusterConfigPlan to its desired
+// Reconcile observed state of CStorClusterPlan to its desired
 // state
 func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 	planner, err := NewStorageSetPlanner(
 		r.CStorClusterPlan,
-		r.CStorClusterStorageSet,
+		r.ObservedStorageSet,
 	)
 	if err != nil {
 		return ReconcileResponse{}, err
 	}
-	storageSet, err := planner.Plan(r.CStorClusterConfig)
+	desiredStorageSet, err := planner.Plan(r.CStorClusterConfig)
 	if err != nil {
 		return ReconcileResponse{}, err
 	}
 	return ReconcileResponse{
-		CStorClusterStorageSet: storageSet,
+		DesiredStorageSet: desiredStorageSet,
+		Status:            types.MakeCStorClusterPlanStatusToOnline(r.CStorClusterPlan),
 	}, nil
 }
 
-// StorageSetPlanner manages various CRUD operations w.r.t
-// CStorClusterStorageSet. It makes use of CStorClusterPlan
-// to do so.
+// StorageSetPlanner ensures if any CStorClusterStorageSet instance
+// need to be created, deleted, updated or perhaps does not require
+// any changes at all.
 type StorageSetPlanner struct {
 	ClusterPlan *types.CStorClusterPlan
 
@@ -234,7 +236,7 @@ type StorageSetPlanner struct {
 // NewStorageSetPlanner returns a new instance of StorageSetPlanner
 func NewStorageSetPlanner(
 	plan *types.CStorClusterPlan,
-	storageSet []*unstructured.Unstructured,
+	observedStorageSet []*unstructured.Unstructured,
 ) (*StorageSetPlanner, error) {
 	// initialize the planner
 	planner := &StorageSetPlanner{
@@ -247,26 +249,26 @@ func NewStorageSetPlanner(
 		PlannedNodeNames:       map[string]string{},
 		Updates:                map[string]string{},
 	}
-	for _, storage := range storageSet {
+	for _, storageSet := range observedStorageSet {
 		// verify further if this belongs to the current watch
 		uid, found, err := unstructured.NestedString(
-			storage.UnstructuredContent(), "spec", "node", "uid",
+			storageSet.UnstructuredContent(), "spec", "node", "uid",
 		)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"Failed to get spec.node.uid: StorageSet %s %s",
-				storage.GetNamespace(), storage.GetName(),
+				storageSet.GetNamespace(), storageSet.GetName(),
 			)
 		}
 		if !found {
 			return nil, errors.Errorf(
 				"Invalid StorageSet %s %s: Missing spec.node.uid",
-				storage.GetNamespace(), storage.GetName(),
+				storageSet.GetNamespace(), storageSet.GetName(),
 			)
 		}
 		planner.ObservedStorageSets[uid] = true
-		planner.ObservedStorageSetObjs[uid] = storage
+		planner.ObservedStorageSetObjs[uid] = storageSet
 	}
 	for _, plannedNode := range plan.Spec.Nodes {
 		// store node uid to name mapping
@@ -340,8 +342,13 @@ func (p *StorageSetPlanner) create(config *types.CStorClusterConfig) []*unstruct
 		storageSet := &unstructured.Unstructured{}
 		storageSet.SetUnstructuredContent(map[string]interface{}{
 			"metadata": map[string]interface{}{
-				"generateName": "ccplan-",
+				"apiVersion":   "dao.mayadata.io/v1alpha1",
+				"kind":         "CStorClusterStorageSet",
+				"generateName": "ccplan-", // ccplan -> CStorClusterPlan
 				"namespace":    p.ClusterPlan.GetNamespace(),
+				"annotations": map[string]interface{}{
+					string(types.AnnKeyCStorClusterPlanUID): p.ClusterPlan.GetUID(),
+				},
 			},
 			"spec": map[string]interface{}{
 				"node": map[string]interface{}{

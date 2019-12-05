@@ -129,9 +129,9 @@ spec:
 # cluster.
 kind: CStorClusterStorageSet
 metadata:
-    # NOTE: Name will be deterministic
-    name: # <Name of CStorClusterConfig>-ss0
-    namespace:
+    # NOTE: Name will be non-deterministic
+    generateName: ccplan-
+    namespace: # same as CStorClusterPlan
     annotations:
         # UID of CStorClusterPlan that triggered this resource
         dao.mayadata.io/cstorclusterplan-uid:
@@ -145,6 +145,27 @@ spec:
     externalProvisioner:
         csiAttacherName:
         storageClassName:
+```
+
+```yaml
+# Storage is used to provision storage using PVC PV
+# workflow and then attach this storage against the
+# declared node.
+#
+# NOTE:
+#   A StorageSet will result in creation of one or
+# more Storage instances
+kind: Storage
+metadata:
+    # NOTE: Name will be non deterministic
+    generateName: # ccsset-
+    namespace: # same as CStorClusterStorageSet
+    annotations:
+        # UID of CStorClusterStorageSet that triggered this resource
+        dao.mayadata.io/cstorclusterstorageset-uid:
+spec:
+    capacity:
+    nodeName:
 ```
 
 ## High Level Design & Workflows
