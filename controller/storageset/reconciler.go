@@ -102,7 +102,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 
 	var observedStorages []*unstructured.Unstructured
 	for _, attachment := range request.Attachments.List() {
-		if attachment.GetKind() == string(types.KindStorage) {
+		if attachment.GetKind() == string(k8s.KindStorage) {
 			// verify further if this belongs to the current watch
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterStorageSetUID,
@@ -189,7 +189,7 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 type StoragePlanner struct {
 	ObservedStorages []*unstructured.Unstructured
 	StorageSetUID    k8stypes.UID
-	DesiredCount     int
+	DesiredCount     resource.Quantity
 	DesiredCapacity  resource.Quantity
 	DesiredNodeName  string
 	DesiredNamespace string
@@ -214,28 +214,29 @@ func NewStoragePlanner(
 // Plan provides the desired Storages
 func (p *StoragePlanner) Plan() ([]*unstructured.Unstructured, error) {
 	var finalStorages []*unstructured.Unstructured
-	if len(p.ObservedStorages) < p.DesiredCount {
+	if int64(len(p.ObservedStorages)) < p.DesiredCount.Value() {
 		// create the difference
-		createObjs := p.create(p.DesiredCount - len(p.ObservedStorages))
+		createObjs := p.create(p.DesiredCount.Value() - int64(len(p.ObservedStorages)))
 		finalStorages = append(finalStorages, createObjs...)
 	}
 	for _, storage := range p.ObservedStorages {
-		if len(finalStorages) == p.DesiredCount {
+		if int64(len(finalStorages)) == p.DesiredCount.Value() {
 			break
 		}
 		// update to desired characteristics
-		updateObj, err := p.update(storage)
+		err := p.update(storage)
 		if err != nil {
 			return nil, err
 		}
-		finalStorages = append(finalStorages, updateObj)
+		finalStorages = append(finalStorages, storage)
 	}
 	return finalStorages, nil
 }
 
-func (p *StoragePlanner) create(count int) []*unstructured.Unstructured {
+func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 	var desiredStorages []*unstructured.Unstructured
-	for i := 0; i < count; i++ {
+	var i int64
+	for i = 0; i < count; i++ {
 		new := &unstructured.Unstructured{}
 		new.SetUnstructuredContent(map[string]interface{}{
 			"metadata": map[string]interface{}{
@@ -257,10 +258,9 @@ func (p *StoragePlanner) create(count int) []*unstructured.Unstructured {
 	return desiredStorages
 }
 
-func (p *StoragePlanner) update(storage *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	storageCopy := storage.DeepCopy()
+func (p *StoragePlanner) update(storage *unstructured.Unstructured) error {
 	err := unstructured.SetNestedMap(
-		storageCopy.UnstructuredContent(),
+		storage.UnstructuredContent(),
 		map[string]interface{}{
 			"capacity": p.DesiredCapacity,
 			"nodeName": p.DesiredNodeName,
@@ -268,7 +268,7 @@ func (p *StoragePlanner) update(storage *unstructured.Unstructured) (*unstructur
 		"spec",
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return storageCopy, nil
+	return nil
 }

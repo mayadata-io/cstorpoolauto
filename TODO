@@ -1,25 +1,65 @@
 ### Design v0.2.0
 #### TODO
+- TODO - 0
+    - Workflow:
+        CStorClusterConfig
+        -> CStorClusterPlan
+        -> CStorClusterStorageSet (n)
+        -> Storage (n)
+        -> BlockDevice (n)
+    - [1] **BlockDevice controller**: Associate Storage with BlockDevice
+        - NOTE: Name of Storage = Name of PVC
+        - NOTE: PVC is associated to PV
+        - NOTE: BD contains the PV name in its path-id or so
+        - Storage is the watch
+            - Filter with particular annotations
+        - CStorClusterStorageSet is the attachment
+            - Filter based on the watch's annotation UID matching this instance' UID
+        - BD is an attachment (this becomes a huge number if not filtered)
+            - Filter those that have path-id or so
+        - PVC is an attachment
+            - Filter those with annotation of Storage's UID
+            - Find its PV
+            - Find corresponding BD whose path-id has PV name
+            - Are there multiple BDs? Bubble it as an error
+        - Annotate BlockDevice with CStorClusterPlan UID if BD's status is available
+        - Annotate BlockDevice with CStorClusterStorageSet UID if BD's status is available
+        - Bubble up as error if BD's status is error
+    - [2] **CStorPoolCluster controller**: Create a CStorPoolCluster
+        - CStorClusterPlan is the watch
+        - CStorClusterStorageSet are the attachments
+            - Filter them by annotation with CStorClusterPlan's UID
+        - BD are the attachments
+            - Filter them by annotation that has CStorClusterPlan's UID
+        - Create CStorPoolCluster by using the nodename & corresponding blockdevices
 - TODO - 1
+    - update storage provisioner codebase
+    - change ddp to dao
+    - add status.conditions to storage API
+    - set Storage's UID against PVC's annotations
+- TODO - 2
     - refactor clusterconfig reconciler
     - manage status/conditions of clusterconfig
     - refactor reconcile logic to:
+        - Defaulter,
         - CStorClusterPlanner & 
         - NodePlanner
-- TODO - 2
-    - update storage provisioner codebase
 - TODO - 3
-    - test
+    - write delete contollers
 - TODO - 4
-    - Unit Tests for cstorpoolauto
+    - manual tests
 - TODO - 5
-    - refactor storage provisioner to use metac
+    - Unit Tests for cstorpoolauto
 - TODO - 6
-    - Unit Test storage provisioner
+    - refactor storage provisioner to use metac
 - TODO - 7
-    - e2e tests for cstorpoolauto
+    - Unit Test storage provisioner
 - TODO - 8
-    - e2e tests for storage provisioner
+    - Installer & UnInstaller for DAO
+- TODO - 9
+    - e2e test controller(s) for cstorpoolauto
+- TODO - 10
+    - e2e test controller(s) for storage provisioner
 
 #### FUTURE
 - pool spread logic might be required

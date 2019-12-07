@@ -32,4 +32,7 @@ const (
 	// AnnKeyCStorClusterStorageSetUID is the annotation that refers to
 	// CStorClusterStorageSet UID
 	AnnKeyCStorClusterStorageSetUID string = AnnotationNamespace + "/cstorclusterstorageset-uid"
+
+	// AnnKeyStorageUID is the annotation that refers to Storage UID
+	AnnKeyStorageUID string = AnnotationNamespace + "/storage-uid"
 )

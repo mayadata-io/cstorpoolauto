@@ -27,6 +27,10 @@ vendor: go.mod go.sum
 	@GO111MODULE=on go mod download
 	@GO111MODULE=on go mod vendor
 
+.PHONY: test
+test: 
+	@go test ./...
+
 .PHONY: image
 image:
 	docker build -t $(REGISTRY)/$(IMG_NAME):$(PACKAGE_VERSION) .
