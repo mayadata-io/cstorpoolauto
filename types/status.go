@@ -25,32 +25,56 @@ import (
 type ConditionType string
 
 const (
-	// CStorClusterConfigConditionReconcileError is used to
+	// CStorClusterConfigReconcileErrorCondition is used to
 	// indicate presence or absence of error while reconciling
 	// CStorClusterConfig
-	CStorClusterConfigConditionReconcileError ConditionType = "CStorClusterConfigReconcileError"
+	CStorClusterConfigReconcileErrorCondition ConditionType = "CStorClusterConfigReconcileError"
 
-	// CStorClusterPlanConditionReconcileError is used to
+	// CStorClusterPlanReconcileErrorCondition is used to
 	// indicate presence or absence of error while reconciling
 	// CStorClusterConfigPlan
-	CStorClusterPlanConditionReconcileError ConditionType = "CStorClusterPlanReconcileError"
+	CStorClusterPlanReconcileErrorCondition ConditionType = "CStorClusterPlanReconcileError"
 
-	// CStorClusterStorageSetConditionReconcileError is used to
+	// CStorClusterStorageSetReconcileErrorCondition is used to
 	// indicate presence or absence of error while reconciling
 	// CStorClusterStorageSet
-	CStorClusterStorageSetConditionReconcileError ConditionType = "CStorClusterStorageSetError"
+	CStorClusterStorageSetReconcileErrorCondition ConditionType = "CStorClusterStorageSetReconcileError"
+
+	// StorageToBlockDeviceAssociationErrorCondition is used to
+	// indicate presence or absence of error while reconciling
+	// the association of Storage with corresponding BlockDevice
+	StorageToBlockDeviceAssociationErrorCondition ConditionType = "StorageToBlockDeviceAssociationError"
 )
 
-// ConditionStatus is a custom datatype that
+// ConditionState is a custom datatype that
 // refers to presence or absence of any condition
-type ConditionStatus string
+type ConditionState string
 
 const (
 	// ConditionIsPresent refers to presence of any condition
-	ConditionIsPresent ConditionStatus = "True"
+	ConditionIsPresent ConditionState = "True"
 
 	// ConditionIsAbsent refers to absence of any condition
-	ConditionIsAbsent ConditionStatus = "False"
+	ConditionIsAbsent ConditionState = "False"
+)
+
+// StatusPhase refers to various phases found in a resource'
+// status
+type StatusPhase string
+
+const (
+	// StatusPhaseError refers to a generic error status phase
+	StatusPhaseError StatusPhase = "Error"
+)
+
+// DeviceClaimState defines the observed state of BlockDevice
+type DeviceClaimState string
+
+const (
+	// BlockDeviceUnclaimed represents that the block device is
+	// not bound to any BDC, all cleanup jobs have been completed
+	// and is available for claiming.
+	BlockDeviceUnclaimed DeviceClaimState = "Unclaimed"
 )
 
 // MakeCStorClusterConfigReconcileErrCond builds a new
@@ -58,7 +82,7 @@ const (
 // suitable to be used in API status.conditions
 func MakeCStorClusterConfigReconcileErrCond(err error) map[string]string {
 	return map[string]string{
-		"type":             string(CStorClusterConfigConditionReconcileError),
+		"type":             string(CStorClusterConfigReconcileErrorCondition),
 		"status":           string(ConditionIsPresent),
 		"reason":           err.Error(),
 		"lastObservedTime": metav1.Now().String(),
@@ -70,7 +94,7 @@ func MakeCStorClusterConfigReconcileErrCond(err error) map[string]string {
 // suitable to be used in API status.conditions
 func MakeCStorClusterPlanReconcileErrCond(err error) map[string]string {
 	return map[string]string{
-		"type":             string(CStorClusterPlanConditionReconcileError),
+		"type":             string(CStorClusterPlanReconcileErrorCondition),
 		"status":           string(ConditionIsPresent),
 		"reason":           err.Error(),
 		"lastObservedTime": metav1.Now().String(),
@@ -82,7 +106,19 @@ func MakeCStorClusterPlanReconcileErrCond(err error) map[string]string {
 // suitable to be used in API status.conditions
 func MakeCStorClusterStorageSetReconcileErrCond(err error) map[string]string {
 	return map[string]string{
-		"type":             string(CStorClusterStorageSetConditionReconcileError),
+		"type":             string(CStorClusterStorageSetReconcileErrorCondition),
+		"status":           string(ConditionIsPresent),
+		"reason":           err.Error(),
+		"lastObservedTime": metav1.Now().String(),
+	}
+}
+
+// MakeStorageToBlockDeviceAssociationErrCond builds a new
+// StorageToBlockDeviceAssociationErrorCondition suitable to
+// be used in API status.conditions
+func MakeStorageToBlockDeviceAssociationErrCond(err error) map[string]string {
+	return map[string]string{
+		"type":             string(StorageToBlockDeviceAssociationErrorCondition),
 		"status":           string(ConditionIsPresent),
 		"reason":           err.Error(),
 		"lastObservedTime": metav1.Now().String(),
@@ -95,7 +131,7 @@ func MakeCStorClusterStorageSetReconcileErrCond(err error) map[string]string {
 // this error if any.
 func MakeNoCStorClusterConfigReconcileErrCond() map[string]string {
 	return map[string]string{
-		"type":             string(CStorClusterConfigConditionReconcileError),
+		"type":             string(CStorClusterConfigReconcileErrorCondition),
 		"status":           string(ConditionIsAbsent),
 		"lastObservedTime": metav1.Now().String(),
 	}
@@ -105,13 +141,13 @@ func MakeNoCStorClusterConfigReconcileErrCond() map[string]string {
 // CStorClusterConfigConditionReconcileError condition to false.
 func MergeNoReconcileErrorOnCStorClusterConfig(obj *CStorClusterConfig) {
 	noErrCond := CStorClusterConfigStatusCondition{
-		Type:             CStorClusterConfigConditionReconcileError,
+		Type:             CStorClusterConfigReconcileErrorCondition,
 		Status:           ConditionIsAbsent,
 		LastObservedTime: metav1.Now(),
 	}
 	var newConds []CStorClusterConfigStatusCondition
 	for _, old := range obj.Status.Conditions {
-		if old.Type == CStorClusterConfigConditionReconcileError {
+		if old.Type == CStorClusterConfigReconcileErrorCondition {
 			// ignore previous occurrence of ReconcileError
 			continue
 		}
@@ -125,13 +161,13 @@ func MergeNoReconcileErrorOnCStorClusterConfig(obj *CStorClusterConfig) {
 // CStorClusterPlanConditionReconcileError condition to false.
 func MergeNoReconcileErrorOnCStorClusterPlan(obj *CStorClusterPlan) {
 	noErrCond := CStorClusterPlanStatusCondition{
-		Type:             CStorClusterPlanConditionReconcileError,
+		Type:             CStorClusterPlanReconcileErrorCondition,
 		Status:           ConditionIsAbsent,
 		LastObservedTime: metav1.Now(),
 	}
 	var newConds []CStorClusterPlanStatusCondition
 	for _, old := range obj.Status.Conditions {
-		if old.Type == CStorClusterPlanConditionReconcileError {
+		if old.Type == CStorClusterPlanReconcileErrorCondition {
 			// ignore previous occurrence of ReconcileError
 			continue
 		}
@@ -145,13 +181,13 @@ func MergeNoReconcileErrorOnCStorClusterPlan(obj *CStorClusterPlan) {
 // CStorClusterStorageSetConditionReconcileError condition to false.
 func MergeNoReconcileErrorOnCStorClusterStorageSet(obj *CStorClusterStorageSet) {
 	noErrCond := CStorClusterStorageSetStatusCondition{
-		Type:             CStorClusterStorageSetConditionReconcileError,
+		Type:             CStorClusterStorageSetReconcileErrorCondition,
 		Status:           ConditionIsAbsent,
 		LastObservedTime: metav1.Now(),
 	}
 	var newConds []CStorClusterStorageSetStatusCondition
 	for _, old := range obj.Status.Conditions {
-		if old.Type == CStorClusterStorageSetConditionReconcileError {
+		if old.Type == CStorClusterStorageSetReconcileErrorCondition {
 			// ignore previous occurrence of ReconcileError
 			continue
 		}

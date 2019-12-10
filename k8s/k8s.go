@@ -38,8 +38,17 @@ const (
 	// kind CStorClusterStorageSet
 	KindCStorClusterStorageSet Kind = "CStorClusterStorageSet"
 
+	// KindCStorClusterConfig refers to custom resource with
+	// kind CStorClusterConfig
+	KindCStorClusterConfig Kind = "CStorClusterConfig"
+
 	// KindStorage refers to custom resource with kind Storage
 	KindStorage Kind = "Storage"
+
+	// KindBlockDevice refers to custom resource with kind BlockDevice
+	KindBlockDevice Kind = "BlockDevice"
+
+	KindPersistentVolumeClaim Kind = "PersistentVolumeClaim"
 )
 
 // GetNestedSlice returns the slice found at given field path

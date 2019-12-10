@@ -71,8 +71,8 @@ const (
 // CStorClusterStorageSetStatusCondition represents a condition
 // that represents the current state of CStorClusterStorageSet
 type CStorClusterStorageSetStatusCondition struct {
-	Type             ConditionType   `json:"type"`
-	Status           ConditionStatus `json:"status"`
-	Reason           string          `json:"reason,omitempty"`
-	LastObservedTime metav1.Time     `json:"lastObservedTime"`
+	Type             ConditionType  `json:"type"`
+	Status           ConditionState `json:"status"`
+	Reason           string         `json:"reason,omitempty"`
+	LastObservedTime metav1.Time    `json:"lastObservedTime"`
 }

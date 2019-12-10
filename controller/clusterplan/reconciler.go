@@ -100,7 +100,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	var observedStorageSet []*unstructured.Unstructured
 	var cstorClusterConfig *unstructured.Unstructured
 	for _, attachment := range request.Attachments.List() {
-		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
+		if attachment.GetKind() == string(k8s.KindCStorClusterStorageSet) {
 			// verify further if CStorClusterStorageSet belongs to current watch
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
@@ -113,7 +113,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				continue
 			}
 		}
-		if attachment.GetKind() == string(types.KindCStorClusterConfig) {
+		if attachment.GetKind() == string(k8s.KindCStorClusterConfig) {
 			// verify further if CStorClusterConfig belongs to current watch
 			uid, _ := k8s.GetAnnotationForKey(
 				request.Watch.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
