@@ -44,6 +44,11 @@ const (
 	// indicate presence or absence of error while reconciling
 	// the association of Storage with corresponding BlockDevice
 	StorageToBlockDeviceAssociationErrorCondition ConditionType = "StorageToBlockDeviceAssociationError"
+
+	// CStorClusterPlanCSPCApplyErrorCondition is used to indicate
+	// presence or absence of error while reconciling
+	// the CStorClusterPlan with CStorPoolCluster
+	CStorClusterPlanCSPCApplyErrorCondition ConditionType = "CStorClusterPlanCSPCApplyError"
 )
 
 // ConditionState is a custom datatype that
@@ -113,6 +118,18 @@ func MakeCStorClusterStorageSetReconcileErrCond(err error) map[string]string {
 	}
 }
 
+// MakeCStorPoolClusterApplyErrCond builds a new
+// CStorPoolClusterApplyErrorCondition suitable to be
+// used in API status.conditions
+func MakeCStorPoolClusterApplyErrCond(err error) map[string]string {
+	return map[string]string{
+		"type":             string(CStorClusterPlanCSPCApplyErrorCondition),
+		"status":           string(ConditionIsPresent),
+		"reason":           err.Error(),
+		"lastObservedTime": metav1.Now().String(),
+	}
+}
+
 // MakeStorageToBlockDeviceAssociationErrCond builds a new
 // StorageToBlockDeviceAssociationErrorCondition suitable to
 // be used in API status.conditions
@@ -168,6 +185,26 @@ func MergeNoReconcileErrorOnCStorClusterPlan(obj *CStorClusterPlan) {
 	var newConds []CStorClusterPlanStatusCondition
 	for _, old := range obj.Status.Conditions {
 		if old.Type == CStorClusterPlanReconcileErrorCondition {
+			// ignore previous occurrence of ReconcileError
+			continue
+		}
+		newConds = append(newConds, old)
+	}
+	newConds = append(newConds, noErrCond)
+	obj.Status.Conditions = newConds
+}
+
+// MergeNoCSPCApplyErrorOnCStorClusterPlan sets
+// CStorClusterPlanConditionReconcileError condition to false.
+func MergeNoCSPCApplyErrorOnCStorClusterPlan(obj *CStorClusterPlan) {
+	noErrCond := CStorClusterPlanStatusCondition{
+		Type:             CStorClusterPlanCSPCApplyErrorCondition,
+		Status:           ConditionIsAbsent,
+		LastObservedTime: metav1.Now(),
+	}
+	var newConds []CStorClusterPlanStatusCondition
+	for _, old := range obj.Status.Conditions {
+		if old.Type == CStorClusterPlanCSPCApplyErrorCondition {
 			// ignore previous occurrence of ReconcileError
 			continue
 		}

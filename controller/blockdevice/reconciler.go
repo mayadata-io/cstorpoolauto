@@ -40,7 +40,8 @@ func (h *reconcileErrHandler) handle(err error) {
 	//
 	// In addition, errors are logged as well.
 	glog.Errorf(
-		"Failed to associate a BlockDevice with Storage %s: %v", h.storage.GetName(), err,
+		"Failed to associate a BlockDevice with Storage %s %s: %v",
+		h.storage.GetNamespace(), h.storage.GetName(), err,
 	)
 
 	conds, mergeErr :=
@@ -50,8 +51,8 @@ func (h *reconcileErrHandler) handle(err error) {
 		)
 	if mergeErr != nil {
 		glog.Errorf(
-			"Can't set status conditions on Storage %s: %v",
-			h.storage.GetName(), mergeErr,
+			"Can't set status conditions on Storage %s %s: %v",
+			h.storage.GetNamespace(), h.storage.GetName(), mergeErr,
 		)
 		// Note: Merge error will reset the conditions which will make
 		// things worse since various controllers will be reconciling
@@ -185,17 +186,28 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 		return ReconcileResponse{}, err
 	}
 	// prepare the status to be set against the storage instance
-	storagePhase, found, err :=
-		unstructured.NestedString(r.Storage.UnstructuredContent(), "status", "phase")
+	status, err := r.getStorageStatusAsNoError()
 	if err != nil {
 		return ReconcileResponse{}, err
 	}
-	if !found {
-		return ReconcileResponse{}, errors.Errorf(
-			"Invalid storage %s %s: Can't find status.phase",
-			r.Storage.GetNamespace(), r.Storage.GetName(),
-		)
+	// build & return reconcile response
+	return ReconcileResponse{
+		DesiredBlockDevices: desiredBlockDevices,
+		Status:              status,
+	}, nil
+}
+
+func (r *Reconciler) getStorageStatusAsNoError() (map[string]interface{}, error) {
+	// get the existing status.phase
+	phase, found, err :=
+		unstructured.NestedString(r.Storage.UnstructuredContent(), "status", "phase")
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to get status.phase")
 	}
+	if !found {
+		return nil, errors.Errorf("Invalid storage: Can't find status.phase")
+	}
+	// get updated conditions
 	conds, err := k8s.MergeStatusConditions(
 		r.Storage,
 		map[string]string{
@@ -205,15 +217,11 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 		},
 	)
 	if err != nil {
-		return ReconcileResponse{}, err
+		return nil, err
 	}
-	// build & return reconcile response
-	return ReconcileResponse{
-		DesiredBlockDevices: desiredBlockDevices,
-		Status: map[string]interface{}{
-			"phase":      storagePhase,
-			"conditions": conds,
-		},
+	return map[string]interface{}{
+		"phase":      phase,
+		"conditions": conds,
 	}, nil
 }
 
