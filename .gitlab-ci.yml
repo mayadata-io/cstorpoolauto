@@ -1,0 +1,14 @@
+stages:
+  - build
+
+build-cstorpoolauto
+   stages: build
+   script:
+    - export BRANCH=${CI_COMMIT_REF_NAME}
+    - echo $BRANCH
+    - export COMMIT=${CI_COMMIT_SHA:0:7}
+    - echo $COMMIT
+    - TAG="$BRANCH-$COMMIT"
+    - export REPO=harshitasharma011/cstorpoolauto
+    - sudo docker build -t $REPO:TAG
+    - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" && docker push $REPO:TAG
