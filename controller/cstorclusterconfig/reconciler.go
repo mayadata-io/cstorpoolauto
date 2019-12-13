@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package reconciler
+package cstorclusterconfig
 
 import (
 	"github.com/golang/glog"
@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
-	"cstorpoolauto/controller/clusterconfig/node"
 	"cstorpoolauto/k8s"
 	"cstorpoolauto/types"
 )
@@ -32,6 +31,14 @@ import (
 const (
 	// DefaultMinPoolCount is the default value for minimum pool
 	// count
+	//
+	// NOTE:
+	//	This value is used when min pool count is not set
+	//
+	// NOTE:
+	//	The final default value is determined based on various
+	// factors e.g. current state of cluster, etc. in addition to
+	// this constant number.
 	DefaultMinPoolCount int64 = 3
 )
 
@@ -60,7 +67,8 @@ func (h *reconcileErrHandler) handle(err error) {
 	// In addition, logging has been done to check for error messages
 	// from this pod's logs.
 	glog.Errorf(
-		"Failed to reconcile CStorClusterConfig %s: %v", h.clusterConfig.GetName(), err,
+		"Failed to reconcile CStorClusterConfig %s %s: %v",
+		h.clusterConfig.GetNamespace(), h.clusterConfig.GetName(), err,
 	)
 
 	conds, mergeErr :=
@@ -69,8 +77,8 @@ func (h *reconcileErrHandler) handle(err error) {
 		)
 	if mergeErr != nil {
 		glog.Errorf(
-			"Failed to reconcile CStorClusterConfig %s: Can't set status conditions: %v",
-			h.clusterConfig.GetName(), mergeErr,
+			"Failed to reconcile CStorClusterConfig %s %s: Can't set status conditions: %v",
+			h.clusterConfig.GetNamespace(), h.clusterConfig.GetName(), mergeErr,
 		)
 		// Note: Merge error will reset the conditions which will make
 		// things worse since various controllers will be reconciling
@@ -85,15 +93,16 @@ func (h *reconcileErrHandler) handle(err error) {
 		h.hookResponse.Status["phase"] = types.CStorClusterConfigStatusPhaseError
 		h.hookResponse.Status["conditions"] = conds
 	}
-
-	// stop further reconciliation since there was an error
+	// this will stop further reconciliation at metac since there was
+	// an error
 	h.hookResponse.SkipReconcile = true
 }
 
 // Sync implements the idempotent logic to set CStorClusterConfig
-// with its defaults. CStorClusterConfig updated with defaults is
-// sent as response attachment. However, any error while updating
-// with defaults is sent as response status.
+// with its defaults i.e. defaulting controller. In addition,
+// it applies a CStorClusterPlan resource to trigger the workflow
+// of creating cstor pool instances across a set of eligible nodes
+// in the current cluster.
 //
 // NOTE:
 // 	SyncHookRequest is the payload received as part of reconcile
@@ -113,7 +122,11 @@ func (h *reconcileErrHandler) handle(err error) {
 func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) error {
 	response = &generic.SyncHookResponse{}
 
-	// nothing needs to be done if request is empty
+	// Nothing needs to be done if there are no attachments in request
+	//
+	// NOTE:
+	// 	It is expected to have CStorClusterConfig as an attachment
+	// resource as well as the resource under watch.
 	if request == nil || request.Attachments == nil || request.Attachments.IsEmpty() {
 		response.SkipReconcile = true
 		return nil
@@ -129,14 +142,17 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	var cstorClusterPlanObj *unstructured.Unstructured
 
 	for _, attachment := range request.Attachments.List() {
-		// watched resource is also present in attachments
-		if request.Watch.GetUID() == attachment.GetUID() {
-			// keep this to update during reconcile & add the
-			// updated copy to the response's attachments
+		// this watch resource must be present in the list of attachments
+		if request.Watch.GetUID() == attachment.GetUID() &&
+			attachment.GetKind() == string(k8s.KindCStorClusterConfig) {
+			// this is the required CStorClusterConfig
 			cstorClusterConfigObj = attachment
+			// add this to the response later after completion of its
+			// reconcile logic
 			continue
 		}
 		if attachment.GetKind() == string(k8s.KindCStorClusterPlan) {
+			// verify further if CStorClusterPlan is what we are looking
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
 			)
@@ -156,7 +172,8 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		return nil
 	}
 
-	// invoke the logic to set defaults against CStorClusterConfig
+	// reconciler is the one that will perform reconciliation of
+	// CStorClusterConfig resource
 	reconciler, err :=
 		NewReconciler(
 			cstorClusterConfigObj,
@@ -167,7 +184,6 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		errHandler.handle(err)
 		return nil
 	}
-
 	op, err := reconciler.Reconcile()
 	if err != nil {
 		errHandler.handle(err)
@@ -177,7 +193,6 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	// add updated CStorClusterConfig & CStorClusterConfigPlan to response
 	response.Attachments = append(response.Attachments, op.CStorClusterConfig)
 	response.Attachments = append(response.Attachments, op.CStorClusterPlan)
-
 	return nil
 }
 
@@ -185,8 +200,8 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 type Reconciler struct {
 	CStorClusterConfig *types.CStorClusterConfig
 	CStorClusterPlan   *types.CStorClusterPlan
-	Attachments        []*unstructured.Unstructured
-	NodeEvaluator      *node.CStorClusterConfigNodeEvaluator
+	Resources          []*unstructured.Unstructured
+	NodePlanner        *NodePlanner
 }
 
 // ReconcileResponse is a helper struct used to form the response
@@ -200,9 +215,9 @@ type ReconcileResponse struct {
 func NewReconciler(
 	clusterConfig *unstructured.Unstructured,
 	clusterPlan *unstructured.Unstructured,
-	attachments []*unstructured.Unstructured,
+	resources []*unstructured.Unstructured,
 ) (*Reconciler, error) {
-	// transform cluster config from unstructured to typed
+	// transform CStorClusterConfig from unstructured to typed
 	var cstorClusterConfigTyped types.CStorClusterConfig
 	cstorClusterConfigRaw, err := clusterConfig.MarshalJSON()
 	if err != nil {
@@ -213,7 +228,7 @@ func NewReconciler(
 		return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterConfig")
 	}
 
-	// transforms cluster config plan from unstructured to typed
+	// transform CStorClusterPlan from unstructured to typed
 	var cstorClusterPlanTyped *types.CStorClusterPlan
 	if clusterPlan != nil {
 		cstorClusterPlanRaw, err := clusterPlan.MarshalJSON()
@@ -229,10 +244,10 @@ func NewReconciler(
 	return &Reconciler{
 		CStorClusterConfig: &cstorClusterConfigTyped,
 		CStorClusterPlan:   cstorClusterPlanTyped,
-		Attachments:        attachments,
-		NodeEvaluator: &node.CStorClusterConfigNodeEvaluator{
-			CStorClusterConfig: &cstorClusterConfigTyped,
-			Attachments:        attachments,
+		Resources:          resources,
+		NodePlanner: &NodePlanner{
+			NodeSelector: cstorClusterConfigTyped.Spec.AllowedNodes,
+			Resources:    resources,
 		},
 	}, nil
 }
@@ -241,10 +256,10 @@ func NewReconciler(
 //
 // NOTE:
 //	Due care has been taken to let this logic be idempotent
-func (s *Reconciler) Reconcile() (ReconcileResponse, error) {
+func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 	syncFns := []func() error{
-		s.validateClusterConfigAndSetDefaultsIfNotSet,
-		s.buildClusterPlan,
+		r.validateClusterConfigAndSetDefaultsIfNotSet,
+		r.syncClusterPlan,
 	}
 	for _, syncFn := range syncFns {
 		err := syncFn()
@@ -252,31 +267,35 @@ func (s *Reconciler) Reconcile() (ReconcileResponse, error) {
 			return ReconcileResponse{}, err
 		}
 	}
-	s.resetClusterConfigReconcileErrorIfAny()
-	return s.makeReconcileResponse()
+	r.resetClusterConfigReconcileErrorIfAny()
+	return r.makeReconcileResponse()
 }
 
 // makeReconcileResponse builds reconcile response
-func (s *Reconciler) makeReconcileResponse() (ReconcileResponse, error) {
+func (r *Reconciler) makeReconcileResponse() (ReconcileResponse, error) {
 	// convert updated CStorClusterConfig from typed to unstruct
-	clusterConfigRaw, err := json.Marshal(s.CStorClusterConfig)
+	clusterConfigRaw, err := json.Marshal(r.CStorClusterConfig)
 	if err != nil {
-		return ReconcileResponse{}, err
+		return ReconcileResponse{},
+			errors.Wrapf(err, "Can't marshal CStorClusterConfig")
 	}
 	var clusterConfig unstructured.Unstructured
 	err = json.Unmarshal(clusterConfigRaw, &clusterConfig)
 	if err != nil {
-		return ReconcileResponse{}, err
+		return ReconcileResponse{},
+			errors.Wrapf(err, "Can't unmarshal CStorClusterConfig")
 	}
 	// convert updated CStorClusterConfigPlan from typed to unstruct
-	clusterConfigPlanRaw, err := json.Marshal(s.CStorClusterPlan)
+	clusterConfigPlanRaw, err := json.Marshal(r.CStorClusterPlan)
 	if err != nil {
-		return ReconcileResponse{}, err
+		return ReconcileResponse{},
+			errors.Wrapf(err, "Can't marshal CStorClusterPlan")
 	}
 	var clusterConfigPlan unstructured.Unstructured
 	err = json.Unmarshal(clusterConfigPlanRaw, &clusterConfigPlan)
 	if err != nil {
-		return ReconcileResponse{}, err
+		return ReconcileResponse{},
+			errors.Wrapf(err, "Can't unmarshal CStorClusterPlan")
 	}
 
 	return ReconcileResponse{
@@ -289,51 +308,76 @@ func (s *Reconciler) makeReconcileResponse() (ReconcileResponse, error) {
 // if any associated with CStorClusterConfig. This removes
 // ReconcileError if it ever happened during in previous
 // reconciliations.
-func (s *Reconciler) resetClusterConfigReconcileErrorIfAny() {
-	types.MergeNoReconcileErrorOnCStorClusterConfig(s.CStorClusterConfig)
+func (r *Reconciler) resetClusterConfigReconcileErrorIfAny() {
+	types.MergeNoReconcileErrorOnCStorClusterConfig(r.CStorClusterConfig)
 }
 
-// buildClusterPlan builds a CStorClusterPlan resource
-func (s *Reconciler) buildClusterPlan() error {
-
+// syncClusterPlan synchronises the CStorClusterPlan resource
+// based on current specifications at CStorClusterConfig object
+// and observed nodes at the cluster
+//
+// NOTE:
+//	This should be invoked only after CStorClusterConfig is set
+// with defaults if required.
+func (r *Reconciler) syncClusterPlan() error {
 	var observedNodes []types.CStorClusterPlanNode
-	if s.CStorClusterPlan != nil {
-		observedNodes = s.CStorClusterPlan.Spec.Nodes
+	if r.CStorClusterPlan != nil {
+		observedNodes = r.CStorClusterPlan.Spec.Nodes
 	} else {
-		s.CStorClusterPlan = &types.CStorClusterPlan{}
-		s.CStorClusterPlan.SetName(s.CStorClusterConfig.GetName())
-		s.CStorClusterPlan.SetNamespace(s.CStorClusterConfig.GetNamespace())
-		s.CStorClusterPlan.SetAnnotations(
+		r.CStorClusterPlan = &types.CStorClusterPlan{}
+		// name & namespace are same as CStorClusterConfig
+		r.CStorClusterPlan.SetName(r.CStorClusterConfig.GetName())
+		r.CStorClusterPlan.SetNamespace(r.CStorClusterConfig.GetNamespace())
+		// set CStorClusterConfig UID as an annotation for easy
+		// mapping at later stages of the workflow
+		r.CStorClusterPlan.SetAnnotations(
 			k8s.MergeToAnnotations(
 				types.AnnKeyCStorClusterConfigUID,
-				string(s.CStorClusterConfig.GetUID()),
-				s.CStorClusterPlan.GetAnnotations(),
+				string(r.CStorClusterConfig.GetUID()),
+				r.CStorClusterPlan.GetAnnotations(),
 			),
 		)
 	}
 
-	desired, err := s.NodeEvaluator.EvaluateDesiredNodes(node.EvaluationConfig{
+	// Plan should be invoked only after CStorClusterConfig is
+	// set with defaults.
+	//
+	// These defaults are passed via NodePlannerConfig to help
+	// finding the eligible nodes that are fit to form
+	// CStorPoolCluster
+	desired, err := r.NodePlanner.Plan(NodePlannerConfig{
 		ObservedNodes: observedNodes,
-		MinPoolCount:  s.CStorClusterConfig.Spec.MinPoolCount,
-		MaxPoolCount:  s.CStorClusterConfig.Spec.MaxPoolCount,
+		MinPoolCount:  r.CStorClusterConfig.Spec.MinPoolCount,
+		MaxPoolCount:  r.CStorClusterConfig.Spec.MaxPoolCount,
 	})
 	if err != nil {
 		return err
 	}
-	s.CStorClusterPlan.Spec.Nodes = desired
+	// desired nodes are set against CStorClusterPlan & not
+	// against CStorClusterConfig
+	//
+	// NOTE:
+	//	We could have used these resulting/desired nodes to be
+	// set against cstorClusterConfig.status. However, we
+	// prefered to use a dedicated resource i.e. CStorClusterPlan.
+	// A dedicated resource will provide a granular workflow
+	// to build up the CStorPoolCluster resource.
+	r.CStorClusterPlan.Spec.Nodes = desired
 	return nil
 }
 
-func (s *Reconciler) validateClusterConfigAndSetDefaultsIfNotSet() error {
+func (r *Reconciler) validateClusterConfigAndSetDefaultsIfNotSet() error {
 	// these default funcs follow a pre-defined order
-	// ensure this ordering is not changed
+	//
+	// NOTE:
+	// 	Ensure this ordering is **not** changed
 	setDefaultFns := []func() error{
-		s.validateDiskExternalProvisioner,
-		s.setMinPoolCountIfNotSet,
-		s.setMaxPoolCountIfNotSet,
-		s.setRAIDTypeIfNotSet,
-		s.setMinDiskCountIfNotSet,
-		s.setMinDiskCapacityIfNotSet,
+		r.validateDiskExternalProvisioner,
+		r.setMinPoolCountIfNotSet,
+		r.setMaxPoolCountIfNotSet,
+		r.setRAIDTypeIfNotSet,
+		r.setMinDiskCountIfNotSet,
+		r.setMinDiskCapacityIfNotSet,
 	}
 	for _, setDefaultFn := range setDefaultFns {
 		err := setDefaultFn()
@@ -349,19 +393,19 @@ func (s *Reconciler) validateClusterConfigAndSetDefaultsIfNotSet() error {
 // - Number of worker nodes
 // - Number of eligible nodes from node selector policy
 // - A default min value
-func (s *Reconciler) setMinPoolCountIfNotSet() error {
-	if s.CStorClusterConfig.Spec.MinPoolCount.CmpInt64(0) == -1 {
+func (r *Reconciler) setMinPoolCountIfNotSet() error {
+	if r.CStorClusterConfig.Spec.MinPoolCount.CmpInt64(0) == -1 {
 		return errors.Errorf(
-			"Invalid min pool count %d: Want positive value",
-			s.CStorClusterConfig.Spec.MinPoolCount.Value(),
+			"Invalid MinPoolCount %d: Want positive value",
+			r.CStorClusterConfig.Spec.MinPoolCount.Value(),
 		)
 	}
-	if s.CStorClusterConfig.Spec.MinPoolCount.CmpInt64(0) != 0 {
+	if r.CStorClusterConfig.Spec.MinPoolCount.CmpInt64(0) != 0 {
 		// don't set default value if it is already configured
 		return nil
 	}
-	availableNodeCount := s.NodeEvaluator.GetNodeCount()
-	eligibleNodeCount, err := s.NodeEvaluator.GetEligibleNodeCount()
+	availableNodeCount := r.NodePlanner.GetAllNodeCount()
+	eligibleNodeCount, err := r.NodePlanner.GetAllowedNodeCount()
 	if err != nil {
 		return err
 	}
@@ -372,78 +416,89 @@ func (s *Reconciler) setMinPoolCountIfNotSet() error {
 		minPoolCount = availableNodeCount
 	}
 	if eligibleNodeCount < minPoolCount {
+		// use the lowest value
 		minPoolCount = eligibleNodeCount
 	}
 	if minPoolCount <= 0 {
-		return errors.Errorf("Min pool count can't be 0: Preferred nodes not found")
+		return errors.Errorf("MinPoolCount can't be 0: Preferred nodes not found")
 	}
-	// set min
-	s.CStorClusterConfig.Spec.MinPoolCount.Set(minPoolCount)
+	// set the min value
+	r.CStorClusterConfig.Spec.MinPoolCount.Set(minPoolCount)
 	return nil
 }
 
-func (s *Reconciler) setMaxPoolCountIfNotSet() error {
-	if s.CStorClusterConfig.Spec.MaxPoolCount.CmpInt64(0) == 0 {
+func (r *Reconciler) setMaxPoolCountIfNotSet() error {
+	if r.CStorClusterConfig.Spec.MaxPoolCount.CmpInt64(0) == 0 {
 		// max pool count is not set, so set it as min + 2
-		s.CStorClusterConfig.Spec.MaxPoolCount.Set(
-			s.CStorClusterConfig.Spec.MinPoolCount.Value() + 2,
+		r.CStorClusterConfig.Spec.MaxPoolCount.Set(
+			r.CStorClusterConfig.Spec.MinPoolCount.Value() + 2,
 		)
 		return nil
 	}
-	if s.CStorClusterConfig.Spec.MinPoolCount.Cmp(s.CStorClusterConfig.Spec.MaxPoolCount) == 1 {
-		return errors.Errorf("MaxPoolCount can't be less than MinPoolCount")
+	if r.CStorClusterConfig.Spec.MinPoolCount.Cmp(r.CStorClusterConfig.Spec.MaxPoolCount) == 1 {
+		return errors.Errorf(
+			"MaxPoolCount %d can't be less than MinPoolCount %d",
+			r.CStorClusterConfig.Spec.MaxPoolCount.Value(),
+			r.CStorClusterConfig.Spec.MinPoolCount.Value(),
+		)
 	}
 	return nil
 }
 
-func (s *Reconciler) setRAIDTypeIfNotSet() error {
-	if s.CStorClusterConfig.Spec.PoolConfig.RAIDType == "" {
-		s.CStorClusterConfig.Spec.PoolConfig.RAIDType = types.PoolRAIDTypeDefault
+func (r *Reconciler) setRAIDTypeIfNotSet() error {
+	if r.CStorClusterConfig.Spec.PoolConfig.RAIDType == "" {
+		r.CStorClusterConfig.Spec.PoolConfig.RAIDType = types.PoolRAIDTypeDefault
 		return nil
 	}
-	switch s.CStorClusterConfig.Spec.PoolConfig.RAIDType {
+	switch r.CStorClusterConfig.Spec.PoolConfig.RAIDType {
 	case types.PoolRAIDTypeStripe, types.PoolRAIDTypeMirror,
 		types.PoolRAIDTypeRAIDZ, types.PoolRAIDTypeRAIDZ2:
 		// do nothing
 	default:
 		return errors.Errorf(
-			"Invalid RAID type %s", s.CStorClusterConfig.Spec.PoolConfig.RAIDType,
+			"Invalid RAID type %s", r.CStorClusterConfig.Spec.PoolConfig.RAIDType,
 		)
 	}
 	return nil
 }
 
-func (s *Reconciler) setMinDiskCountIfNotSet() error {
-	if s.CStorClusterConfig.Spec.DiskConfig.MinCount.CmpInt64(0) == -1 {
-		return errors.Errorf("Invalid min disk count: Want positive value")
+func (r *Reconciler) setMinDiskCountIfNotSet() error {
+	if r.CStorClusterConfig.Spec.DiskConfig.MinCount.CmpInt64(0) == -1 {
+		return errors.Errorf(
+			"Invalid MinDiskCount %d: Want positive value",
+			r.CStorClusterConfig.Spec.DiskConfig.MinCount.Value(),
+		)
 	}
-	if s.CStorClusterConfig.Spec.DiskConfig.MinCount.CmpInt64(0) == 1 {
+	if r.CStorClusterConfig.Spec.DiskConfig.MinCount.CmpInt64(0) == 1 {
 		// no need to set default since it is already configured
 		return nil
 	}
-	s.CStorClusterConfig.Spec.DiskConfig.MinCount.Set(
-		RAIDTypeToDefaultMinDiskCount[s.CStorClusterConfig.Spec.PoolConfig.RAIDType],
+	r.CStorClusterConfig.Spec.DiskConfig.MinCount.Set(
+		RAIDTypeToDefaultMinDiskCount[r.CStorClusterConfig.Spec.PoolConfig.RAIDType],
 	)
 	return nil
 }
 
-func (s *Reconciler) setMinDiskCapacityIfNotSet() error {
-	if s.CStorClusterConfig.Spec.DiskConfig.MinCapacity.CmpInt64(0) == -1 {
-		return errors.Errorf("Invalid min disk capacity: Want positive value")
+func (r *Reconciler) setMinDiskCapacityIfNotSet() error {
+	if r.CStorClusterConfig.Spec.DiskConfig.MinCapacity.CmpInt64(0) == -1 {
+		return errors.Errorf(
+			"Invalid MinDiskCapacity %s: Want positive value",
+			r.CStorClusterConfig.Spec.DiskConfig.MinCapacity.String(),
+		)
 	}
-	if s.CStorClusterConfig.Spec.DiskConfig.MinCapacity.CmpInt64(0) != 0 {
+	if r.CStorClusterConfig.Spec.DiskConfig.MinCapacity.CmpInt64(0) != 0 {
 		// no need to set default since it is already configured
 		return nil
 	}
-	s.CStorClusterConfig.Spec.DiskConfig.MinCapacity = DefaultMinDiskCapacity
+	r.CStorClusterConfig.Spec.DiskConfig.MinCapacity = DefaultMinDiskCapacity
 	return nil
 }
 
-func (s *Reconciler) validateDiskExternalProvisioner() error {
-	if s.CStorClusterConfig.Spec.DiskConfig.ExternalProvisioner.CSIAttacherName == "" ||
-		s.CStorClusterConfig.Spec.DiskConfig.ExternalProvisioner.StorageClassName == "" {
+func (r *Reconciler) validateDiskExternalProvisioner() error {
+	if r.CStorClusterConfig.Spec.DiskConfig.ExternalProvisioner.CSIAttacherName == "" ||
+		r.CStorClusterConfig.Spec.DiskConfig.ExternalProvisioner.StorageClassName == "" {
 		return errors.Errorf(
-			"Invalid disk external provisioner: Both csi attacher & storageclass are required",
+			"Invalid disk ExternalProvisioner: Both csi attacher & storageclass are required",
 		)
 	}
 	return nil
