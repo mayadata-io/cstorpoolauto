@@ -20,11 +20,29 @@ import (
 	"openebs.io/metac/controller/generic"
 	"openebs.io/metac/start"
 
-	ccreconciler "cstorpoolauto/controller/clusterconfig/reconciler"
+	"cstorpoolauto/controller/blockdevice"
+	"cstorpoolauto/controller/cstorclusterconfig"
+	"cstorpoolauto/controller/cstorclusterplan"
+	"cstorpoolauto/controller/cstorclusterstorageset"
+	"cstorpoolauto/controller/cstorpoolcluster"
 )
 
+// main function is the entry point of this binary.
+//
+// This registers various controller (i.e. kubernetes reconciler)
+// handler functions. Each handler function gets triggered due
+// to any changes (add, update or delete) to configured watch
+// resource.
+//
+// NOTE:
+// 	These functions will also be triggered in case this binary
+// gets deployed or redeployed (due to restarts, etc.).
 func main() {
-	generic.AddToInlineRegistry("sync/cstorclusterconfig/default", ccreconciler.Sync)
+	generic.AddToInlineRegistry("sync/cstorclusterconfig", cstorclusterconfig.Sync)
+	generic.AddToInlineRegistry("sync/cstorclusterplan", cstorclusterplan.Sync)
+	generic.AddToInlineRegistry("sync/cstorclusterstorageset", cstorclusterstorageset.Sync)
+	generic.AddToInlineRegistry("sync/blockdevice", blockdevice.Sync)
+	generic.AddToInlineRegistry("sync/cstorpoolcluster", cstorpoolcluster.Sync)
 
 	start.Start()
 }

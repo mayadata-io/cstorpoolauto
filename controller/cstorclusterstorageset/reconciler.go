@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package storageset
+package cstorclusterstorageset
 
 import (
 	"encoding/json"
@@ -42,7 +42,8 @@ func (h *reconcileErrHandler) handle(err error) {
 	//
 	// In addition, errors are logged as well.
 	glog.Errorf(
-		"Failed to reconcile CStorClusterStorageSet %s: %v", h.storageSet.GetName(), err,
+		"Failed to reconcile CStorClusterStorageSet %s %s: %v",
+		h.storageSet.GetNamespace(), h.storageSet.GetName(), err,
 	)
 
 	conds, mergeErr :=
@@ -52,8 +53,8 @@ func (h *reconcileErrHandler) handle(err error) {
 		)
 	if mergeErr != nil {
 		glog.Errorf(
-			"Failed to reconcile CStorClusterStorageSet %s: Can't set status conditions: %v",
-			h.storageSet.GetName(), mergeErr,
+			"Failed to reconcile CStorClusterStorageSet %s %s: Can't set status conditions: %v",
+			h.storageSet.GetNamespace(), h.storageSet.GetName(), mergeErr,
 		)
 		// Note: Merge error will reset the conditions which will make
 		// things worse since various controllers will be reconciling
@@ -68,12 +69,11 @@ func (h *reconcileErrHandler) handle(err error) {
 		h.hookResponse.Status["phase"] = types.CStorClusterStorageSetStatusPhaseError
 		h.hookResponse.Status["conditions"] = conds
 	}
-
-	// stop further reconciliation since there was an error
+	// this will stop further reconciliation at metac since there was an error
 	h.hookResponse.SkipReconcile = true
 }
 
-// Sync implements the idempotent logic reconcile
+// Sync implements the idempotent logic to reconcile
 // CStorClusterStorageSet
 //
 // NOTE:
@@ -83,8 +83,8 @@ func (h *reconcileErrHandler) handle(err error) {
 //
 // NOTE:
 //	SyncHookRequest uses CStorClusterStorageSet as the watched resource.
-// SyncHookResponse has the resources that forms the desired state
-// w.r.t the watched resource.
+// SyncHookResponse has the resource(s) that in turn form the desired
+// state in the cluster.
 //
 // NOTE:
 //	Returning error will panic this process. We would rather want this
@@ -115,7 +115,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				continue
 			}
 		}
-		// add attachments as-is if they are not of kind Storage
+		// add attachments to response if they are not of kind Storage
 		response.Attachments = append(response.Attachments, attachment)
 	}
 
@@ -169,8 +169,16 @@ func NewReconciler(
 	}, nil
 }
 
-// Reconcile observed state of CStorClusterStorageSet to its desired
-// state
+// Reconcile observed state of CStorClusterStorageSet to its
+// desired state
+//
+// Reconcile provides the desired Storages to be either created,
+// removed, updated or perhaps does not require any change.
+// at the cluster.
+//
+// NOTE:
+//	The logic to either create, delete, update or noop is
+// handled by metac (which is the underlying library)
 func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 	planner := NewStoragePlanner(r.CStorClusterStorageSet, r.ObservedStorages)
 	desiredStorages, err := planner.Plan()
@@ -179,7 +187,9 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 	}
 	return ReconcileResponse{
 		DesiredStorages: desiredStorages,
-		Status:          types.MakeCStorClusterStorageSetStatusToOnline(r.CStorClusterStorageSet),
+		Status: types.MakeCStorClusterStorageSetToOnlineWithNoReconcileErr(
+			r.CStorClusterStorageSet,
+		),
 	}, nil
 }
 
@@ -211,16 +221,21 @@ func NewStoragePlanner(
 	}
 }
 
-// Plan provides the desired Storages
+// Plan plans the desired Storages to be either **created**,
+// **removed**, **updated** or perhaps a **noop** i.e. does
+// not require any change at the cluster.
 func (p *StoragePlanner) Plan() ([]*unstructured.Unstructured, error) {
 	var finalStorages []*unstructured.Unstructured
 	if int64(len(p.ObservedStorages)) < p.DesiredCount.Value() {
-		// create the difference
+		// more storages are desired than what is currently observed
+		// hence create the diff
 		createObjs := p.create(p.DesiredCount.Value() - int64(len(p.ObservedStorages)))
 		finalStorages = append(finalStorages, createObjs...)
 	}
 	for _, storage := range p.ObservedStorages {
 		if int64(len(finalStorages)) == p.DesiredCount.Value() {
+			// we have already achieved the desired count of
+			// Storage(s)
 			break
 		}
 		// update to desired characteristics
@@ -228,11 +243,15 @@ func (p *StoragePlanner) Plan() ([]*unstructured.Unstructured, error) {
 		if err != nil {
 			return nil, err
 		}
+		// add this updated Storage to the desired list
 		finalStorages = append(finalStorages, storage)
 	}
 	return finalStorages, nil
 }
 
+// create will create the Storage(s) specifications which when
+// applied should achieve the desired state. It creates given
+// count number of Storage specifications.
 func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 	var desiredStorages []*unstructured.Unstructured
 	var i int64
@@ -258,6 +277,9 @@ func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 	return desiredStorages
 }
 
+// update modifies the given Storage instance with the
+// desired storage capacity & node on which this storage
+// should get attached
 func (p *StoragePlanner) update(storage *unstructured.Unstructured) error {
 	err := unstructured.SetNestedMap(
 		storage.UnstructuredContent(),
@@ -268,7 +290,11 @@ func (p *StoragePlanner) update(storage *unstructured.Unstructured) error {
 		"spec",
 	)
 	if err != nil {
-		return err
+		return errors.Wrapf(
+			err,
+			"Failed to update specs for Storage %s %s",
+			storage.GetNamespace(), storage.GetName(),
+		)
 	}
 	return nil
 }

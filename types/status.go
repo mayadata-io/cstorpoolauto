@@ -20,6 +20,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// TODO(@amitkumardas):
+// Move status & conditions logic to individual controller/xyz
+// packages. Let the constants be available in this package/file.
+
 // ConditionType is a custom datatype that
 // refers to various conditions supported in this operator
 type ConditionType string
@@ -118,10 +122,10 @@ func MakeCStorClusterStorageSetReconcileErrCond(err error) map[string]string {
 	}
 }
 
-// MakeCStorPoolClusterApplyErrCond builds a new
+// MakeCStorClusterPlanCSPCApplyErrCond builds a new
 // CStorPoolClusterApplyErrorCondition suitable to be
 // used in API status.conditions
-func MakeCStorPoolClusterApplyErrCond(err error) map[string]string {
+func MakeCStorClusterPlanCSPCApplyErrCond(err error) map[string]string {
 	return map[string]string{
 		"type":             string(CStorClusterPlanCSPCApplyErrorCondition),
 		"status":           string(ConditionIsPresent),
@@ -234,9 +238,10 @@ func MergeNoReconcileErrorOnCStorClusterStorageSet(obj *CStorClusterStorageSet) 
 	obj.Status.Conditions = newConds
 }
 
-// MakeCStorClusterPlanStatusToOnline sets the given CStorClusterPlan
-// status to online and returns this newly formed status object.
-func MakeCStorClusterPlanStatusToOnline(obj *CStorClusterPlan) map[string]interface{} {
+// MakeCStorClusterPlanToOnlineWithNoReconcileErr sets the given
+// CStorClusterPlan status to online and returns this newly
+// formed status object.
+func MakeCStorClusterPlanToOnlineWithNoReconcileErr(obj *CStorClusterPlan) map[string]interface{} {
 	MergeNoReconcileErrorOnCStorClusterPlan(obj)
 	obj.Status.Phase = CStorClusterPlanStatusPhaseOnline
 	return map[string]interface{}{
@@ -245,10 +250,10 @@ func MakeCStorClusterPlanStatusToOnline(obj *CStorClusterPlan) map[string]interf
 	}
 }
 
-// MakeCStorClusterStorageSetStatusToOnline sets the given
-// CStorClusterStorageSet status to online and
-// returns this newly formed status object.
-func MakeCStorClusterStorageSetStatusToOnline(obj *CStorClusterStorageSet) map[string]interface{} {
+// MakeCStorClusterStorageSetToOnlineWithNoReconcileErr sets the given
+// CStorClusterStorageSet status to online and returns this newly
+// formed status object.
+func MakeCStorClusterStorageSetToOnlineWithNoReconcileErr(obj *CStorClusterStorageSet) map[string]interface{} {
 	MergeNoReconcileErrorOnCStorClusterStorageSet(obj)
 	obj.Status.Phase = CStorClusterStorageSetStatusPhaseOnline
 	return map[string]interface{}{
