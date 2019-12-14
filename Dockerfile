@@ -23,6 +23,7 @@ COPY Makefile Makefile
 COPY cmd/ ./cmd/
 COPY k8s/ ./k8s/
 COPY types/ ./types/
+COPY util/ ./util/
 COPY controller/ ./controller/
 
 # build cspauto binary
@@ -37,6 +38,7 @@ RUN apt-get update && \
   apt-get install --no-install-recommends -y ca-certificates && \
   rm -rf /var/lib/apt/lists/*
 
+COPY config/metac.yaml /etc/config/metac/metac.yaml
 COPY --from=builder /cstorpoolauto /usr/bin/
 
 CMD ["/usr/bin/cstorpoolauto"]

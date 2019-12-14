@@ -1,37 +1,31 @@
 ---
-# This deployment deploys cstorpoolauto server
+# This StatefulSet deploys cstorpoolauto server
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
+  labels:
+    app.mayadata.io/name: cstorpoolauto
   name: cstorpoolauto
   namespace: dao
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: cstorpoolauto
+      app.mayadata.io/name: cstorpoolauto
+  serviceName: ""
   template:
     metadata:
       labels:
-        app: cstorpoolauto
+        app.mayadata.io/name: cstorpoolauto
     spec:
+      serviceAccountName: cstorpoolauto
       containers:
-      - name: server
+      - name: cstorpoolauto
         image: quay.io/amitkumardas/cstorpoolauto:latest
-        command: ["cstorpoolauto"]
+        command: ["/usr/bin/cstorpoolauto"]
+        args:
+        - --logtostderr
+        - --run-as-local
+        - -v=4
+        - --discovery-interval=20s
 ---
-# This is the corresponding Kubernetes service
-# of cstorpoolauto server. Consumers of cstorpoolauto
-# server will make use of this service namespace, name
-# & port to communicate to cstorpoolauto server.
-apiVersion: v1
-kind: Service
-metadata:
-  name: cstorpoolauto
-  namespace: dao
-spec:
-  selector:
-    app: cstorpoolauto
-  ports:
-  - port: 80
-    targetPort: 8080

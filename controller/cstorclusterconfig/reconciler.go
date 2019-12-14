@@ -353,10 +353,13 @@ func (r *Reconciler) syncClusterPlan() error {
 	if err != nil {
 		return err
 	}
+	if len(desired) == 0 {
+		return errors.Errorf("No elgible nodes were found")
+	}
 	// desired nodes are set against CStorClusterPlan & not
 	// against CStorClusterConfig
 	//
-	// NOTE:
+	// NOTE: (design decision)
 	//	We could have used these resulting/desired nodes to be
 	// set against cstorClusterConfig.status. However, we
 	// prefered to use a dedicated resource i.e. CStorClusterPlan.

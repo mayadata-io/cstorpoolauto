@@ -2,7 +2,20 @@
 #### TODO
 - TODO - 0
     - metacontroller configs
-    - logs
+        - each config should have unique names
+    - deterministic names
+        - CStorClusterStorageSet(s)
+            - make use of the node that is set in its spec
+            - use the node UID as its name's suffix
+            - use cscplan- as its name's prefix
+            - e.g. cscplan-<node uid that used in StorageSet during later's creation>
+        - Storage(s)
+            - make use of StorageSet name as its name's prefix
+            - make use of count index as its name's suffix
+            - e.g. <storagesetname>-1, <storagesetname>-2, etc
+        - Remove / Scale Down should be done to young disks
+            - current logic removes young nodes.
+            - however, young nodes may attach old disks i.e. bigger data
 - TODO - 1
     - update storage provisioner codebase
     - change ddp to dao
