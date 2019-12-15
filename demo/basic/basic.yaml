@@ -1,0 +1,12 @@
+apiVersion: dao.mayadata.io/v1alpha1
+kind: CStorClusterConfig
+metadata:
+    name: my-cstor-cluster
+    namespace: dao
+spec:
+    diskConfig:
+        externalProvisioner:
+            csiAttacherName:
+            storageClassName:
+    poolConfig:
+        raidType: mirror

@@ -37,6 +37,10 @@ import (
 // NOTE:
 // 	These functions will also be triggered in case this binary
 // gets deployed or redeployed (due to restarts, etc.).
+//
+// NOTE:
+//	One can consider each registered function as an independent
+// kubernetes controller & this project as the operator.
 func main() {
 	generic.AddToInlineRegistry("sync/cstorclusterconfig", cstorclusterconfig.Sync)
 	generic.AddToInlineRegistry("sync/cstorclusterplan", cstorclusterplan.Sync)

@@ -2,15 +2,45 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: cspcautos.dao.mayadata.io
+  name: cstorclusterconfigs.dao.mayadata.io
 spec:
   group: dao.mayadata.io
   version: v1alpha1
   scope: Namespaced
   names:
-    plural: cspcautos
-    singular: cspcauto
-    kind: CSPCAuto
+    plural: cstorclusterconfigs
+    singular: cstorclusterconfig
+    kind: CStorClusterConfig
     shortNames:
-    - cspcauto
+    - cscconfig
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: cstorclusterplans.dao.mayadata.io
+spec:
+  group: dao.mayadata.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: cstorclusterplans
+    singular: cstorclusterplan
+    kind: CStorClusterPlan
+    shortNames:
+    - cscplan
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: cstorclusterstoragesets.dao.mayadata.io
+spec:
+  group: dao.mayadata.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: cstorclusterstoragesets
+    singular: cstorclusterstorageset
+    kind: CStorClusterStorageSet
+    shortNames:
+    - cscstorageset
 ---

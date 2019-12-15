@@ -1,78 +1,41 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: dao
+  name: cstorpoolauto
   namespace: dao
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: dao
+  name: cstorpoolauto
 rules:
 - apiGroups:
-  - "dao.mayadata.io"
+  - "*"
   resources:
-  - "*"
+  - cstorclusterconfigs
+  - cstorclusterplans
+  - cstorclusterstoragesets
+  - storages
+  - persistentvolumeclaims
+  - blockdevices
+  - cstorpoolclusters
   verbs:
-  - "*"
+  - get
+  - list
+  - watch
+  - create
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: dao
+  name: cstorpoolauto
 subjects:
 - kind: ServiceAccount
-  name: dao
+  name: cstorpoolauto
   namespace: dao
 roleRef:
   kind: ClusterRole
-  name: dao
+  name: cstorpoolauto
   apiGroup: rbac.authorization.k8s.io
 ---
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: aggregate-dao-view
-  labels:
-    rbac.authorization.k8s.io/aggregate-to-admin: "true"
-    rbac.authorization.k8s.io/aggregate-to-edit: "true"
-    rbac.authorization.k8s.io/aggregate-to-view: "true"
-rules:
-- apiGroups:
-  - dao.mayadata.io
-  resources:
-  - storages
-  - cstorpoolautos
-  - persistentvolumeclaims
-  - persistentvolumes
-  - volumeattachments
-  - storageclasses
-  verbs:
-  - get
-  - list
-  - watch
----
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: aggregate-dao-edit
-  labels:
-    rbac.authorization.k8s.io/aggregate-to-admin: "true"
-    rbac.authorization.k8s.io/aggregate-to-edit: "true"
-rules:
-- apiGroups:
-  - dao.mayadata.io
-  resources:
-  - storages
-  - cstorpoolautos
-  - persistentvolumeclaims
-  - volumeattachments
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
