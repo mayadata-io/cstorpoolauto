@@ -1,7 +1,6 @@
 stages:
   - build
 
-
 build-cstorpoolauto:
    stage: build
    script:
