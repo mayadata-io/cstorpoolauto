@@ -10,6 +10,6 @@ build-cstorpoolauto:
     - echo $COMMIT
     - TAG="$BRANCH-$COMMIT"
     - echo $TAG
-    - export REPO=mayadata.io/cstorpoolauto
+    - export REPO=mayadataio/cstorpoolauto
     - docker build -t $REPO:$TAG .
     - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD" && docker push $REPO:$TAG
