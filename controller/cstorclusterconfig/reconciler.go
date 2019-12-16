@@ -21,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
@@ -67,7 +68,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	// In addition, logging has been done to check for error messages
 	// from this pod's logs.
 	glog.Errorf(
-		"Failed to reconcile CStorClusterConfig %s %s: %v",
+		"Failed to reconcile CStorClusterConfig %s %s: %+v",
 		h.clusterConfig.GetNamespace(), h.clusterConfig.GetName(), err,
 	)
 
@@ -77,7 +78,7 @@ func (h *reconcileErrHandler) handle(err error) {
 		)
 	if mergeErr != nil {
 		glog.Errorf(
-			"Failed to reconcile CStorClusterConfig %s %s: Can't set status conditions: %v",
+			"Failed to reconcile CStorClusterConfig %s %s: Can't set status conditions: %+v",
 			h.clusterConfig.GetNamespace(), h.clusterConfig.GetName(), mergeErr,
 		)
 		// Note: Merge error will reset the conditions which will make
@@ -147,14 +148,14 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	for _, attachment := range request.Attachments.List() {
 		// this watch resource must be present in the list of attachments
 		if request.Watch.GetUID() == attachment.GetUID() &&
-			attachment.GetKind() == string(k8s.KindCStorClusterConfig) {
+			attachment.GetKind() == string(types.KindCStorClusterConfig) {
 			// this is the required CStorClusterConfig
 			cstorClusterConfigObj = attachment
 			// add this to the response later after completion of its
 			// reconcile logic
 			continue
 		}
-		if attachment.GetKind() == string(k8s.KindCStorClusterPlan) {
+		if attachment.GetKind() == string(types.KindCStorClusterPlan) {
 			// verify further if CStorClusterPlan is what we are looking
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
@@ -328,6 +329,11 @@ func (r *Reconciler) syncClusterPlan() error {
 		observedNodes = r.CStorClusterPlan.Spec.Nodes
 	} else {
 		r.CStorClusterPlan = &types.CStorClusterPlan{}
+		r.CStorClusterPlan.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   types.GroupDAOMayaDataIO,
+			Version: types.VersionV1Alpha1,
+			Kind:    string(types.KindCStorClusterPlan),
+		})
 		// name & namespace are same as CStorClusterConfig
 		r.CStorClusterPlan.SetName(r.CStorClusterConfig.GetName())
 		r.CStorClusterPlan.SetNamespace(r.CStorClusterConfig.GetNamespace())

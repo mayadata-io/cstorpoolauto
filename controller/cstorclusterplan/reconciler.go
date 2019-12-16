@@ -40,7 +40,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	//
 	// In addition, errors are logged as well.
 	glog.Errorf(
-		"Failed to reconcile CStorClusterPlan %s %s: %v",
+		"Failed to reconcile CStorClusterPlan %s %s: %+v",
 		h.clusterPlan.GetNamespace(), h.clusterPlan.GetName(), err,
 	)
 
@@ -51,7 +51,7 @@ func (h *reconcileErrHandler) handle(err error) {
 		)
 	if mergeErr != nil {
 		glog.Errorf(
-			"Failed to reconcile CStorClusterPlan %s %s: Can't set status conditions: %v",
+			"Failed to reconcile CStorClusterPlan %s %s: Can't set status conditions: %+v",
 			h.clusterPlan.GetNamespace(), h.clusterPlan.GetName(), mergeErr,
 		)
 		// Note: Merge error will reset the conditions which will make
@@ -109,7 +109,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		request.Watch.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
 	)
 	for _, attachment := range request.Attachments.List() {
-		if attachment.GetKind() == string(k8s.KindCStorClusterStorageSet) {
+		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
 			// verify further if CStorClusterStorageSet belongs to current watch
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
@@ -122,7 +122,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				continue
 			}
 		}
-		if attachment.GetKind() == string(k8s.KindCStorClusterConfig) {
+		if attachment.GetKind() == string(types.KindCStorClusterConfig) {
 			// verify further if CStorClusterConfig belongs to current watch
 			if string(attachment.GetUID()) == desiredCStorClusterConfigUID {
 				// this is a desired CStorClusterConfig
@@ -364,8 +364,8 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 		storageSet := &unstructured.Unstructured{}
 		storageSet.SetUnstructuredContent(map[string]interface{}{
 			"metadata": map[string]interface{}{
-				"apiVersion":   "dao.mayadata.io/v1alpha1",
-				"kind":         "CStorClusterStorageSet",
+				"apiVersion":   string(types.APIVersionDAOMayaDataV1Alpha1),
+				"kind":         string(types.KindCStorClusterStorageSet),
 				"generateName": "ccplan-", // ccplan -> CStorClusterPlan
 				"namespace":    p.ClusterPlan.GetNamespace(),
 				"annotations": map[string]interface{}{

@@ -43,7 +43,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	//
 	// In addition, errors are logged as well.
 	glog.Errorf(
-		"Failed to apply CStorPoolCluster for CStorClusterPlan %s %s: %v",
+		"Failed to apply CStorPoolCluster for CStorClusterPlan %s %s: %+v",
 		h.clusterPlan.GetNamespace(), h.clusterPlan.GetName(), err,
 	)
 
@@ -53,7 +53,7 @@ func (h *reconcileErrHandler) handle(err error) {
 		)
 	if mergeErr != nil {
 		glog.Errorf(
-			"Can't set status conditions for CStorClusterPlan %s %s: %v",
+			"Can't set status conditions for CStorClusterPlan %s %s: %+v",
 			h.clusterPlan.GetNamespace(), h.clusterPlan.GetName(), mergeErr,
 		)
 		// Note: Merge error will reset the conditions which will make
@@ -115,7 +115,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	var observedBlockDevices []*unstructured.Unstructured
 	var observedStorageSets []*unstructured.Unstructured
 	for _, attachment := range request.Attachments.List() {
-		if attachment.GetKind() == string(k8s.KindCStorPoolCluster) {
+		if attachment.GetKind() == string(types.KindCStorPoolCluster) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
 			uid, _ := k8s.GetAnnotationForKey(
@@ -129,7 +129,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				continue
 			}
 		}
-		if attachment.GetKind() == string(k8s.KindBlockDevice) {
+		if attachment.GetKind() == string(types.KindBlockDevice) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
 			uid, _ := k8s.GetAnnotationForKey(
@@ -140,7 +140,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				observedBlockDevices = append(observedBlockDevices, attachment)
 			}
 		}
-		if attachment.GetKind() == string(k8s.KindCStorClusterStorageSet) {
+		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
 			uid, _ := k8s.GetAnnotationForKey(
@@ -151,7 +151,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				observedStorageSets = append(observedStorageSets, attachment)
 			}
 		}
-		if attachment.GetKind() == string(k8s.KindCStorClusterConfig) {
+		if attachment.GetKind() == string(types.KindCStorClusterConfig) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
 			uid, _ := k8s.GetAnnotationForKey(
@@ -540,8 +540,8 @@ func (p *Planner) Plan() (*unstructured.Unstructured, error) {
 	desired := &unstructured.Unstructured{}
 	desired.SetUnstructuredContent(map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"apiVersion": "openebs.io/v1alpha1",
-			"kind":       "CStorPoolCluster",
+			"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+			"kind":       string(types.KindCStorPoolCluster),
 			"name":       p.CStorClusterPlan.GetName(),
 			"namespace":  p.CStorClusterPlan.GetNamespace(),
 			"annotations": map[string]interface{}{

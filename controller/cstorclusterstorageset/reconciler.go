@@ -42,7 +42,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	//
 	// In addition, errors are logged as well.
 	glog.Errorf(
-		"Failed to reconcile CStorClusterStorageSet %s %s: %v",
+		"Failed to reconcile CStorClusterStorageSet %s %s: %+v",
 		h.storageSet.GetNamespace(), h.storageSet.GetName(), err,
 	)
 
@@ -53,7 +53,7 @@ func (h *reconcileErrHandler) handle(err error) {
 		)
 	if mergeErr != nil {
 		glog.Errorf(
-			"Failed to reconcile CStorClusterStorageSet %s %s: Can't set status conditions: %v",
+			"Failed to reconcile CStorClusterStorageSet %s %s: Can't set status conditions: %+v",
 			h.storageSet.GetNamespace(), h.storageSet.GetName(), mergeErr,
 		)
 		// Note: Merge error will reset the conditions which will make
@@ -107,7 +107,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 
 	var observedStorages []*unstructured.Unstructured
 	for _, attachment := range request.Attachments.List() {
-		if attachment.GetKind() == string(k8s.KindStorage) {
+		if attachment.GetKind() == string(types.KindStorage) {
 			// verify further if this belongs to the current watch
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterStorageSetUID,
@@ -264,8 +264,8 @@ func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 		new := &unstructured.Unstructured{}
 		new.SetUnstructuredContent(map[string]interface{}{
 			"metadata": map[string]interface{}{
-				"apiVersion":   "dao.mayadata.io/v1alpha1",
-				"kind":         "Storage",
+				"apiVersion":   string(types.APIVersionDAOMayaDataV1Alpha1),
+				"kind":         string(types.KindStorage),
 				"generateName": "ccsset-", // ccsset -> CStorClusterStorageSet
 				"namespace":    p.DesiredNamespace,
 				"annotations": map[string]interface{}{

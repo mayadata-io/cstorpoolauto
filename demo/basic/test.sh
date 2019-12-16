@@ -9,6 +9,8 @@ cleanup() {
   echo "++ Clean up started"
   echo "--------------------------"
 
+
+  kubectl delete -f basic.yaml || true
   kubectl delete -f ../../deploy/operator.yaml || true
   kubectl delete -f ../../deploy/rbac.yaml || true
   kubectl delete -f ../../deploy/crd.yaml || true
@@ -21,7 +23,9 @@ cleanup() {
   
   kubectl delete -f openebs-operator-1.5.0.yaml || true
   kubectl delete -f cspc-operator.yaml || true
-  
+
+  kubectl delete -f gpd_sc.yaml || true
+
   echo "--------------------------"
   echo "++ Clean up completed"
   echo "--------------------------"
@@ -37,6 +41,10 @@ kubectl apply -f ../../deploy/crd.yaml
 kubectl apply -f ../../deploy/rbac.yaml
 kubectl apply -f ../../deploy/operator.yaml
 echo -e "\n++ Installed cstorpoolauto operator successfully"
+
+echo -e "\n++ Installing gpd storageclass"
+kubectl apply -f gpd_sc.yaml
+echo -e "\n++ Installed gpd storageclass successfully"
 
 echo -e "\n++ Installing storage-provisioner operator"
 curl https://raw.githubusercontent.com/mayadata-io/storage-provisioner/master/deploy/kubernetes/storage_crd.yaml > storage_crd.yaml

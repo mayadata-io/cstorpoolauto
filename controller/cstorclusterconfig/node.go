@@ -17,7 +17,6 @@ limitations under the License.
 package cstorclusterconfig
 
 import (
-	"cstorpoolauto/k8s"
 	"cstorpoolauto/types"
 	"sort"
 
@@ -205,7 +204,7 @@ type NodePlannerConfig struct {
 func (s *NodePlanner) GetAllNodes() []*unstructured.Unstructured {
 	var nodes []*unstructured.Unstructured
 	for _, attachment := range s.Resources {
-		if attachment.GetKind() == string(k8s.KindNode) {
+		if attachment.GetKind() == string(types.KindNode) {
 			nodes = append(nodes, attachment)
 		}
 	}
