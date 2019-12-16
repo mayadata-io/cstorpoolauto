@@ -18,6 +18,7 @@ package k8s
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,7 +29,19 @@ import (
 func GetNestedSlice(obj *unstructured.Unstructured, fields ...string) ([]interface{}, error) {
 	nestedSlice, found, err := unstructured.NestedSlice(obj.Object, fields...)
 	if err != nil || !found {
-		return nil, err
+		return nil,
+			errors.Wrapf(
+				err,
+				"Failed to find slice at %s: Object %s %s",
+				strings.Join(fields, "."), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	if !found {
+		return nil,
+			errors.Errorf(
+				"No slice is found at %s: Object %s %s",
+				strings.Join(fields, "."), obj.GetNamespace(), obj.GetName(),
+			)
 	}
 	return nestedSlice, nil
 }
@@ -66,7 +79,10 @@ func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]interface{}
 	for i, item := range nestedSlice {
 		itemMap, ok := item.(map[string]interface{})
 		if !ok {
-			return nil, errors.Errorf("Invalid nested slice: Want map[string]interface{}: Got %T", item)
+			return nil,
+				errors.Errorf(
+					"Invalid nested slice: Want map[string]interface{}: Got %T", item,
+				)
 		}
 		for k, v := range itemMap {
 			val := fmt.Sprintf("%s", v)
@@ -105,11 +121,50 @@ func MergeAndSetNestedSlice(obj *unstructured.Unstructured, new map[string]inter
 	return updatedSlice, nil
 }
 
+// IsStatus returns true if status set against the
+// provided instance if not nil
+func IsStatus(obj *unstructured.Unstructured) (bool, error) {
+	status, found, err := unstructured.NestedMap(obj.Object, "status")
+	if status == nil {
+		found = false
+	}
+	// No need to check if err != nil, since errors.Wrapf takes
+	// care of it
+	return found, errors.Wrapf(
+		err,
+		"Failed to get .status: Object %s %s", obj.GetNamespace(), obj.GetName(),
+	)
+}
+
+// SetStatusToEmptyConditions sets the given object's status
+// conditions to an empty slice
+func SetStatusToEmptyConditions(obj *unstructured.Unstructured) error {
+	statusConds := map[string]interface{}{
+		"conditions": []interface{}{},
+	}
+	err := unstructured.SetNestedMap(obj.Object, statusConds, "status")
+	return errors.Wrapf(
+		err,
+		"Failed to set empty status conditions: Object %s %s",
+		obj.GetNamespace(), obj.GetName(),
+	)
+}
+
 // MergeStatusConditions merges the provided conditions with existing
 // ones if any & returns the updated conditions
 //
 // TODO (@amitkumardas): Unit Tests
 func MergeStatusConditions(obj *unstructured.Unstructured, newCondition map[string]interface{}) ([]interface{}, error) {
+	found, err := IsStatus(obj)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		err := SetStatusToEmptyConditions(obj)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return MergeNestedSlice(obj, newCondition, "status", "conditions")
 }
 
