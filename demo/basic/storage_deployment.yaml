@@ -1,0 +1,33 @@
+# This YAML file demonstrates how to deploy the stotage
+# provisioner. It depends on the definitions from namespace.yaml & 
+# rbac.yaml.
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: storage-provisioner
+  namespace: dao
+  labels:
+    dao-project-name: storage-provisioner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: storage-provisioner
+  template:
+    metadata:
+      labels:
+        app: storage-provisioner
+    spec:
+      serviceAccount: storage-provisioner
+      containers:
+        - name: storage-provisioner
+          image: quay.io/amitkumardas/storage-provisioner:latest
+          args:
+            - "--v=5"
+          env:
+            - name: MY_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          imagePullPolicy: "Always"

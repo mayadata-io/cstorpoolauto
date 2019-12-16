@@ -120,14 +120,18 @@ func (h *reconcileErrHandler) handle(err error) {
 // the same time, these errors are posted against CStorClusterConfig's
 // status.
 func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) error {
-	response = &generic.SyncHookResponse{}
-
+	if request == nil {
+		return errors.Errorf("Failed to reconcile CStorClusterConfig: Nil request found")
+	}
+	if response == nil {
+		return errors.Errorf("Failed to reconcile CStorClusterConfig: Nil response found")
+	}
 	// Nothing needs to be done if there are no attachments in request
 	//
 	// NOTE:
 	// 	It is expected to have CStorClusterConfig as an attachment
 	// resource as well as the resource under watch.
-	if request == nil || request.Attachments == nil || request.Attachments.IsEmpty() {
+	if request.Attachments == nil || request.Attachments.IsEmpty() {
 		response.SkipReconcile = true
 		return nil
 	}
@@ -140,7 +144,6 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 
 	var cstorClusterConfigObj *unstructured.Unstructured
 	var cstorClusterPlanObj *unstructured.Unstructured
-
 	for _, attachment := range request.Attachments.List() {
 		// this watch resource must be present in the list of attachments
 		if request.Watch.GetUID() == attachment.GetUID() &&
