@@ -157,18 +157,18 @@ func NewReconciler(
 	observedStorages []*unstructured.Unstructured,
 ) (*Reconciler, error) {
 	// transform storageset from unstructured to typed
-	var cstorClusterStorageSetTyped *types.CStorClusterStorageSet
+	var cstorClusterStorageSetTyped types.CStorClusterStorageSet
 	cstorClusterStorageSetRaw, err := storageSet.MarshalJSON()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Can't marshal CStorClusterStorageSet")
 	}
-	err = json.Unmarshal(cstorClusterStorageSetRaw, cstorClusterStorageSetTyped)
+	err = json.Unmarshal(cstorClusterStorageSetRaw, &cstorClusterStorageSetTyped)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterStorageSet")
 	}
 	// use above constructed object to build Reconciler instance
 	return &Reconciler{
-		CStorClusterStorageSet: cstorClusterStorageSetTyped,
+		CStorClusterStorageSet: &cstorClusterStorageSetTyped,
 		ObservedStorages:       observedStorages,
 	}, nil
 }

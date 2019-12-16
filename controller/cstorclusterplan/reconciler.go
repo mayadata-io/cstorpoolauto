@@ -173,29 +173,29 @@ func NewReconciler(
 	observedStorageSets []*unstructured.Unstructured,
 ) (*Reconciler, error) {
 	// transforms cluster plan from unstructured to typed
-	var cstorClusterPlanTyped *types.CStorClusterPlan
+	var cstorClusterPlanTyped types.CStorClusterPlan
 	cstorClusterPlanRaw, err := clusterPlan.MarshalJSON()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Can't marshal CStorClusterPlan")
 	}
-	err = json.Unmarshal(cstorClusterPlanRaw, cstorClusterPlanTyped)
+	err = json.Unmarshal(cstorClusterPlanRaw, &cstorClusterPlanTyped)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterPlan")
 	}
 	// transforms cluster config from unstructured to typed
-	var cstorClusterConfigTyped *types.CStorClusterConfig
+	var cstorClusterConfigTyped types.CStorClusterConfig
 	cstorClusterConfigRaw, err := clusterConfig.MarshalJSON()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Can't marshal CStorClusterConfig")
 	}
-	err = json.Unmarshal(cstorClusterConfigRaw, cstorClusterConfigTyped)
+	err = json.Unmarshal(cstorClusterConfigRaw, &cstorClusterConfigTyped)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterConfig")
 	}
 	// use above constructed objects to build Reconciler instance
 	return &Reconciler{
-		CStorClusterPlan:    cstorClusterPlanTyped,
-		CStorClusterConfig:  cstorClusterConfigTyped,
+		CStorClusterPlan:    &cstorClusterPlanTyped,
+		CStorClusterConfig:  &cstorClusterConfigTyped,
 		ObservedStorageSets: observedStorageSets,
 	}, nil
 }
