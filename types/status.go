@@ -86,6 +86,12 @@ const (
 	BlockDeviceUnclaimed DeviceClaimState = "Unclaimed"
 )
 
+// now returns the current time in following format
+// 2006-01-02 15:04:05.000000
+func now() string {
+	return metav1.Now().Format("2006-01-02 15:04:05.000000")
+}
+
 // MakeCStorClusterConfigReconcileErrCond builds a new
 // CStorClusterConfigConditionReconcileError condition
 // suitable to be used in API status.conditions
@@ -94,7 +100,7 @@ func MakeCStorClusterConfigReconcileErrCond(err error) map[string]interface{} {
 		"type":             CStorClusterConfigReconcileErrorCondition,
 		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now(),
+		"lastObservedTime": now(),
 	}
 }
 
@@ -106,7 +112,7 @@ func MakeCStorClusterPlanReconcileErrCond(err error) map[string]interface{} {
 		"type":             CStorClusterPlanReconcileErrorCondition,
 		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now(),
+		"lastObservedTime": now(),
 	}
 }
 
@@ -118,7 +124,7 @@ func MakeCStorClusterStorageSetReconcileErrCond(err error) map[string]interface{
 		"type":             CStorClusterStorageSetReconcileErrorCondition,
 		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now(),
+		"lastObservedTime": now(),
 	}
 }
 
@@ -130,7 +136,7 @@ func MakeCStorClusterPlanCSPCApplyErrCond(err error) map[string]interface{} {
 		"type":             CStorClusterPlanCSPCApplyErrorCondition,
 		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now(),
+		"lastObservedTime": now(),
 	}
 }
 
@@ -142,7 +148,7 @@ func MakeStorageToBlockDeviceAssociationErrCond(err error) map[string]interface{
 		"type":             StorageToBlockDeviceAssociationErrorCondition,
 		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now(),
+		"lastObservedTime": now(),
 	}
 }
 
@@ -154,7 +160,7 @@ func MakeNoCStorClusterConfigReconcileErrCond() map[string]interface{} {
 	return map[string]interface{}{
 		"type":             string(CStorClusterConfigReconcileErrorCondition),
 		"status":           string(ConditionIsAbsent),
-		"lastObservedTime": metav1.Now(),
+		"lastObservedTime": now(),
 	}
 }
 
@@ -164,7 +170,7 @@ func MergeNoReconcileErrorOnCStorClusterConfig(obj *CStorClusterConfig) {
 	noErrCond := CStorClusterConfigStatusCondition{
 		Type:             CStorClusterConfigReconcileErrorCondition,
 		Status:           ConditionIsAbsent,
-		LastObservedTime: metav1.Now(),
+		LastObservedTime: now(),
 	}
 	var newConds []CStorClusterConfigStatusCondition
 	for _, old := range obj.Status.Conditions {
@@ -184,7 +190,7 @@ func MergeNoReconcileErrorOnCStorClusterPlan(obj *CStorClusterPlan) {
 	noErrCond := CStorClusterPlanStatusCondition{
 		Type:             CStorClusterPlanReconcileErrorCondition,
 		Status:           ConditionIsAbsent,
-		LastObservedTime: metav1.Now(),
+		LastObservedTime: now(),
 	}
 	var newConds []CStorClusterPlanStatusCondition
 	for _, old := range obj.Status.Conditions {
@@ -204,7 +210,7 @@ func MergeNoCSPCApplyErrorOnCStorClusterPlan(obj *CStorClusterPlan) {
 	noErrCond := CStorClusterPlanStatusCondition{
 		Type:             CStorClusterPlanCSPCApplyErrorCondition,
 		Status:           ConditionIsAbsent,
-		LastObservedTime: metav1.Now(),
+		LastObservedTime: now(),
 	}
 	var newConds []CStorClusterPlanStatusCondition
 	for _, old := range obj.Status.Conditions {
@@ -224,7 +230,7 @@ func MergeNoReconcileErrorOnCStorClusterStorageSet(obj *CStorClusterStorageSet) 
 	noErrCond := CStorClusterStorageSetStatusCondition{
 		Type:             CStorClusterStorageSetReconcileErrorCondition,
 		Status:           ConditionIsAbsent,
-		LastObservedTime: metav1.Now(),
+		LastObservedTime: now(),
 	}
 	var newConds []CStorClusterStorageSetStatusCondition
 	for _, old := range obj.Status.Conditions {

@@ -89,7 +89,12 @@ func (h *reconcileErrHandler) handle(err error) {
 // the same time, these errors are posted against CStorClusterPlan's
 // status.
 func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) error {
-	response = &generic.SyncHookResponse{}
+	if request == nil {
+		return errors.Errorf("Failed to reconcile CStorClusterPlan: Nil request found")
+	}
+	if response == nil {
+		return errors.Errorf("Failed to reconcile CStorClusterPlan: Nil response found")
+	}
 
 	// construct the error handler
 	errHandler := &reconcileErrHandler{

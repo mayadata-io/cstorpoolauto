@@ -93,7 +93,16 @@ func (h *reconcileErrHandler) handle(err error) {
 // the same time, these errors are posted against the watch here
 // CStorClusterPlan status conditions.
 func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) error {
-	response = &generic.SyncHookResponse{}
+	if request == nil {
+		return errors.Errorf(
+			"Failed to apply CStorPoolCluster for CStorClusterPlan: Nil request found",
+		)
+	}
+	if response == nil {
+		return errors.Errorf(
+			"Failed to apply CStorPoolCluster for CStorClusterPlan: Nil response found",
+		)
+	}
 
 	// construct the error handler
 	errHandler := &reconcileErrHandler{

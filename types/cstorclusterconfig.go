@@ -145,5 +145,5 @@ type CStorClusterConfigStatusCondition struct {
 	Type             ConditionType  `json:"type"`
 	Status           ConditionState `json:"status"`
 	Reason           string         `json:"reason,omitempty"`
-	LastObservedTime metav1.Time    `json:"lastObservedTime"`
+	LastObservedTime string         `json:"lastObservedTime"`
 }
