@@ -23,42 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// Kind is a custom datatype to refer to kubernetes native
-// resource kind value
-type Kind string
-
-const (
-	// KindNode refers to kubernetes node (a native resource)
-	// kind value
-	KindNode Kind = "Node"
-
-	// KindCStorClusterPlan refers to custom resource with
-	// kind CStorClusterPlan
-	KindCStorClusterPlan Kind = "CStorClusterPlan"
-
-	// KindCStorClusterStorageSet refers to custom resource with
-	// kind CStorClusterStorageSet
-	KindCStorClusterStorageSet Kind = "CStorClusterStorageSet"
-
-	// KindCStorClusterConfig refers to custom resource with
-	// kind CStorClusterConfig
-	KindCStorClusterConfig Kind = "CStorClusterConfig"
-
-	// KindStorage refers to custom resource with kind Storage
-	KindStorage Kind = "Storage"
-
-	// KindBlockDevice refers to custom resource with kind BlockDevice
-	KindBlockDevice Kind = "BlockDevice"
-
-	// KindPersistentVolumeClaim refers to custom resource with kind
-	// PersistentVolumeClaim
-	KindPersistentVolumeClaim Kind = "PersistentVolumeClaim"
-
-	// KindCStorPoolCluster refers to custom resource with kind
-	// CStorPoolCluster
-	KindCStorPoolCluster Kind = "CStorPoolCluster"
-)
-
 // GetNestedSlice returns the slice found at given field path
 // of the given object
 func GetNestedSlice(obj *unstructured.Unstructured, fields ...string) ([]interface{}, error) {

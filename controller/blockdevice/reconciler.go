@@ -40,7 +40,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	//
 	// In addition, errors are logged as well.
 	glog.Errorf(
-		"Failed to associate a BlockDevice with Storage %s %s: %v",
+		"Failed to associate a BlockDevice with Storage %s %s: %+v",
 		h.storage.GetNamespace(), h.storage.GetName(), err,
 	)
 
@@ -51,7 +51,7 @@ func (h *reconcileErrHandler) handle(err error) {
 		)
 	if mergeErr != nil {
 		glog.Errorf(
-			"Can't set status conditions on Storage %s %s: %v",
+			"Can't set status conditions on Storage %s %s: %+v",
 			h.storage.GetNamespace(), h.storage.GetName(), mergeErr,
 		)
 		// Note: Merge error will reset the conditions which will make
@@ -111,11 +111,11 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	var cstorClusterStoragetSet *unstructured.Unstructured
 	var pvc *unstructured.Unstructured
 	for _, attachment := range request.Attachments.List() {
-		if attachment.GetKind() == string(k8s.KindBlockDevice) {
+		if attachment.GetKind() == string(types.KindBlockDevice) {
 			// BlockDevices are attached after the reconciliation
 			continue
 		}
-		if attachment.GetKind() == string(k8s.KindCStorClusterStorageSet) {
+		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
 			// verify further if this belongs to the current watch
 			uid, _ := k8s.GetAnnotationForKey(
 				request.Watch.GetAnnotations(), types.AnnKeyCStorClusterStorageSetUID,
@@ -125,7 +125,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				cstorClusterStoragetSet = attachment
 			}
 		}
-		if attachment.GetKind() == string(k8s.KindPersistentVolumeClaim) {
+		if attachment.GetKind() == string(types.KindPersistentVolumeClaim) {
 			// verify further if this belongs to the current watch
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyStorageUID,
@@ -291,7 +291,7 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 func (p *StorageToBlockDeviceAssociator) getObservedBlockDevices() []*unstructured.Unstructured {
 	var blockDevices []*unstructured.Unstructured
 	for _, resource := range p.ObservedResources {
-		if resource.GetKind() == string(k8s.KindBlockDevice) {
+		if resource.GetKind() == string(types.KindBlockDevice) {
 			blockDevices = append(blockDevices, resource)
 		}
 	}

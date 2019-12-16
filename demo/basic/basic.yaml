@@ -6,7 +6,7 @@ metadata:
 spec:
     diskConfig:
         externalProvisioner:
-            csiAttacherName:
-            storageClassName:
+            csiAttacherName: pd.csi.storage.gke.io
+            storageClassName: csi-gce-pd
     poolConfig:
         raidType: mirror
