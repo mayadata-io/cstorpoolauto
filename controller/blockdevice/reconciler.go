@@ -210,10 +210,10 @@ func (r *Reconciler) getStorageStatusAsNoError() (map[string]interface{}, error)
 	// get updated conditions
 	conds, err := k8s.MergeStatusConditions(
 		r.Storage,
-		map[string]string{
-			"type":             string(types.StorageToBlockDeviceAssociationErrorCondition),
-			"status":           string(types.ConditionIsAbsent),
-			"lastObservedTime": metav1.Now().String(),
+		map[string]interface{}{
+			"type":             types.StorageToBlockDeviceAssociationErrorCondition,
+			"status":           types.ConditionIsAbsent,
+			"lastObservedTime": metav1.Now(),
 		},
 	)
 	if err != nil {

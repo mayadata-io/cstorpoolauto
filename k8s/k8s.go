@@ -72,7 +72,7 @@ func GetNestedSlice(obj *unstructured.Unstructured, fields ...string) ([]interfa
 // updated slice.
 //
 // TODO (@amitkumardas): Unit Tests
-func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]string, fields ...string) ([]interface{}, error) {
+func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]interface{}, fields ...string) ([]interface{}, error) {
 	nestedSlice, err := GetNestedSlice(obj, fields...)
 	if err != nil {
 		return nil, err
@@ -91,19 +91,20 @@ func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]string, fie
 		// the slice of maps.
 		if k == "uid" || k == "id" || k == "name" || k == "type" {
 			indexKey = k
-			indexValue = v
+			indexValue, _ = v.(string)
 			break
 		}
 	}
 	var found bool
 	var foundAt int
 	for i, item := range nestedSlice {
-		itemMap, ok := item.(map[string]string)
+		itemMap, ok := item.(map[string]interface{})
 		if !ok {
-			return nil, errors.Errorf("Invalid nested slice: Want map[string]string: Got %T", item)
+			return nil, errors.Errorf("Invalid nested slice: Want map[string]interface{}: Got %T", item)
 		}
 		for k, v := range itemMap {
-			if k == indexKey && v == indexValue {
+			val, _ := v.(string)
+			if k == indexKey && val == indexValue {
 				found = true
 				foundAt = i
 				break
@@ -126,7 +127,7 @@ func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]string, fie
 // MergeAndSetNestedSlice merges the provided map against a slice
 // of maps at given field path. It then sets the updated slice against
 // the provided object.
-func MergeAndSetNestedSlice(obj *unstructured.Unstructured, new map[string]string, fields ...string) ([]interface{}, error) {
+func MergeAndSetNestedSlice(obj *unstructured.Unstructured, new map[string]interface{}, fields ...string) ([]interface{}, error) {
 	updatedSlice, err := MergeNestedSlice(obj, new, fields...)
 	if err != nil {
 		return nil, err
@@ -142,7 +143,7 @@ func MergeAndSetNestedSlice(obj *unstructured.Unstructured, new map[string]strin
 // ones if any & returns the updated conditions
 //
 // TODO (@amitkumardas): Unit Tests
-func MergeStatusConditions(obj *unstructured.Unstructured, newCondition map[string]string) ([]interface{}, error) {
+func MergeStatusConditions(obj *unstructured.Unstructured, newCondition map[string]interface{}) ([]interface{}, error) {
 	return MergeNestedSlice(obj, newCondition, "status", "conditions")
 }
 
@@ -150,7 +151,7 @@ func MergeStatusConditions(obj *unstructured.Unstructured, newCondition map[stri
 // ones if any against the provided object
 //
 // TODO (@amitkumardas): Unit Tests
-func MergeAndSetStatusConditions(obj *unstructured.Unstructured, newCondition map[string]string) ([]interface{}, error) {
+func MergeAndSetStatusConditions(obj *unstructured.Unstructured, newCondition map[string]interface{}) ([]interface{}, error) {
 	return MergeAndSetNestedSlice(obj, newCondition, "status", "conditions")
 }
 

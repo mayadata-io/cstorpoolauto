@@ -89,60 +89,60 @@ const (
 // MakeCStorClusterConfigReconcileErrCond builds a new
 // CStorClusterConfigConditionReconcileError condition
 // suitable to be used in API status.conditions
-func MakeCStorClusterConfigReconcileErrCond(err error) map[string]string {
-	return map[string]string{
-		"type":             string(CStorClusterConfigReconcileErrorCondition),
-		"status":           string(ConditionIsPresent),
+func MakeCStorClusterConfigReconcileErrCond(err error) map[string]interface{} {
+	return map[string]interface{}{
+		"type":             CStorClusterConfigReconcileErrorCondition,
+		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now().String(),
+		"lastObservedTime": metav1.Now(),
 	}
 }
 
 // MakeCStorClusterPlanReconcileErrCond builds a new
 // CStorClusterPlanConditionReconcileError condition
 // suitable to be used in API status.conditions
-func MakeCStorClusterPlanReconcileErrCond(err error) map[string]string {
-	return map[string]string{
-		"type":             string(CStorClusterPlanReconcileErrorCondition),
-		"status":           string(ConditionIsPresent),
+func MakeCStorClusterPlanReconcileErrCond(err error) map[string]interface{} {
+	return map[string]interface{}{
+		"type":             CStorClusterPlanReconcileErrorCondition,
+		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now().String(),
+		"lastObservedTime": metav1.Now(),
 	}
 }
 
 // MakeCStorClusterStorageSetReconcileErrCond builds a new
 // CStorClusterStorageSetConditionReconcileError condition
 // suitable to be used in API status.conditions
-func MakeCStorClusterStorageSetReconcileErrCond(err error) map[string]string {
-	return map[string]string{
-		"type":             string(CStorClusterStorageSetReconcileErrorCondition),
-		"status":           string(ConditionIsPresent),
+func MakeCStorClusterStorageSetReconcileErrCond(err error) map[string]interface{} {
+	return map[string]interface{}{
+		"type":             CStorClusterStorageSetReconcileErrorCondition,
+		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now().String(),
+		"lastObservedTime": metav1.Now(),
 	}
 }
 
 // MakeCStorClusterPlanCSPCApplyErrCond builds a new
 // CStorPoolClusterApplyErrorCondition suitable to be
 // used in API status.conditions
-func MakeCStorClusterPlanCSPCApplyErrCond(err error) map[string]string {
-	return map[string]string{
-		"type":             string(CStorClusterPlanCSPCApplyErrorCondition),
-		"status":           string(ConditionIsPresent),
+func MakeCStorClusterPlanCSPCApplyErrCond(err error) map[string]interface{} {
+	return map[string]interface{}{
+		"type":             CStorClusterPlanCSPCApplyErrorCondition,
+		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now().String(),
+		"lastObservedTime": metav1.Now(),
 	}
 }
 
 // MakeStorageToBlockDeviceAssociationErrCond builds a new
 // StorageToBlockDeviceAssociationErrorCondition suitable to
 // be used in API status.conditions
-func MakeStorageToBlockDeviceAssociationErrCond(err error) map[string]string {
-	return map[string]string{
-		"type":             string(StorageToBlockDeviceAssociationErrorCondition),
-		"status":           string(ConditionIsPresent),
+func MakeStorageToBlockDeviceAssociationErrCond(err error) map[string]interface{} {
+	return map[string]interface{}{
+		"type":             StorageToBlockDeviceAssociationErrorCondition,
+		"status":           ConditionIsPresent,
 		"reason":           err.Error(),
-		"lastObservedTime": metav1.Now().String(),
+		"lastObservedTime": metav1.Now(),
 	}
 }
 
@@ -150,11 +150,11 @@ func MakeStorageToBlockDeviceAssociationErrCond(err error) map[string]string {
 // CStorClusterConfigConditionReconcileError condition. This
 // should be used in such a way that it voids previous occurrence of
 // this error if any.
-func MakeNoCStorClusterConfigReconcileErrCond() map[string]string {
-	return map[string]string{
+func MakeNoCStorClusterConfigReconcileErrCond() map[string]interface{} {
+	return map[string]interface{}{
 		"type":             string(CStorClusterConfigReconcileErrorCondition),
 		"status":           string(ConditionIsAbsent),
-		"lastObservedTime": metav1.Now().String(),
+		"lastObservedTime": metav1.Now(),
 	}
 }
 
