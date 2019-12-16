@@ -19,6 +19,7 @@ rules:
   - persistentvolumeclaims
   - blockdevices
   - cstorpoolclusters
+  - nodes
   verbs:
   - get
   - list

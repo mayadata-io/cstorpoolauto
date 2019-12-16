@@ -1,0 +1,65 @@
+# This YAML file contains all RBAC objects that are necessary to 
+# run storage provisioner.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: storage-provisioner
+  namespace: dao
+---
+# Provisioner must be able to work with following resources
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: storage-provisioner
+rules:
+  - apiGroups: ["dao.mayadata.io"]
+    resources: ["storages"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch", "create", "update"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: storage-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: storage-provisioner
+    namespace: dao
+roleRef:
+  kind: ClusterRole
+  name: storage-provisioner
+  apiGroup: rbac.authorization.k8s.io
+---
+# Provisioner must be able to work with configmaps or leases
+# in the current namespace if (and only if) leadership election 
+# is enabled
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: dao
+  name: storage-provisioner-cfg
+rules:
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "watch", "list", "delete", "update", "create"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: storage-provisioner-cfg
+  namespace: dao
+subjects:
+  - kind: ServiceAccount
+    name: storage-provisioner
+    namespace: dao
+roleRef:
+  kind: Role
+  name: storage-provisioner-cfg
+  apiGroup: rbac.authorization.k8s.io
+---
