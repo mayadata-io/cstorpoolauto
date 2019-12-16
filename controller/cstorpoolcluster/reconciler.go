@@ -227,18 +227,18 @@ type ReconcileResponse struct {
 // NewReconciler returns a new instance of reconciler
 func NewReconciler(conf ReconcilerConfig) (*Reconciler, error) {
 	// transform CStorClusterPlan from unstructured to typed
-	var cstorClusterPlanTyped *types.CStorClusterPlan
+	var cstorClusterPlanTyped types.CStorClusterPlan
 	cstorClusterPlanRaw, err := conf.CStorClusterPlan.MarshalJSON()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Can't marshal CStorClusterPlan")
 	}
-	err = json.Unmarshal(cstorClusterPlanRaw, cstorClusterPlanTyped)
+	err = json.Unmarshal(cstorClusterPlanRaw, &cstorClusterPlanTyped)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterPlan")
 	}
 	// use above constructed object to build Reconciler instance
 	return &Reconciler{
-		CStorClusterPlan:        cstorClusterPlanTyped,
+		CStorClusterPlan:        &cstorClusterPlanTyped,
 		DesiredCStorPoolCluster: conf.DesiredCStorPoolCluster,
 		ObservedClusterConfig:   conf.ObservedClusterConfig,
 		ObservedStorageSets:     conf.ObservedStorageSets,

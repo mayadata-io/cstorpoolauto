@@ -233,13 +233,13 @@ func NewReconciler(
 	}
 
 	// transform CStorClusterPlan from unstructured to typed
-	var cstorClusterPlanTyped *types.CStorClusterPlan
+	var cstorClusterPlanTyped types.CStorClusterPlan
 	if clusterPlan != nil {
 		cstorClusterPlanRaw, err := clusterPlan.MarshalJSON()
 		if err != nil {
 			return nil, errors.Wrapf(err, "Can't marshal CStorClusterPlan")
 		}
-		err = json.Unmarshal(cstorClusterPlanRaw, cstorClusterPlanTyped)
+		err = json.Unmarshal(cstorClusterPlanRaw, &cstorClusterPlanTyped)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterPlan")
 		}
@@ -247,7 +247,7 @@ func NewReconciler(
 
 	return &Reconciler{
 		CStorClusterConfig: &cstorClusterConfigTyped,
-		CStorClusterPlan:   cstorClusterPlanTyped,
+		CStorClusterPlan:   &cstorClusterPlanTyped,
 		Resources:          resources,
 		NodePlanner: &NodePlanner{
 			NodeSelector: cstorClusterConfigTyped.Spec.AllowedNodes,
