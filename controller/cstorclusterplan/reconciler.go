@@ -17,11 +17,10 @@ limitations under the License.
 package cstorclusterplan
 
 import (
-	"encoding/json"
-
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
 	"cstorpoolauto/k8s"
