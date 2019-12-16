@@ -91,7 +91,16 @@ func (h *reconcileErrHandler) handle(err error) {
 // controller to run continuously. Hence, the errors are logged and at
 // the same time, these errors are posted against Storage's status field.
 func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) error {
-	response = &generic.SyncHookResponse{}
+	if request == nil {
+		return errors.Errorf(
+			"Failed to associate BlockDevice with Storage: Nil request found",
+		)
+	}
+	if response == nil {
+		return errors.Errorf(
+			"Failed to associate BlockDevice with Storage: Nil response found",
+		)
+	}
 
 	// construct the error handler
 	errHandler := &reconcileErrHandler{

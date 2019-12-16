@@ -17,6 +17,8 @@ limitations under the License.
 package k8s
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -91,7 +93,7 @@ func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]interface{}
 		// the slice of maps.
 		if k == "uid" || k == "id" || k == "name" || k == "type" {
 			indexKey = k
-			indexValue, _ = v.(string)
+			indexValue = fmt.Sprintf("%s", v)
 			break
 		}
 	}
@@ -103,7 +105,7 @@ func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]interface{}
 			return nil, errors.Errorf("Invalid nested slice: Want map[string]interface{}: Got %T", item)
 		}
 		for k, v := range itemMap {
-			val, _ := v.(string)
+			val := fmt.Sprintf("%s", v)
 			if k == indexKey && val == indexValue {
 				found = true
 				foundAt = i
