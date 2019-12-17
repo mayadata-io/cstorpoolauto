@@ -25,6 +25,7 @@ import (
 
 	"cstorpoolauto/k8s"
 	"cstorpoolauto/types"
+	"cstorpoolauto/util/metac"
 )
 
 type reconcileErrHandler struct {
@@ -95,6 +96,11 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		return errors.Errorf("Failed to reconcile CStorClusterPlan: Nil response found")
 	}
 
+	glog.V(3).Infof(
+		"Will reconcile CStorClusterPlan %s %s:",
+		request.Watch.GetNamespace(), request.Watch.GetName(),
+	)
+
 	// construct the error handler
 	errHandler := &reconcileErrHandler{
 		clusterPlan:  request.Watch,
@@ -149,6 +155,13 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	}
 	response.Attachments = append(response.Attachments, op.DesiredStorageSets...)
 	response.Status = op.Status
+
+	glog.V(2).Infof(
+		"CStorClusterPlan %s %s reconciled successfully: %s",
+		request.Watch.GetNamespace(), request.Watch.GetName(),
+		metac.GetDetailsFromResponse(response),
+	)
+
 	return nil
 }
 

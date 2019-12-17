@@ -25,6 +25,7 @@ import (
 
 	"cstorpoolauto/k8s"
 	"cstorpoolauto/types"
+	"cstorpoolauto/util/metac"
 	stringutil "cstorpoolauto/util/string"
 )
 
@@ -102,6 +103,11 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		)
 	}
 
+	glog.V(3).Infof(
+		"Will associate BlockDevice with Storage %s %s:",
+		request.Watch.GetNamespace(), request.Watch.GetName(),
+	)
+
 	// construct the error handler
 	errHandler := &reconcileErrHandler{
 		storage:      request.Watch,
@@ -163,6 +169,13 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	}
 	response.Attachments = append(response.Attachments, op.DesiredBlockDevices...)
 	response.Status = op.Status
+
+	glog.V(2).Infof(
+		"BlockDevice(s) were associated with Storage %s %s successfully: %s",
+		request.Watch.GetNamespace(), request.Watch.GetName(),
+		metac.GetDetailsFromResponse(response),
+	)
+
 	return nil
 }
 
