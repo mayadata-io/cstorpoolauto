@@ -154,7 +154,12 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		return nil
 	}
 	response.Attachments = append(response.Attachments, op.DesiredStorageSets...)
-	response.Status = op.Status
+
+	// TODO (@amitkumardas):
+	// Can't set status as this creates a never ending hot loop
+	// In other words, this updates the watch & reconciliations
+	// of this watch due to other controllers get impacted
+	//response.Status = op.Status
 
 	glog.V(2).Infof(
 		"CStorClusterPlan %s %s reconciled successfully: %s",
@@ -373,11 +378,17 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 		if !iscreate {
 			continue
 		}
+
+		glog.V(3).Infof(
+			"Will create (i.e. build) a CStorClusterStorageSet: CStorClusterPlan %s %s",
+			p.ClusterPlan.GetNamespace(), p.ClusterPlan.GetName(),
+		)
+
 		storageSet := &unstructured.Unstructured{}
 		storageSet.SetUnstructuredContent(map[string]interface{}{
 			"metadata": map[string]interface{}{
-				"apiVersion":   string(types.APIVersionDAOMayaDataV1Alpha1),
-				"kind":         string(types.KindCStorClusterStorageSet),
+				"apiVersion":   types.APIVersionDAOMayaDataV1Alpha1,
+				"kind":         types.KindCStorClusterStorageSet,
 				"generateName": "ccplan-", // ccplan -> CStorClusterPlan
 				"namespace":    p.ClusterPlan.GetNamespace(),
 				"annotations": map[string]interface{}{
@@ -399,6 +410,12 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 				},
 			},
 		})
+
+		glog.V(2).Infof(
+			"Created (i.e. Built) a CStorClusterStorageSet: CStorClusterPlan %s %s",
+			p.ClusterPlan.GetNamespace(), p.ClusterPlan.GetName(),
+		)
+
 		storageSets = append(storageSets, storageSet)
 	}
 	return storageSets

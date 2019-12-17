@@ -140,7 +140,13 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		return nil
 	}
 	response.Attachments = append(response.Attachments, op.DesiredStorages...)
-	response.Status = op.Status
+
+	// TODO (@amitkumardas):
+	//
+	// Can't set status as this creates a never ending hot loop
+	// In other words, this updates the watch & reconciliations
+	// of this watch due to other controllers get impacted
+	//response.Status = op.Status
 
 	glog.V(2).Infof(
 		"CStorClusterStorageSet %s %s reconciled successfully: %s",

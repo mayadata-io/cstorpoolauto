@@ -200,7 +200,13 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		// not ready to create CStorPoolCluster
 		response.SkipReconcile = true
 	}
-	response.Status = op.Status
+
+	// TODO (@amitkumardas):
+	//
+	// Can't set status as this creates a never ending hot loop
+	// In other words, this updates the watch & reconciliations
+	// of this watch due to other controllers get impacted
+	//response.Status = op.Status
 
 	glog.V(3).Infof(
 		"CStorPoolCluster applied successfully for CStorClusterPlan %s %s: %s",
