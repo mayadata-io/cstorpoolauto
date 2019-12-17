@@ -13,7 +13,7 @@ spec:
     resource: cstorclusterplans
     updateStrategy:
       method: InPlace
-    - apiVersion: dao.mayadata.io/v1alpha1
+  - apiVersion: dao.mayadata.io/v1alpha1
     resource: cstorclusterconfigs
     updateStrategy:
       method: InPlace
