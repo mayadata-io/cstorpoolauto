@@ -1,8 +1,14 @@
 ### Design v0.2.0
 #### TODO
 - TODO - 0
-    - metacontroller configs
-        - each config should have unique names
+    - Need to have a CStorClusterDefault CR & corresponding reconciler
+        - Its job will be to set defaults to CStorClusterConfig
+        - Then set the SetDefaultsCompleted condition
+        - This condition will be looked up by the reconciler that creates
+            CStorClusterPlan
+        - This will eliminate the current hot loop path experienced by 
+            CStorClusterConfig reconciler that sets the defaults.
+    - Create EVENTs against the watch instance in case of errors at reconciler
     - deterministic names
         - CStorClusterStorageSet(s)
             - make use of the node that is set in its spec
