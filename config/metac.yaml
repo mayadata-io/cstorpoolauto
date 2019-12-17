@@ -4,6 +4,7 @@ metadata:
   name: sync-cstorclusterconfig
   namespace: cstorpoolauto
 spec:
+  updateAny: true
   watch:
     apiVersion: dao.mayadata.io/v1alpha1
     resource: cstorclusterconfigs
@@ -61,6 +62,7 @@ metadata:
   name: sync-blockdevice
   namespace: cstorpoolauto
 spec:
+  updateAny: true
   watch:
     apiVersion: dao.mayadata.io/v1alpha1
     resource: storages
