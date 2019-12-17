@@ -232,6 +232,13 @@ func NewReconciler(
 	clusterPlan *unstructured.Unstructured,
 	resources []*unstructured.Unstructured,
 ) (*Reconciler, error) {
+	r := &Reconciler{
+		Resources: resources,
+		NodePlanner: &NodePlanner{
+			Resources: resources,
+		},
+	}
+
 	// transform CStorClusterConfig from unstructured to typed
 	var cstorClusterConfigTyped types.CStorClusterConfig
 	cstorClusterConfigRaw, err := clusterConfig.MarshalJSON()
@@ -243,9 +250,13 @@ func NewReconciler(
 		return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterConfig")
 	}
 
+	// update the reconciler instance with config & related fields
+	r.CStorClusterConfig = &cstorClusterConfigTyped
+	r.NodePlanner.NodeSelector = r.CStorClusterConfig.Spec.AllowedNodes
+
 	// transform CStorClusterPlan from unstructured to typed
-	var cstorClusterPlanTyped types.CStorClusterPlan
 	if clusterPlan != nil {
+		var cstorClusterPlanTyped types.CStorClusterPlan
 		cstorClusterPlanRaw, err := clusterPlan.MarshalJSON()
 		if err != nil {
 			return nil, errors.Wrapf(err, "Can't marshal CStorClusterPlan")
@@ -254,17 +265,11 @@ func NewReconciler(
 		if err != nil {
 			return nil, errors.Wrapf(err, "Can't unmarshal CStorClusterPlan")
 		}
+		// update the reconciler instance with typed CStorClusterPlan
+		r.CStorClusterPlan = &cstorClusterPlanTyped
 	}
 
-	return &Reconciler{
-		CStorClusterConfig: &cstorClusterConfigTyped,
-		CStorClusterPlan:   &cstorClusterPlanTyped,
-		Resources:          resources,
-		NodePlanner: &NodePlanner{
-			NodeSelector: cstorClusterConfigTyped.Spec.AllowedNodes,
-			Resources:    resources,
-		},
-	}, nil
+	return r, nil
 }
 
 // Reconcile runs through the reconciliation logic
@@ -282,6 +287,7 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 			return ReconcileResponse{}, err
 		}
 	}
+	// reset previous errors if any
 	r.resetClusterConfigReconcileErrorIfAny()
 	return r.makeReconcileResponse()
 }
@@ -300,6 +306,7 @@ func (r *Reconciler) makeReconcileResponse() (ReconcileResponse, error) {
 		return ReconcileResponse{},
 			errors.Wrapf(err, "Can't unmarshal CStorClusterConfig")
 	}
+
 	// convert updated CStorClusterConfigPlan from typed to unstruct
 	clusterConfigPlanRaw, err := json.Marshal(r.CStorClusterPlan)
 	if err != nil {
