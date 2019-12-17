@@ -393,8 +393,6 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 		storageSet := &unstructured.Unstructured{}
 		storageSet.SetUnstructuredContent(map[string]interface{}{
 			"metadata": map[string]interface{}{
-				"apiVersion":   types.APIVersionDAOMayaDataV1Alpha1,
-				"kind":         types.KindCStorClusterStorageSet,
 				"generateName": "ccplan-", // ccplan -> CStorClusterPlan
 				"namespace":    p.ClusterPlan.GetNamespace(),
 				"annotations": map[string]interface{}{
@@ -416,6 +414,10 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 				},
 			},
 		})
+		// below is the right way to set APIVersion & Kind
+		storageSet.SetAPIVersion(string(types.APIVersionDAOMayaDataV1Alpha1))
+		storageSet.SetKind(string(types.KindCStorClusterStorageSet))
+		// add the built up unstruct instance
 		storageSets = append(storageSets, storageSet)
 	}
 	return storageSets
