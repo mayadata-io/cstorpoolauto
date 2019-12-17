@@ -27,6 +27,7 @@ import (
 
 	"cstorpoolauto/k8s"
 	"cstorpoolauto/types"
+	"cstorpoolauto/util/metac"
 )
 
 const (
@@ -137,6 +138,11 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		return nil
 	}
 
+	glog.V(3).Infof(
+		"Will reconcile CStorClusterConfig %s %s:",
+		request.Watch.GetNamespace(), request.Watch.GetName(),
+	)
+
 	// construct the error handler
 	errHandler := &reconcileErrHandler{
 		clusterConfig: request.Watch,
@@ -197,6 +203,11 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	// add updated CStorClusterConfig & CStorClusterConfigPlan to response
 	response.Attachments = append(response.Attachments, op.CStorClusterConfig)
 	response.Attachments = append(response.Attachments, op.CStorClusterPlan)
+	glog.V(2).Infof(
+		"CStorClusterConfig %s %s reconciled successfully: %s",
+		request.Watch.GetNamespace(), request.Watch.GetName(),
+		metac.GetDetailsFromResponse(response),
+	)
 	return nil
 }
 

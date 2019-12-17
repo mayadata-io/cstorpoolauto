@@ -26,6 +26,7 @@ import (
 
 	"cstorpoolauto/k8s"
 	"cstorpoolauto/types"
+	"cstorpoolauto/util/metac"
 )
 
 // reconcileErrHandler logs the error & updates these errors
@@ -102,6 +103,11 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 			"Failed to apply CStorPoolCluster for CStorClusterPlan: Nil response found",
 		)
 	}
+
+	glog.V(3).Infof(
+		"Will apply CStorPoolCluster for CStorClusterPlan %s %s:",
+		request.Watch.GetNamespace(), request.Watch.GetName(),
+	)
 
 	// construct the error handler
 	errHandler := &reconcileErrHandler{
@@ -195,6 +201,13 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		response.SkipReconcile = true
 	}
 	response.Status = op.Status
+
+	glog.V(3).Infof(
+		"CStorPoolCluster applied successfully for CStorClusterPlan %s %s: %s",
+		request.Watch.GetNamespace(), request.Watch.GetName(),
+		metac.GetDetailsFromResponse(response),
+	)
+
 	return nil
 }
 

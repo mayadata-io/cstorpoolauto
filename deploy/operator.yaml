@@ -27,5 +27,6 @@ spec:
         - --logtostderr
         - --run-as-local
         - -v=4
-        - --discovery-interval=20s
+        - --discovery-interval=40s
+        - --cache-flush-interval=240s
 ---
