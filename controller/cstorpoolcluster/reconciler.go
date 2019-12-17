@@ -558,10 +558,8 @@ func (p *Planner) Plan() (*unstructured.Unstructured, error) {
 	desired := &unstructured.Unstructured{}
 	desired.SetUnstructuredContent(map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
-			"kind":       string(types.KindCStorPoolCluster),
-			"name":       p.CStorClusterPlan.GetName(),
-			"namespace":  p.CStorClusterPlan.GetNamespace(),
+			"name":      p.CStorClusterPlan.GetName(),
+			"namespace": p.CStorClusterPlan.GetNamespace(),
 			"annotations": map[string]interface{}{
 				string(types.AnnKeyCStorClusterPlanUID):   p.CStorClusterPlan.GetUID(),
 				string(types.AnnKeyCStorClusterConfigUID): p.ObservedClusterConfig.GetUID(),
@@ -571,5 +569,8 @@ func (p *Planner) Plan() (*unstructured.Unstructured, error) {
 			"pools": p.buildDesiredPools(),
 		},
 	})
+	// below is the right way to set APIVersion & Kind
+	desired.SetAPIVersion(string(types.APIVersionOpenEBSV1Alpha1))
+	desired.SetKind(string(types.KindCStorPoolCluster))
 	return desired, nil
 }

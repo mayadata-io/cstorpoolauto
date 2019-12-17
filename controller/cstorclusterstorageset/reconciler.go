@@ -282,8 +282,6 @@ func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 		new := &unstructured.Unstructured{}
 		new.SetUnstructuredContent(map[string]interface{}{
 			"metadata": map[string]interface{}{
-				"apiVersion":   string(types.APIVersionDAOMayaDataV1Alpha1),
-				"kind":         string(types.KindStorage),
 				"generateName": "ccsset-", // ccsset -> CStorClusterStorageSet
 				"namespace":    p.DesiredNamespace,
 				"annotations": map[string]interface{}{
@@ -295,6 +293,10 @@ func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 				"nodeName": p.DesiredNodeName,
 			},
 		})
+		// below is the right way to create APIVersion & Kind
+		new.SetAPIVersion(string(types.APIVersionDAOMayaDataV1Alpha1))
+		new.SetKind(string(types.KindStorage))
+		// add the newly built unstruct instance to the list
 		desiredStorages = append(desiredStorages, new)
 	}
 	return desiredStorages
