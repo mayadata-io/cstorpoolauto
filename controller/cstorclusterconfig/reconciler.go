@@ -203,6 +203,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	// add updated CStorClusterConfig & CStorClusterConfigPlan to response
 	response.Attachments = append(response.Attachments, op.CStorClusterConfig)
 	response.Attachments = append(response.Attachments, op.CStorClusterPlan)
+
 	glog.V(2).Infof(
 		"CStorClusterConfig %s %s reconciled successfully: %s",
 		request.Watch.GetNamespace(), request.Watch.GetName(),
