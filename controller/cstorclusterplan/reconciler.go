@@ -220,19 +220,19 @@ func NewReconciler(
 
 // Reconcile observed state of CStorClusterPlan to its desired
 // state
-func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
+func (r *Reconciler) Reconcile() (*ReconcileResponse, error) {
 	planner, err := NewStorageSetsPlanner(
 		r.CStorClusterPlan,
 		r.ObservedStorageSets,
 	)
 	if err != nil {
-		return ReconcileResponse{}, err
+		return nil, err
 	}
 	desiredStorageSets, err := planner.Plan(r.CStorClusterConfig)
 	if err != nil {
-		return ReconcileResponse{}, err
+		return nil, err
 	}
-	return ReconcileResponse{
+	return &ReconcileResponse{
 		DesiredStorageSets: desiredStorageSets,
 		Status: types.MakeCStorClusterPlanToOnlineWithNoReconcileErr(
 			r.CStorClusterPlan,
@@ -365,6 +365,12 @@ func (p *StorageSetsPlanner) noop() []*unstructured.Unstructured {
 		if !isnoop {
 			continue
 		}
+		glog.V(3).Infof(
+			"Will not change CStorClusterStorageSet %s %s with node uid %s",
+			p.ObservedStorageSetObjs[uid].GetNamespace(),
+			p.ObservedStorageSetObjs[uid].GetName(),
+			uid,
+		)
 		storageSets = append(storageSets, p.ObservedStorageSetObjs[uid])
 	}
 	return storageSets
@@ -379,9 +385,9 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 			continue
 		}
 
+		// log it for debuggability purposes
 		glog.V(3).Infof(
-			"Will create (i.e. build) a CStorClusterStorageSet: CStorClusterPlan %s %s",
-			p.ClusterPlan.GetNamespace(), p.ClusterPlan.GetName(),
+			"Will create CStorClusterStorageSet with node uid %s", nodeUID,
 		)
 
 		storageSet := &unstructured.Unstructured{}
@@ -410,12 +416,6 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 				},
 			},
 		})
-
-		glog.V(2).Infof(
-			"Created (i.e. Built) a CStorClusterStorageSet: CStorClusterPlan %s %s",
-			p.ClusterPlan.GetNamespace(), p.ClusterPlan.GetName(),
-		)
-
 		storageSets = append(storageSets, storageSet)
 	}
 	return storageSets
@@ -450,6 +450,13 @@ func (p *StorageSetsPlanner) update() ([]*unstructured.Unstructured, error) {
 	for oldNodeUID, newNodeUID := range p.Updates {
 		storageSet := p.ObservedStorageSetObjs[oldNodeUID]
 		copy := storageSet.DeepCopy()
+
+		// log it for debuggability purposes
+		glog.V(3).Infof(
+			"Will update CStorClusterStorageSet %s %s from node uid %s to %s",
+			copy.GetNamespace(), copy.GetName(), oldNodeUID, newNodeUID,
+		)
+
 		// set new node details
 		node := map[string]string{
 			"name": p.PlannedNodeNames[newNodeUID],
