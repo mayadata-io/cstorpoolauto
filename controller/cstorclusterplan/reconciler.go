@@ -381,7 +381,7 @@ func (p *StorageSetsPlanner) updateDiskOnly(config *types.CStorClusterConfig) ([
 		// NOTE:
 		//	Disk details might not have changed. However we shall
 		// still set them to keep the logic idempotent.
-		disk := map[string]string{
+		disk := map[string]interface{}{
 			"capacity": config.Spec.DiskConfig.MinCapacity.String(),
 			"count":    config.Spec.DiskConfig.MinCount.String(),
 		}
@@ -480,7 +480,7 @@ func (p *StorageSetsPlanner) update(config *types.CStorClusterConfig) ([]*unstru
 		)
 
 		// set new node details
-		node := map[string]string{
+		node := map[string]interface{}{
 			"name": p.PlannedNodeNames[newNodeUID],
 			"uid":  newNodeUID,
 		}
@@ -500,7 +500,7 @@ func (p *StorageSetsPlanner) update(config *types.CStorClusterConfig) ([]*unstru
 		// NOTE:
 		//	Disk details might not have changed. However we shall
 		// still set them to keep the logic idempotent.
-		disk := map[string]string{
+		disk := map[string]interface{}{
 			"capacity": config.Spec.DiskConfig.MinCapacity.String(),
 			"count":    config.Spec.DiskConfig.MinCount.String(),
 		}
