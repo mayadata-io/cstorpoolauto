@@ -312,7 +312,7 @@ func (p *StoragePlanner) update(storage *unstructured.Unstructured) error {
 	err := unstructured.SetNestedMap(
 		storage.UnstructuredContent(),
 		map[string]interface{}{
-			"capacity": p.DesiredCapacity,
+			"capacity": p.DesiredCapacity.String(),
 			"nodeName": p.DesiredNodeName,
 		},
 		"spec",
