@@ -395,9 +395,6 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 			"metadata": map[string]interface{}{
 				"generateName": "ccplan-", // ccplan -> CStorClusterPlan
 				"namespace":    p.ClusterPlan.GetNamespace(),
-				"annotations": map[string]interface{}{
-					string(types.AnnKeyCStorClusterPlanUID): p.ClusterPlan.GetUID(),
-				},
 			},
 			"spec": map[string]interface{}{
 				"node": map[string]interface{}{
@@ -413,6 +410,10 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 					"storageClassName": config.Spec.DiskConfig.ExternalProvisioner.StorageClassName,
 				},
 			},
+		})
+		// create annotations with CStorClusterPlan UID
+		storageSet.SetAnnotations(map[string]string{
+			types.AnnKeyCStorClusterPlanUID: string(p.ClusterPlan.GetUID()),
 		})
 		// below is the right way to set APIVersion & Kind
 		storageSet.SetAPIVersion(string(types.APIVersionDAOMayaDataV1Alpha1))

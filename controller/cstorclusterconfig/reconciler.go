@@ -356,15 +356,10 @@ func (r *Reconciler) syncClusterPlan() error {
 		// name & namespace are same as CStorClusterConfig
 		r.CStorClusterPlan.SetName(r.CStorClusterConfig.GetName())
 		r.CStorClusterPlan.SetNamespace(r.CStorClusterConfig.GetNamespace())
-		// set CStorClusterConfig UID as an annotation for easy
-		// mapping at later stages of the workflow
-		r.CStorClusterPlan.SetAnnotations(
-			k8s.MergeToAnnotations(
-				types.AnnKeyCStorClusterConfigUID,
-				string(r.CStorClusterConfig.GetUID()),
-				r.CStorClusterPlan.GetAnnotations(),
-			),
-		)
+		// create annotations with CStorClusterConfig UID
+		r.CStorClusterPlan.SetAnnotations(map[string]string{
+			types.AnnKeyCStorClusterConfigUID: string(r.CStorClusterConfig.GetUID()),
+		})
 	}
 
 	// Plan should be invoked only after CStorClusterConfig is

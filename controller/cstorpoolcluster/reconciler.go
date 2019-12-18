@@ -560,14 +560,15 @@ func (p *Planner) Plan() (*unstructured.Unstructured, error) {
 		"metadata": map[string]interface{}{
 			"name":      p.CStorClusterPlan.GetName(),
 			"namespace": p.CStorClusterPlan.GetNamespace(),
-			"annotations": map[string]interface{}{
-				string(types.AnnKeyCStorClusterPlanUID):   p.CStorClusterPlan.GetUID(),
-				string(types.AnnKeyCStorClusterConfigUID): p.ObservedClusterConfig.GetUID(),
-			},
 		},
 		"spec": map[string]interface{}{
 			"pools": p.buildDesiredPools(),
 		},
+	})
+	// create annotations with CStorClusterPlan UID & CStorClusterConfig UID
+	desired.SetAnnotations(map[string]string{
+		types.AnnKeyCStorClusterPlanUID:   string(p.CStorClusterPlan.GetUID()),
+		types.AnnKeyCStorClusterConfigUID: string(p.ObservedClusterConfig.GetUID()),
 	})
 	// below is the right way to set APIVersion & Kind
 	desired.SetAPIVersion(string(types.APIVersionOpenEBSV1Alpha1))
