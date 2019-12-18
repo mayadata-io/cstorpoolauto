@@ -22,6 +22,9 @@
         - Remove / Scale Down should be done to young disks
             - current logic removes young nodes.
             - however, young nodes may attach old disks i.e. bigger data
+    - Finish the TODO markers in the code
+    - Create/Update construction should be same & hence should come from one func
+        - This is very important to make the code adhere to being idempotent
 - TODO - 1
     - update storage provisioner codebase
     - change ddp to dao

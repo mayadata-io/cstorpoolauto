@@ -220,12 +220,14 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 // created, removed, updated or perhaps does not require any
 // changes at all.
 type StoragePlanner struct {
-	ObservedStorages []*unstructured.Unstructured
-	StorageSetUID    k8stypes.UID
-	DesiredCount     resource.Quantity
-	DesiredCapacity  resource.Quantity
-	DesiredNodeName  string
-	DesiredNamespace string
+	ObservedStorages        []*unstructured.Unstructured
+	StorageSetUID           k8stypes.UID
+	DesiredCount            resource.Quantity
+	DesiredCapacity         resource.Quantity
+	DesiredNodeName         string
+	DesiredNamespace        string
+	DesiredCSIAttacherName  string
+	DesiredStorageClassName string
 }
 
 // NewStoragePlanner returns a new instance of StoragePlanner
@@ -235,12 +237,14 @@ func NewStoragePlanner(
 ) *StoragePlanner {
 	// initialize the planner
 	return &StoragePlanner{
-		ObservedStorages: observedStorages,
-		StorageSetUID:    storageSet.GetUID(),
-		DesiredCount:     storageSet.Spec.Disk.Count,
-		DesiredCapacity:  storageSet.Spec.Disk.Capacity,
-		DesiredNodeName:  storageSet.Spec.Node.Name,
-		DesiredNamespace: storageSet.GetNamespace(),
+		ObservedStorages:        observedStorages,
+		StorageSetUID:           storageSet.GetUID(),
+		DesiredCount:            storageSet.Spec.Disk.Count,
+		DesiredCapacity:         storageSet.Spec.Disk.Capacity,
+		DesiredNodeName:         storageSet.Spec.Node.Name,
+		DesiredNamespace:        storageSet.GetNamespace(),
+		DesiredCSIAttacherName:  storageSet.Spec.ExternalProvisioner.CSIAttacherName,
+		DesiredStorageClassName: storageSet.Spec.ExternalProvisioner.StorageClassName,
 	}
 }
 
@@ -281,6 +285,10 @@ func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 	var desiredStorages []*unstructured.Unstructured
 	var i int64
 	for i = 0; i < count; i++ {
+		glog.V(3).Infof(
+			"Will create Storage for CStorClusterStorageSet UID %s ", p.StorageSetUID,
+		)
+
 		new := &unstructured.Unstructured{}
 		new.SetUnstructuredContent(map[string]interface{}{
 			"metadata": map[string]interface{}{
@@ -292,9 +300,11 @@ func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 				"nodeName": p.DesiredNodeName,
 			},
 		})
-		// create annotations with CStorClusterStorageSet UID
+		// create annotations with CStorClusterStorageSet UID & others
 		new.SetAnnotations(map[string]string{
-			types.AnnKeyCStorClusterStorageSetUID: string(p.StorageSetUID),
+			types.AnnKeyCStorClusterStorageSetUID:          string(p.StorageSetUID),
+			types.AnnKeyStorageProvisionerCSIAttacherName:  p.DesiredCSIAttacherName,
+			types.AnnKeyStorageProvisionerStorageClassName: p.DesiredStorageClassName,
 		})
 		// below is the right way to create APIVersion & Kind
 		new.SetAPIVersion(string(types.APIVersionDAOMayaDataV1Alpha1))
@@ -309,6 +319,10 @@ func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 // desired storage capacity & node on which this storage
 // should get attached
 func (p *StoragePlanner) update(storage *unstructured.Unstructured) error {
+	glog.V(3).Infof(
+		"Will update Storage %s %s", storage.GetNamespace(), storage.GetName(),
+	)
+
 	err := unstructured.SetNestedMap(
 		storage.UnstructuredContent(),
 		map[string]interface{}{
@@ -324,5 +338,19 @@ func (p *StoragePlanner) update(storage *unstructured.Unstructured) error {
 			storage.GetNamespace(), storage.GetName(),
 		)
 	}
+
+	// sync the annotations
+	newAnns := k8s.MergeToAnnotations(
+		types.AnnKeyStorageProvisionerCSIAttacherName,
+		p.DesiredCSIAttacherName,
+		storage.GetAnnotations(),
+	)
+	newAnns = k8s.MergeToAnnotations(
+		types.AnnKeyStorageProvisionerStorageClassName,
+		p.DesiredStorageClassName,
+		newAnns,
+	)
+	storage.SetAnnotations(newAnns)
+
 	return nil
 }
