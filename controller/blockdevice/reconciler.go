@@ -122,7 +122,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 			continue
 		}
 		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
-			// verify further if this belongs to the current watch
+			// verify further if this belongs to the Storage i.e. watch
 			uid, _ := k8s.GetAnnotationForKey(
 				request.Watch.GetAnnotations(), types.AnnKeyCStorClusterStorageSetUID,
 			)
@@ -132,7 +132,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 			}
 		}
 		if attachment.GetKind() == string(types.KindPersistentVolumeClaim) {
-			// verify further if this belongs to the current watch
+			// verify further if this belongs to the Storage i.e. watch
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyStorageUID,
 			)
@@ -262,9 +262,13 @@ type StorageToBlockDeviceAssociator struct {
 	ObservedResources []*unstructured.Unstructured
 }
 
-// Associate filters the matching BlockDevice and adds
-// Storage related annotations against this device.
+// Associate will first filter the matching BlockDevice(s
+// and then add Storage related annotations against each
+// device.
 func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructured, error) {
+	// extract PV name from PVC
+	//
+	// NOTE: PVC needs to be bound to a PV for this to happen
 	pvName, found, err :=
 		unstructured.NestedString(p.PVC.UnstructuredContent(), "spec", "volumeName")
 	if err != nil {
@@ -293,14 +297,14 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 	}
 	if len(matchingBlockDevices) == 0 {
 		glog.V(4).Infof(
-			"Will skip BlockDevice association: BlockDevice not found for PV %s: Storage %s %s",
+			"Will skip BlockDevice association: No matching BlockDevice for PV %s: Storage %s %s",
 			pvName, p.Storage.GetNamespace(), p.Storage.GetName(),
 		)
 		return observedBlockDevices, nil
 	}
 	if len(matchingBlockDevices) > 1 {
 		return nil, errors.Errorf(
-			"Found %d BlockDevices with PV %s: Want one BlockDevice",
+			"Found %d BlockDevices with PV %s: Want exactly one BlockDevice",
 			len(matchingBlockDevices), pvName,
 		)
 	}
@@ -388,6 +392,7 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 			)
 			continue
 		}
+		// extract CStorClusterPlan UID from CStorClusterStorageSet
 		cstorClusterPlanUID, found := k8s.GetAnnotationForKey(
 			p.StorageSet.GetAnnotations(),
 			types.AnnKeyCStorClusterPlanUID,
@@ -398,13 +403,13 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 				p.StorageSet.GetNamespace(), p.StorageSet.GetName(),
 			)
 		}
-		// add CStorClusterStorageSet UID
+		// add CStorClusterStorageSet UID to device annotations
 		newAnns := k8s.MergeToAnnotations(
 			types.AnnKeyCStorClusterStorageSetUID,
 			string(p.StorageSet.GetUID()),
 			device.GetAnnotations(),
 		)
-		// add CStorClusterPlan UID
+		// add CStorClusterPlan UID to device annotations
 		newAnns = k8s.MergeToAnnotations(
 			types.AnnKeyCStorClusterPlanUID,
 			cstorClusterPlanUID,

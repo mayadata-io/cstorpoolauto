@@ -272,9 +272,11 @@ func (p *StoragePlanner) Plan() ([]*unstructured.Unstructured, error) {
 	return finalStorages, nil
 }
 
-// create will create the Storage(s) specifications which when
-// applied should achieve the desired state. It creates given
-// count number of Storage specifications.
+// create will create the **Storage(s)** instances to achieve
+// the desired state.
+//
+// NOTE:
+//	It creates Storage instances based on the given count.
 func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 	var desiredStorages []*unstructured.Unstructured
 	var i int64
@@ -284,14 +286,15 @@ func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
 			"metadata": map[string]interface{}{
 				"generateName": "ccsset-", // ccsset -> CStorClusterStorageSet
 				"namespace":    p.DesiredNamespace,
-				"annotations": map[string]interface{}{
-					string(types.AnnKeyCStorClusterStorageSetUID): p.StorageSetUID,
-				},
 			},
 			"spec": map[string]interface{}{
 				"capacity": p.DesiredCapacity,
 				"nodeName": p.DesiredNodeName,
 			},
+		})
+		// create annotations with CStorClusterStorageSet UID
+		new.SetAnnotations(map[string]string{
+			types.AnnKeyCStorClusterStorageSetUID: string(p.StorageSetUID),
 		})
 		// below is the right way to create APIVersion & Kind
 		new.SetAPIVersion(string(types.APIVersionDAOMayaDataV1Alpha1))
