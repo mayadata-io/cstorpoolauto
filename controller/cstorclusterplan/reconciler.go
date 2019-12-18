@@ -343,37 +343,56 @@ func NewStorageSetsPlanner(
 // Plan provides the list of desired StorageSets
 func (p *StorageSetsPlanner) Plan(config *types.CStorClusterConfig) ([]*unstructured.Unstructured, error) {
 	var finalStorageSets []*unstructured.Unstructured
-	noopObjs := p.noop()
-	createObjs := p.create(config)
-	p.remove()
-	updateObjs, err := p.update()
+	updateDiskObjs, err := p.updateDiskOnly(config)
 	if err != nil {
 		return nil, err
 	}
-	finalStorageSets = append(finalStorageSets, noopObjs...)
+	createObjs := p.create(config)
+	p.remove()
+	updateObjs, err := p.update(config)
+	if err != nil {
+		return nil, err
+	}
+	finalStorageSets = append(finalStorageSets, updateDiskObjs...)
 	finalStorageSets = append(finalStorageSets, createObjs...)
 	finalStorageSets = append(finalStorageSets, updateObjs...)
 	return finalStorageSets, nil
 }
 
-// noop returns the list of CStorClusterStorageSet(s) that do
-// **not** require any changes. In other words their desired &
-// observed states matches.
-func (p *StorageSetsPlanner) noop() []*unstructured.Unstructured {
+// updateDiskOnly returns the list of CStorClusterStorageSet(s)
+// with updated disk info if any.
+func (p *StorageSetsPlanner) updateDiskOnly(config *types.CStorClusterConfig) ([]*unstructured.Unstructured, error) {
 	var storageSets []*unstructured.Unstructured
 	for uid, isnoop := range p.IsNoop {
 		if !isnoop {
 			continue
 		}
+
 		glog.V(3).Infof(
-			"Will not change CStorClusterStorageSet %s %s with node uid %s",
+			"Will sync CStorClusterStorageSet %s %s with disk details",
 			p.ObservedStorageSetObjs[uid].GetNamespace(),
 			p.ObservedStorageSetObjs[uid].GetName(),
-			uid,
 		)
-		storageSets = append(storageSets, p.ObservedStorageSetObjs[uid])
+
+		copy := p.ObservedStorageSetObjs[uid].DeepCopy()
+
+		// set new disk details
+		//
+		// NOTE:
+		//	Disk details might not have changed. However we shall
+		// still set them to keep the logic idempotent.
+		disk := map[string]string{
+			"capacity": config.Spec.DiskConfig.MinCapacity.String(),
+			"count":    config.Spec.DiskConfig.MinCount.String(),
+		}
+		err := unstructured.SetNestedField(copy.Object, disk, "spec", "disk")
+		if err != nil {
+			return nil, err
+		}
+
+		storageSets = append(storageSets, copy)
 	}
-	return storageSets
+	return storageSets, nil
 }
 
 // create returns a list of CStorClusterStorageSet(s) that will
@@ -386,7 +405,7 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 		}
 
 		// log it for debuggability purposes
-		glog.V(3).Infof(
+		glog.V(2).Infof(
 			"Will create CStorClusterStorageSet with node uid %s", nodeUID,
 		)
 
@@ -437,7 +456,7 @@ func (p *StorageSetsPlanner) remove() {
 			continue
 		}
 		// log it for debuggability purposes
-		glog.V(3).Infof(
+		glog.V(2).Infof(
 			"Will remove CStorClusterStorageSet %s %s having node uid %s",
 			p.ObservedStorageSetObjs[uid].GetNamespace(),
 			p.ObservedStorageSetObjs[uid].GetName(),
@@ -448,7 +467,7 @@ func (p *StorageSetsPlanner) remove() {
 
 // update will return a list of modified CStorClusterStorageSet(s)
 // which in turn will get updated at the cluster.
-func (p *StorageSetsPlanner) update() ([]*unstructured.Unstructured, error) {
+func (p *StorageSetsPlanner) update(config *types.CStorClusterConfig) ([]*unstructured.Unstructured, error) {
 	var updatedStorageSets []*unstructured.Unstructured
 	for oldNodeUID, newNodeUID := range p.Updates {
 		storageSet := p.ObservedStorageSetObjs[oldNodeUID]
@@ -469,6 +488,27 @@ func (p *StorageSetsPlanner) update() ([]*unstructured.Unstructured, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// log it for debuggability purposes
+		glog.V(3).Infof(
+			"Will sync CStorClusterStorageSet %s %s with disk details",
+			copy.GetNamespace(), copy.GetName(),
+		)
+
+		// set new disk details
+		//
+		// NOTE:
+		//	Disk details might not have changed. However we shall
+		// still set them to keep the logic idempotent.
+		disk := map[string]string{
+			"capacity": config.Spec.DiskConfig.MinCapacity.String(),
+			"count":    config.Spec.DiskConfig.MinCount.String(),
+		}
+		err = unstructured.SetNestedField(copy.Object, disk, "spec", "disk")
+		if err != nil {
+			return nil, err
+		}
+
 		updatedStorageSets = append(updatedStorageSets, copy)
 	}
 	return updatedStorageSets, nil
