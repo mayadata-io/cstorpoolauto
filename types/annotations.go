@@ -17,6 +17,9 @@ limitations under the License.
 package types
 
 const (
+	// TODO (@amitkumardas):
+	//	Change this to cstorpoolauto.dao.mayadata.io
+
 	// AnnotationNamespace is the common namespace used across all
 	// the annotations supported in this project
 	AnnotationNamespace string = "dao.mayadata.io"
@@ -35,4 +38,16 @@ const (
 
 	// AnnKeyStorageUID is the annotation that refers to Storage UID
 	AnnKeyStorageUID string = AnnotationNamespace + "/storage-uid"
+
+	// StorageProvisionerAnnotationNamespace is the common namespace
+	// used across all the annotations supported in storage-provisioner project
+	StorageProvisionerAnnotationNamespace string = "storageprovisioner.dao.mayadata.io"
+
+	// AnnKeyStorageProvisionerCSIAttacherName is the annotationn that refers
+	// to CSIAttacherName
+	AnnKeyStorageProvisionerCSIAttacherName string = StorageProvisionerAnnotationNamespace + "/csi-attacher-name"
+
+	// AnnKeyStorageProvisionerStorageClassName is the annotation that refers
+	// to StorageClassName
+	AnnKeyStorageProvisionerStorageClassName string = StorageProvisionerAnnotationNamespace + "/storageclass-name"
 )
