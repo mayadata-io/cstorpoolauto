@@ -16,14 +16,27 @@ limitations under the License.
 
 package string
 
+import "strings"
+
 // List is a representation of list of strings
 type List []string
 
-// Contains returns true if given string is found in the
-// list
-func (l List) Contains(given string) bool {
+// ContainsExact returns true if given string is exact
+// match with one if the items in the list
+func (l List) ContainsExact(given string) bool {
 	for _, available := range l {
 		if available == given {
+			return true
+		}
+	}
+	return false
+}
+
+// Contains returns true if given string is a
+// substring of the items in the list
+func (l List) Contains(substr string) bool {
+	for _, available := range l {
+		if strings.Contains(available, substr) {
 			return true
 		}
 	}
