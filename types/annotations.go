@@ -36,12 +36,12 @@ const (
 	// CStorClusterStorageSet UID
 	AnnKeyCStorClusterStorageSetUID string = AnnotationNamespace + "/cstorclusterstorageset-uid"
 
-	// AnnKeyStorageUID is the annotation that refers to Storage UID
-	AnnKeyStorageUID string = AnnotationNamespace + "/storage-uid"
-
 	// StorageProvisionerAnnotationNamespace is the common namespace
 	// used across all the annotations supported in storage-provisioner project
 	StorageProvisionerAnnotationNamespace string = "storageprovisioner.dao.mayadata.io"
+
+	// AnnKeyStorageUID is the annotation that refers to Storage UID
+	AnnKeyStorageUID string = StorageProvisionerAnnotationNamespace + "/storage-uid"
 
 	// AnnKeyStorageProvisionerCSIAttacherName is the annotationn that refers
 	// to CSIAttacherName
