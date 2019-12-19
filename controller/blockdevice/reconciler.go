@@ -459,28 +459,25 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 				p.StorageSet.GetNamespace(), p.StorageSet.GetName(),
 			)
 		}
-		// // add CStorClusterStorageSet UID to device annotations
-		// newAnns := k8s.MergeToAnnotations(
-		// 	types.AnnKeyCStorClusterStorageSetUID,
-		// 	string(p.StorageSet.GetUID()),
-		// 	device.GetAnnotations(),
-		// )
-		// // add CStorClusterPlan UID to device annotations
-		// newAnns = k8s.MergeToAnnotations(
-		// 	types.AnnKeyCStorClusterPlanUID,
-		// 	cstorClusterPlanUID,
-		// 	newAnns,
-		// )
+		// add CStorClusterStorageSet UID to device's
+		// existing annotations
+		newAnns := k8s.MergeToAnnotations(
+			types.AnnKeyCStorClusterStorageSetUID, string(p.StorageSet.GetUID()),
+			device.GetAnnotations(),
+		)
+		// add CStorClusterPlan UID to device's
+		// existing annotations
+		newAnns = k8s.MergeToAnnotations(
+			types.AnnKeyCStorClusterPlanUID, cstorClusterPlanUID,
+			newAnns,
+		)
 
 		new := &unstructured.Unstructured{}
 		new.SetAPIVersion(device.GetAPIVersion())
 		new.SetKind(device.GetKind())
 		new.SetNamespace(device.GetNamespace())
 		new.SetName(device.GetName())
-		new.SetAnnotations(map[string]string{
-			types.AnnKeyCStorClusterStorageSetUID: string(p.StorageSet.GetUID()),
-			types.AnnKeyCStorClusterPlanUID:       cstorClusterPlanUID,
-		})
+		new.SetAnnotations(newAnns)
 
 		glog.V(2).Infof(
 			"BlockDevice %s %s associated / annotated successfully: CStorClusterStorageSet %s: CStorClusterPlan %s",
