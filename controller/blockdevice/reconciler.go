@@ -292,9 +292,28 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 			"Will skip BlockDevice association: PV not found for PVC %s %s: Storage %s %s",
 			p.PVC.GetNamespace(), p.PVC.GetName(), p.Storage.GetNamespace(), p.Storage.GetName(),
 		)
-		return observedBlockDevices, nil
+		// TODO (@amitkumardas):
+		// This logic needs to be revisited after enhancements & bug fixes
+		// at metac
+		//
+		// Bug:
+		// 	Metac has a bug that updates all returned
+		// resources if these resources are configured
+		// with updateAny true & update strategy set
+		// to InPlace.
+		//
+		// Workaround:
+		// 	We shall return empty block devices which means
+		// metac will try to delete the observed block devices
+		// but will fail since deleteAny is not enabled
+		//return observedBlockDevices, nil
+		return []*unstructured.Unstructured{}, nil
 	}
-	matchingBlockDevices, nonMatchingBlockDevices, err :=
+	// TODO (@amitkumardas):
+	// 	Read above note w.r.t bug & enhancement
+	//
+	//matchingBlockDevices, nonMatchingBlockDevices, err :=	p.filterBlockDevicesWithPVName(observedBlockDevices, pvName)
+	matchingBlockDevices, _, err :=
 		p.filterBlockDevicesWithPVName(observedBlockDevices, pvName)
 	if err != nil {
 		return nil, err
@@ -304,7 +323,11 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 			"Will skip BlockDevice association: No matching BlockDevice for PV %s: Storage %s %s",
 			pvName, p.Storage.GetNamespace(), p.Storage.GetName(),
 		)
-		return observedBlockDevices, nil
+		// TODO (@amitkumardas):
+		// 	Read above note w.r.t bug & enhancement
+		//
+		// return observedBlockDevices, nil
+		return []*unstructured.Unstructured{}, nil
 	}
 	if len(matchingBlockDevices) > 1 {
 		return nil, errors.Errorf(
@@ -316,7 +339,11 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 	if err != nil {
 		return nil, err
 	}
-	final = append(final, nonMatchingBlockDevices...)
+	// TODO (@amitkumardas):
+	// 	Read above note w.r.t bug & enhancement
+	// We shall return only the matching device
+	//
+	//final = append(final, nonMatchingBlockDevices...)
 	return append(final, annotated...), nil
 }
 
@@ -406,16 +433,21 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 ) ([]*unstructured.Unstructured, error) {
 	var annotated []*unstructured.Unstructured
 	for _, device := range devices {
-		unclaimFound, err := p.isBlockDeviceUnclaimed(device)
+		isUnclaimFound, err := p.isBlockDeviceUnclaimed(device)
 		if err != nil {
 			return nil, err
 		}
-		if !unclaimFound {
+		if !isUnclaimFound {
+			// TODO (@amitkumardas):
+			// 	Read previous notes on bug & enhancement required
+			// at metac
+			//
 			// add device without any changes to annotations
 			// if this device is not in unclaimed state
-			annotated = append(annotated, device)
+			// annotated = append(annotated, device)
 			continue
 		}
+		// proceed further for unclaimed device only
 		// extract CStorClusterPlan UID from CStorClusterStorageSet
 		cstorClusterPlanUID, found := k8s.GetAnnotationForKey(
 			p.StorageSet.GetAnnotations(),
