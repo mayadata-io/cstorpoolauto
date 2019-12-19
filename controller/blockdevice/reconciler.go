@@ -341,7 +341,7 @@ func (p *StorageToBlockDeviceAssociator) filterBlockDevicesWithPVName(
 				device.GetNamespace(), device.GetName(),
 			)
 		}
-		if !found {
+		if !found || len(devlinks) == 0 {
 			glog.V(3).Infof("Can't find spec.devlinks for BlockDevice %s %s",
 				device.GetNamespace(), device.GetName(),
 			)
@@ -360,7 +360,7 @@ func (p *StorageToBlockDeviceAssociator) filterBlockDevicesWithPVName(
 					idx, device.GetNamespace(), device.GetName(),
 				)
 			}
-			if !found {
+			if !found || len(links) == 0 {
 				glog.V(3).Infof("Can't find spec.devlinks[%d].links for BlockDevice %s %s",
 					idx, device.GetNamespace(), device.GetName(),
 				)
@@ -369,6 +369,10 @@ func (p *StorageToBlockDeviceAssociator) filterBlockDevicesWithPVName(
 			}
 			linkList := stringutil.List(links)
 			if linkList.Contains(pvName) {
+				glog.V(2).Infof("BlockDevice %s %s matches PV %s: Links [%s]",
+					device.GetNamespace(), device.GetName(),
+					pvName, linkList,
+				)
 				match = append(match, device)
 			} else {
 				nomatch = append(nomatch, device)
@@ -414,25 +418,28 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 				p.StorageSet.GetNamespace(), p.StorageSet.GetName(),
 			)
 		}
-		// add CStorClusterStorageSet UID to device annotations
-		newAnns := k8s.MergeToAnnotations(
-			types.AnnKeyCStorClusterStorageSetUID,
-			string(p.StorageSet.GetUID()),
-			device.GetAnnotations(),
-		)
-		// add CStorClusterPlan UID to device annotations
-		newAnns = k8s.MergeToAnnotations(
-			types.AnnKeyCStorClusterPlanUID,
-			cstorClusterPlanUID,
-			newAnns,
-		)
+		// // add CStorClusterStorageSet UID to device annotations
+		// newAnns := k8s.MergeToAnnotations(
+		// 	types.AnnKeyCStorClusterStorageSetUID,
+		// 	string(p.StorageSet.GetUID()),
+		// 	device.GetAnnotations(),
+		// )
+		// // add CStorClusterPlan UID to device annotations
+		// newAnns = k8s.MergeToAnnotations(
+		// 	types.AnnKeyCStorClusterPlanUID,
+		// 	cstorClusterPlanUID,
+		// 	newAnns,
+		// )
 
 		new := &unstructured.Unstructured{}
 		new.SetAPIVersion(device.GetAPIVersion())
 		new.SetKind(device.GetKind())
 		new.SetNamespace(device.GetNamespace())
 		new.SetName(device.GetName())
-		new.SetAnnotations(newAnns)
+		new.SetAnnotations(map[string]string{
+			types.AnnKeyCStorClusterStorageSetUID: string(p.StorageSet.GetUID()),
+			types.AnnKeyCStorClusterPlanUID:       cstorClusterPlanUID,
+		})
 
 		glog.V(2).Infof(
 			"BlockDevice %s %s associated / annotated successfully: CStorClusterStorageSet %s: CStorClusterPlan %s",

@@ -21,6 +21,11 @@ import "strings"
 // List is a representation of list of strings
 type List []string
 
+// String implements Stringer interface
+func (l List) String() string {
+	return strings.Join(l, ", ")
+}
+
 // ContainsExact returns true if given string is exact
 // match with one if the items in the list
 func (l List) ContainsExact(given string) bool {
