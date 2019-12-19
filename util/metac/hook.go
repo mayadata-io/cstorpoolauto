@@ -18,12 +18,45 @@ package metac
 
 import (
 	"fmt"
+	"strings"
 
 	"openebs.io/metac/controller/generic"
 )
 
+// GetDetailsFromRequest returns details of provided
+// response in string format
+func GetDetailsFromRequest(req *generic.SyncHookRequest) string {
+	if req == nil {
+		return ""
+	}
+	var message string = "Request -"
+	if req.Watch == nil {
+		return message + "Watch=nil"
+	}
+	var details []string
+	details = append(
+		details,
+		message,
+		fmt.Sprintf("[Watch %s %s]", req.Watch.GetNamespace(), req.Watch.GetName()),
+	)
+	var attachmentKinds map[string]int = map[string]int{}
+	for _, attachment := range req.Attachments.List() {
+		count := attachmentKinds[attachment.GetKind()]
+		attachmentKinds[attachment.GetKind()] = count + 1
+	}
+	for kind, count := range attachmentKinds {
+		details = append(
+			details, fmt.Sprintf("[%s %d]", kind, count),
+		)
+	}
+	return strings.Join(details, " ")
+}
+
 // GetDetailsFromResponse returns details of provided
 // response in string format
+//
+// TODO:
+//	Refactor this logic similar to GetDetailsFromRequest
 func GetDetailsFromResponse(resp *generic.SyncHookResponse) string {
 	if resp == nil || len(resp.Attachments) == 0 {
 		return ""
