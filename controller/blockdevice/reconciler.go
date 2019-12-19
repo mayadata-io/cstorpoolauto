@@ -118,7 +118,9 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	var pvc *unstructured.Unstructured
 	for _, attachment := range request.Attachments.List() {
 		if attachment.GetKind() == string(types.KindBlockDevice) {
-			// BlockDevices are attached after the reconciliation
+			// No need to add BlockDevices to response now
+			//
+			// They will be attached after the reconciliation
 			continue
 		}
 		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
@@ -177,7 +179,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	//response.Status = op.Status
 
 	glog.V(2).Infof(
-		"BlockDevice(s) were associated with Storage %s %s successfully: %s",
+		"BlockDevice was associated with Storage %s %s successfully: %s",
 		request.Watch.GetNamespace(), request.Watch.GetName(),
 		metac.GetDetailsFromResponse(response),
 	)
@@ -266,6 +268,7 @@ type StorageToBlockDeviceAssociator struct {
 // and then add Storage related annotations against each
 // device.
 func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructured, error) {
+	var final []*unstructured.Unstructured
 	// extract PV name from PVC
 	//
 	// NOTE: PVC needs to be bound to a PV for this to happen
@@ -278,25 +281,21 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 			p.PVC.GetNamespace(), p.PVC.GetName(),
 		)
 	}
-	if !found {
-		return nil, errors.Errorf(
-			"Can't find PV name from PVC %s %s", p.PVC.GetNamespace(), p.PVC.GetName(),
-		)
-	}
 	observedBlockDevices := p.getObservedBlockDevices()
-	if pvName == "" {
-		glog.V(4).Infof(
+	if !found || pvName == "" {
+		glog.V(3).Infof(
 			"Will skip BlockDevice association: PV not found for PVC %s %s: Storage %s %s",
 			p.PVC.GetNamespace(), p.PVC.GetName(), p.Storage.GetNamespace(), p.Storage.GetName(),
 		)
 		return observedBlockDevices, nil
 	}
-	matchingBlockDevices, err := p.filterBlockDevicesWithPVName(observedBlockDevices, pvName)
+	matchingBlockDevices, nonMatchingBlockDevices, err :=
+		p.filterBlockDevicesWithPVName(observedBlockDevices, pvName)
 	if err != nil {
 		return nil, err
 	}
 	if len(matchingBlockDevices) == 0 {
-		glog.V(4).Infof(
+		glog.V(3).Infof(
 			"Will skip BlockDevice association: No matching BlockDevice for PV %s: Storage %s %s",
 			pvName, p.Storage.GetNamespace(), p.Storage.GetName(),
 		)
@@ -308,7 +307,12 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 			len(matchingBlockDevices), pvName,
 		)
 	}
-	return p.annotateBlockDevicesIfUnclaimed(matchingBlockDevices)
+	annotated, err := p.annotateBlockDevicesIfUnclaimed(matchingBlockDevices)
+	if err != nil {
+		return nil, err
+	}
+	final = append(final, nonMatchingBlockDevices...)
+	return append(final, annotated...), nil
 }
 
 func (p *StorageToBlockDeviceAssociator) getObservedBlockDevices() []*unstructured.Unstructured {
@@ -324,22 +328,24 @@ func (p *StorageToBlockDeviceAssociator) getObservedBlockDevices() []*unstructur
 func (p *StorageToBlockDeviceAssociator) filterBlockDevicesWithPVName(
 	blockDevices []*unstructured.Unstructured,
 	pvName string,
-) ([]*unstructured.Unstructured, error) {
-	var filtered []*unstructured.Unstructured
+) ([]*unstructured.Unstructured, []*unstructured.Unstructured, error) {
+	var match []*unstructured.Unstructured
+	var nomatch []*unstructured.Unstructured
 	for _, device := range blockDevices {
 		devlinks, found, err :=
 			unstructured.NestedSlice(device.UnstructuredContent(), "spec", "devlinks")
 		if err != nil {
-			return nil, errors.Wrapf(
+			return nil, nil, errors.Wrapf(
 				err,
 				"Failed to fetch spec.devlinks from BlockDevice %s %s",
 				device.GetNamespace(), device.GetName(),
 			)
 		}
 		if !found {
-			glog.V(4).Infof("Can't find spec.devlinks for BlockDevice %s %s",
+			glog.V(3).Infof("Can't find spec.devlinks for BlockDevice %s %s",
 				device.GetNamespace(), device.GetName(),
 			)
+			nomatch = append(nomatch, device)
 			continue
 		}
 		for idx, devlink := range devlinks {
@@ -348,25 +354,28 @@ func (p *StorageToBlockDeviceAssociator) filterBlockDevicesWithPVName(
 					map[string]interface{}{"devlink": devlink}, "devlink", "links",
 				)
 			if err != nil {
-				return nil, errors.Wrapf(
+				return nil, nil, errors.Wrapf(
 					err,
 					"Failed to fetch spec.devlinks[%d].links from BlockDevice %s %s",
 					idx, device.GetNamespace(), device.GetName(),
 				)
 			}
 			if !found {
-				glog.V(4).Infof("Can't find spec.devlinks[%d].links for BlockDevice %s %s",
+				glog.V(3).Infof("Can't find spec.devlinks[%d].links for BlockDevice %s %s",
 					idx, device.GetNamespace(), device.GetName(),
 				)
+				nomatch = append(nomatch, device)
 				continue
 			}
 			linkList := stringutil.List(links)
 			if linkList.Contains(pvName) {
-				filtered = append(filtered, device)
+				match = append(match, device)
+			} else {
+				nomatch = append(nomatch, device)
 			}
 		}
 	}
-	return filtered, nil
+	return match, nomatch, nil
 }
 
 func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
@@ -386,10 +395,12 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 			)
 		}
 		if status != string(types.BlockDeviceUnclaimed) {
-			glog.V(4).Infof(
+			glog.V(3).Infof(
 				"BlockDevice %s %s with state %s will be skipped from association: Storage %s %s",
 				device.GetNamespace(), device.GetName(), status, p.Storage.GetNamespace(), p.Storage.GetName(),
 			)
+			// add device without any changes to annotations
+			annotated = append(annotated, device)
 			continue
 		}
 		// extract CStorClusterPlan UID from CStorClusterStorageSet
@@ -415,8 +426,23 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 			cstorClusterPlanUID,
 			newAnns,
 		)
-		device.SetAnnotations(newAnns)
-		annotated = append(annotated, device)
+
+		new := &unstructured.Unstructured{}
+		new.SetAPIVersion(device.GetAPIVersion())
+		new.SetKind(device.GetKind())
+		new.SetNamespace(device.GetNamespace())
+		new.SetName(device.GetName())
+		new.SetAnnotations(newAnns)
+
+		glog.V(2).Infof(
+			"BlockDevice %s %s associated / annotated successfully: CStorClusterStorageSet %s: CStorClusterPlan %s",
+			device.GetNamespace(),
+			device.GetName(),
+			p.StorageSet.GetUID(),
+			cstorClusterPlanUID,
+		)
+		// add device that is updated with annotations
+		annotated = append(annotated, new)
 	}
 	return annotated, nil
 }
