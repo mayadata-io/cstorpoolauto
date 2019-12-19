@@ -104,8 +104,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	}
 
 	glog.V(3).Infof(
-		"Will associate BlockDevice with Storage %s %s:",
-		request.Watch.GetNamespace(), request.Watch.GetName(),
+		"Will associate BlockDevice with Storage: %s", metac.GetDetailsFromRequest(request),
 	)
 
 	// construct the error handler
@@ -216,17 +215,23 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 		return ReconcileResponse{}, err
 	}
 	// prepare the status to be set against the storage instance
-	status, err := r.getStorageStatusAsNoError()
-	if err != nil {
-		return ReconcileResponse{}, err
-	}
+	//status, err := r.getStorageStatusAsNoError()
+	//if err != nil {
+	//	return ReconcileResponse{}, err
+	//}
 	// build & return reconcile response
 	return ReconcileResponse{
 		DesiredBlockDevices: desiredBlockDevices,
-		Status:              status,
+		//Status:              status,
 	}, nil
 }
 
+// getStorageStatusAsNoError sets no error in status & returns
+// the updated status
+//
+// TODO (@amitkumardas):
+// Need to rethink on error handling
+// This functon is not used currently
 func (r *Reconciler) getStorageStatusAsNoError() (map[string]interface{}, error) {
 	// get the existing status.phase
 	phase, found, err :=
@@ -332,54 +337,68 @@ func (p *StorageToBlockDeviceAssociator) filterBlockDevicesWithPVName(
 	var match []*unstructured.Unstructured
 	var nomatch []*unstructured.Unstructured
 	for _, device := range blockDevices {
-		devlinks, found, err :=
-			unstructured.NestedSlice(device.UnstructuredContent(), "spec", "devlinks")
+		found, err := p.isBlockDeviceMatchWithPVName(device, pvName)
 		if err != nil {
-			return nil, nil, errors.Wrapf(
-				err,
-				"Failed to fetch spec.devlinks from BlockDevice %s %s",
-				device.GetNamespace(), device.GetName(),
-			)
+			return nil, nil, err
 		}
-		if !found || len(devlinks) == 0 {
-			glog.V(3).Infof("Can't find spec.devlinks for BlockDevice %s %s",
-				device.GetNamespace(), device.GetName(),
-			)
+		if found {
+			match = append(match, device)
+		} else {
 			nomatch = append(nomatch, device)
-			continue
-		}
-		for idx, devlink := range devlinks {
-			links, found, err :=
-				unstructured.NestedStringSlice(
-					map[string]interface{}{"devlink": devlink}, "devlink", "links",
-				)
-			if err != nil {
-				return nil, nil, errors.Wrapf(
-					err,
-					"Failed to fetch spec.devlinks[%d].links from BlockDevice %s %s",
-					idx, device.GetNamespace(), device.GetName(),
-				)
-			}
-			if !found || len(links) == 0 {
-				glog.V(3).Infof("Can't find spec.devlinks[%d].links for BlockDevice %s %s",
-					idx, device.GetNamespace(), device.GetName(),
-				)
-				nomatch = append(nomatch, device)
-				continue
-			}
-			linkList := stringutil.List(links)
-			if linkList.Contains(pvName) {
-				glog.V(2).Infof("BlockDevice %s %s matches PV %s: Links [%s]",
-					device.GetNamespace(), device.GetName(),
-					pvName, linkList,
-				)
-				match = append(match, device)
-			} else {
-				nomatch = append(nomatch, device)
-			}
 		}
 	}
 	return match, nomatch, nil
+}
+
+func (p *StorageToBlockDeviceAssociator) isBlockDeviceMatchWithPVName(
+	device *unstructured.Unstructured, pvName string,
+) (bool, error) {
+	// extract devlinks
+	devlinks, found, err :=
+		unstructured.NestedSlice(device.UnstructuredContent(), "spec", "devlinks")
+	if err != nil {
+		return false, errors.Wrapf(
+			err,
+			"Failed to fetch spec.devlinks from BlockDevice %s %s",
+			device.GetNamespace(), device.GetName(),
+		)
+	}
+	if !found || len(devlinks) == 0 {
+		glog.V(3).Infof("Can't find spec.devlinks for BlockDevice %s %s",
+			device.GetNamespace(), device.GetName(),
+		)
+		return false, nil
+	}
+
+	// find if any devlink relates to PV name
+	for idx, devlink := range devlinks {
+		links, found, err :=
+			unstructured.NestedStringSlice(
+				map[string]interface{}{"devlink": devlink}, "devlink", "links",
+			)
+		if err != nil {
+			return false, errors.Wrapf(
+				err,
+				"Failed to fetch spec.devlinks[%d].links from BlockDevice %s %s",
+				idx, device.GetNamespace(), device.GetName(),
+			)
+		}
+		if !found || len(links) == 0 {
+			glog.V(3).Infof("Can't find spec.devlinks[%d].links for BlockDevice %s %s",
+				idx, device.GetNamespace(), device.GetName(),
+			)
+			continue
+		}
+		linkList := stringutil.List(links)
+		if linkList.Contains(pvName) {
+			glog.V(3).Infof("BlockDevice %s %s matches PV %s: Links [%s]",
+				device.GetNamespace(), device.GetName(),
+				pvName, linkList,
+			)
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
@@ -387,23 +406,13 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 ) ([]*unstructured.Unstructured, error) {
 	var annotated []*unstructured.Unstructured
 	for _, device := range devices {
-		status, found, err :=
-			unstructured.NestedString(device.UnstructuredContent(), "status", "claimState")
+		unclaimFound, err := p.isBlockDeviceUnclaimed(device)
 		if err != nil {
 			return nil, err
 		}
-		if !found || status == "" {
-			return nil, errors.Errorf(
-				"Can't find status.claimState for BlockDevice %s %s",
-				device.GetNamespace(), device.GetName(),
-			)
-		}
-		if status != string(types.BlockDeviceUnclaimed) {
-			glog.V(3).Infof(
-				"BlockDevice %s %s with state %s will be skipped from association: Storage %s %s",
-				device.GetNamespace(), device.GetName(), status, p.Storage.GetNamespace(), p.Storage.GetName(),
-			)
+		if !unclaimFound {
 			// add device without any changes to annotations
+			// if this device is not in unclaimed state
 			annotated = append(annotated, device)
 			continue
 		}
@@ -452,4 +461,27 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 		annotated = append(annotated, new)
 	}
 	return annotated, nil
+}
+
+func (p *StorageToBlockDeviceAssociator) isBlockDeviceUnclaimed(
+	device *unstructured.Unstructured,
+) (bool, error) {
+	status, found, err :=
+		unstructured.NestedString(device.UnstructuredContent(), "status", "claimState")
+	if err != nil {
+		return false, err
+	}
+	if !found || status == "" {
+		return false, errors.Errorf(
+			"Can't find status.claimState for BlockDevice %s %s",
+			device.GetNamespace(), device.GetName(),
+		)
+	}
+	glog.V(3).Infof(
+		"BlockDevice %s %s has claim state %s: Storage %s %s",
+		device.GetNamespace(), device.GetName(),
+		status,
+		p.Storage.GetNamespace(), p.Storage.GetName(),
+	)
+	return status == string(types.BlockDeviceUnclaimed), nil
 }
