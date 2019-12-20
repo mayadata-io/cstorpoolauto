@@ -138,7 +138,12 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
 			uid, _ := k8s.GetAnnotationForKey(
-				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
+				// TODO (@amitkumardas):
+				//	We are using labels since there might be a bug
+				// in metac to merge annotations. Use of labels is a
+				// workaround that needs to be changed to annotations
+				// once metac fixes this bug.
+				attachment.GetLabels(), types.AnnKeyCStorClusterPlanUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
 				// this is one of the desired BlockDevice(s)
@@ -477,7 +482,12 @@ func (p *Planner) initStorageSetToBlockDevices() error {
 	p.storageSetToBlockDevices = map[string][]string{}
 	for _, device := range p.ObservedBlockDevices {
 		sSetUID, found := k8s.GetAnnotationForKey(
-			device.GetAnnotations(), types.AnnKeyCStorClusterStorageSetUID,
+			// TODO (@amitkumardas):
+			//	We are using labels since there might be a bug
+			// in metac to merge annotations. Use of labels is a
+			// workaround that needs to be changed to annotations
+			// once metac fixes this bug.
+			device.GetLabels(), types.AnnKeyCStorClusterStorageSetUID,
 		)
 		if !found || sSetUID == "" {
 			return errors.Errorf(
