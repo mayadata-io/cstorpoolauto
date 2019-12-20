@@ -1,4 +1,3 @@
-### Design v0.2.0
 #### TODO
 - TODO - 0
     - Need to have a CStorClusterDefault CR & corresponding reconciler
@@ -26,19 +25,20 @@
     - Create/Update construction should be same & hence should come from one func
         - This is very important to make the code adhere to being idempotent
 - TODO - 1
+    - write delete contollers
+    - maxAvailable, maxUnAvailable, etc
+- TODO - 2
     - update storage provisioner codebase
     - change ddp to dao
     - add status.conditions to storage API
     - set Storage's UID against PVC's annotations
-- TODO - 2
+- TODO - 3
     - refactor clusterconfig reconciler
     - manage status/conditions of clusterconfig
     - refactor reconcile logic to:
         - Defaulter,
         - CStorClusterPlanner & 
         - NodePlanner
-- TODO - 3
-    - write delete contollers
 - TODO - 4
     - test scripts / demos
 - TODO - 5

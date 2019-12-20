@@ -170,15 +170,21 @@ spec:
 
 ## High Level Design & Workflows
 ### Workflow for creation of pool cluster
+- provide basic inputs to CStorClusterConfig
+    - e.g. RAID type, Disk.ExternalProvisioner details
 
 ### Workflow for deletion of pool cluster
+- minPool &/or maxPool can be decreased
 
 ### Workflow for modifying the max pools
+- maxPool can be increased
+
 
 ### Workflow when node selectors get changed at runtime
-This workflow provides the high level implementation details when node labels, selector gets changed at runtime. In other words, how CSPCAuto handles changes to node label selector that has impact to this CSPCAuto reconciliation mechanism.
 
 ### Workflow when one of nodes running the cstor pool is taken out of cluster
+- allowedNodes.nodeSelectorTerms will take care of this scenario. A new node will take the place of the old node. Disks will be detached from old node & 
+attached to new node.
 
 ## Known Issues
 ### Correlate block device with volume attachment. 
@@ -186,30 +192,6 @@ Block devices may be created via multiple ways. One of ways to have a BlockDevic
 
 >> let storage code watch for BDC and with annotation, and NDM will not watch for it __ @vitta
 
-## Deployment Strategy
-CStor Pool Auto controller will consist of following deployments:
-
-### Core Deployment (a K8s Pod)
-Core deployment implies the actual business logic. It will consist of following components/containers:
-- cstorpoolauto (a http service)
-- cstorpoolauto-controller (a http client & kubernetes controller)
-
-#### 1/ cstorpoolauto (a K8s sidecar i.e. container)
-cstorpoolauto implements business logic to auto provision cstor pool(s). This is deployed as a http service that exposes one or more http endpoints. These endpoints get invoked by cstorpoolauto controller.
-
-#### 2/ cstorpoolauto-controller (a K8s sidecar i.e. container)
-cstorpoolauto controller watches Kubernetes resource(s) and invokes appropriate http endpoints exposed by cspauto service. In other words, this is the http client for cstorpoolauto service & at the same time is a watcher of Kubernetes resource(s).
-
-### Conformance Deployment (optional) (a K8s Pod)
-Conformance deployment has the conformance logic to verify if cspauto service is working as expected. This is completely optional and can be installed or un-installed without any disruptions to the core services. Conformance deployment will consist of following components:
-- cstorpoolauto-conformance (a conformance http service)
-- cstorpoolauto-conformance-controller (a http client & kubernetes controller)
-
-#### 1/ cstorpoolauto-conformance (a K8s sidecar i.e. container)
-cstorpoolauto conformance implements conformance logic to verify if cstorpoolauto service is functioning properly. This is deployed as a http service. This exposes one or more http endpoints that get invoked by cstorpoolauto conformance controller.
-
-#### 2/ cstorpoolauto-conformance-controller (a K8s sidecar i.e. container)
-cstorpoolauto conformance controller watches Kubernetes resource(s) and invokes appropriate http endpoints exposed by cstorpoolauto conformance service. In other words, this is the http client for cstorpoolauto conformance service & at the same time is a watcher of Kubernetes resource(s).
 
 ## Old Design(s)
 ### Design 1
