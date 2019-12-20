@@ -6,7 +6,7 @@ metadata:
   labels:
     app.mayadata.io/name: cstorpoolauto
   name: cstorpoolauto
-  namespace: dao
+  namespace: openebs
 spec:
   replicas: 1
   selector:
