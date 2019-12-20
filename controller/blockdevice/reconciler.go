@@ -461,15 +461,21 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 		}
 		// add CStorClusterStorageSet UID to device's
 		// existing annotations
-		newAnns := k8s.MergeToAnnotations(
+		//
+		// TODO (@amitkumardas):
+		//	We are using labels since there might be a bug
+		// in metac to merge annotations. Use of labels is a
+		// workaround that needs to be changed to annotations
+		// once metac fixes this bug.
+		newLbls := k8s.MergeToAnnotations(
 			types.AnnKeyCStorClusterStorageSetUID, string(p.StorageSet.GetUID()),
-			device.GetAnnotations(),
+			device.GetLabels(),
 		)
 		// add CStorClusterPlan UID to device's
 		// existing annotations
-		newAnns = k8s.MergeToAnnotations(
+		newLbls = k8s.MergeToAnnotations(
 			types.AnnKeyCStorClusterPlanUID, cstorClusterPlanUID,
-			newAnns,
+			newLbls,
 		)
 
 		new := &unstructured.Unstructured{}
@@ -477,10 +483,12 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 		new.SetKind(device.GetKind())
 		new.SetNamespace(device.GetNamespace())
 		new.SetName(device.GetName())
-		new.SetAnnotations(newAnns)
+		// TODO (@amitkumardas):
+		//	Read above note on why labels vs. annotations
+		new.SetLabels(newLbls)
 
 		glog.V(2).Infof(
-			"BlockDevice %s %s associated / annotated successfully: CStorClusterStorageSet %s: CStorClusterPlan %s",
+			"BlockDevice %s %s associated successfully: CStorClusterStorageSet %s: CStorClusterPlan %s",
 			device.GetNamespace(),
 			device.GetName(),
 			p.StorageSet.GetUID(),
