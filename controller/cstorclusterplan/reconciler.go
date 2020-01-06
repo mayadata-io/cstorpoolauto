@@ -172,8 +172,8 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 
 // Reconciler enables reconciliation of CStorClusterPlan instance
 type Reconciler struct {
-	CStorClusterPlan    *types.CStorClusterPlan
-	CStorClusterConfig  *types.CStorClusterConfig
+	ClusterPlan         *types.CStorClusterPlan
+	ClusterConfig       *types.CStorClusterConfig
 	ObservedStorageSets []*unstructured.Unstructured
 }
 
@@ -212,8 +212,8 @@ func NewReconciler(
 	}
 	// use above constructed objects to build Reconciler instance
 	return &Reconciler{
-		CStorClusterPlan:    &cstorClusterPlanTyped,
-		CStorClusterConfig:  &cstorClusterConfigTyped,
+		ClusterPlan:         &cstorClusterPlanTyped,
+		ClusterConfig:       &cstorClusterConfigTyped,
 		ObservedStorageSets: observedStorageSets,
 	}, nil
 }
@@ -222,41 +222,46 @@ func NewReconciler(
 // state
 func (r *Reconciler) Reconcile() (*ReconcileResponse, error) {
 	planner, err := NewStorageSetsPlanner(
-		r.CStorClusterPlan,
+		r.ClusterPlan,
+		r.ClusterConfig,
 		r.ObservedStorageSets,
 	)
 	if err != nil {
 		return nil, err
 	}
-	desiredStorageSets, err := planner.Plan(r.CStorClusterConfig)
+	desiredStorageSets, err := planner.Plan()
 	if err != nil {
 		return nil, err
 	}
 	return &ReconcileResponse{
 		DesiredStorageSets: desiredStorageSets,
 		Status: types.MakeCStorClusterPlanToOnlineWithNoReconcileErr(
-			r.CStorClusterPlan,
+			r.ClusterPlan,
 		),
 	}, nil
 }
 
-// StorageSetsPlanner ensures if CStorClusterStorageSet instance(s)
+// StorageSetListPlanner ensures if CStorClusterStorageSet instance(s)
 // need to be created, deleted, updated or perhaps does not require
 // any changes at all.
-type StorageSetsPlanner struct {
-	ClusterPlan *types.CStorClusterPlan
+type StorageSetListPlanner struct {
+	ClusterPlan   *types.CStorClusterPlan
+	ClusterConfig *types.CStorClusterConfig
 
 	// NOTE:
-	// All the maps in this structure have node UID as their keys
+	// 	All the maps here represent desired state w.r.t. Node
+	//
+	// NOTE:
+	// 	Each map has **Node UID** as its key
 	ObservedStorageSetObjs map[string]*unstructured.Unstructured
 	ObservedStorageSets    map[string]bool
 
-	IsCreate map[string]bool // map of newly desired nodes
-	IsRemove map[string]bool // map of nodes that are no more needed
-	IsNoop   map[string]bool // map of nodes that are desired & are already in-use
+	IsNodeCreate map[string]bool // map of newly desired nodes
+	IsNodeRemove map[string]bool // map of nodes that are no more needed
+	IsNodeNoop   map[string]bool // map of nodes with no change i.e. nodes already in-use
 
 	PlannedNodeNames map[string]string // map of desired node names
-	Updates          map[string]string // map of not needed to newly desired nodes
+	NodeUpdates      map[string]string // map of not needed to newly desired nodes
 }
 
 // NewStorageSetsPlanner returns a new instance of
@@ -265,21 +270,27 @@ type StorageSetsPlanner struct {
 // NOTE:
 //	This function builds all the plans to needed to create,
 // remove, update & noop StorageSets.
+//
+// TODO (@amitkumardas):
+//	Unit Tests is a must
 func NewStorageSetsPlanner(
 	clusterPlan *types.CStorClusterPlan,
+	clusterConfig *types.CStorClusterConfig,
 	observedStorageSets []*unstructured.Unstructured,
-) (*StorageSetsPlanner, error) {
+) (*StorageSetListPlanner, error) {
 	// initialize the planner
-	planner := &StorageSetsPlanner{
+	planner := &StorageSetListPlanner{
 		ClusterPlan:            clusterPlan,
+		ClusterConfig:          clusterConfig,
 		ObservedStorageSetObjs: map[string]*unstructured.Unstructured{},
 		ObservedStorageSets:    map[string]bool{},
-		IsCreate:               map[string]bool{},
-		IsRemove:               map[string]bool{},
-		IsNoop:                 map[string]bool{},
+		IsNodeCreate:           map[string]bool{},
+		IsNodeRemove:           map[string]bool{},
+		IsNodeNoop:             map[string]bool{},
 		PlannedNodeNames:       map[string]string{},
-		Updates:                map[string]string{},
+		NodeUpdates:            map[string]string{},
 	}
+	// logic to categorise storage sets indexed by their node UID
 	for _, storageSet := range observedStorageSets {
 		nodeUID, found, err := unstructured.NestedString(
 			storageSet.UnstructuredContent(), "spec", "node", "uid",
@@ -300,25 +311,31 @@ func NewStorageSetsPlanner(
 		planner.ObservedStorageSets[nodeUID] = true
 		planner.ObservedStorageSetObjs[nodeUID] = storageSet
 	}
+	// logic to create new categories based on changes w.r.t node UID
 	for _, plannedNode := range clusterPlan.Spec.Nodes {
 		// store node uid to name mapping
 		planner.PlannedNodeNames[string(plannedNode.UID)] = plannedNode.Name
 		// planned nodes need to get into some bucket
 		if planner.ObservedStorageSets[string(plannedNode.UID)] {
-			// this node is desired and is observed
-			planner.IsNoop[string(plannedNode.UID)] = true
+			// this node is observed at cluster and still remains as desired
+			planner.IsNodeNoop[string(plannedNode.UID)] = true
 		} else {
-			// this node is desired and is not observed
-			planner.IsCreate[string(plannedNode.UID)] = true
+			// this node is newly desired i.e. is not observed at cluster currently
+			planner.IsNodeCreate[string(plannedNode.UID)] = true
 		}
 	}
 	// there may be more observed nodes than what is
 	// planned currently
 	for observedNodeUID := range planner.ObservedStorageSets {
-		if planner.IsNoop[observedNodeUID] || planner.IsCreate[observedNodeUID] {
+		if planner.IsNodeNoop[observedNodeUID] || planner.IsNodeCreate[observedNodeUID] {
+			// nothing needs to be done if this node UID is
+			// present as a desired node in one of the following
+			// categories:
+			// 	1/ noop i.e. node is already used & should continue to be used or,
+			// 	2/ node will get created & participate in cstor pool cluster
 			continue
 		}
-		planner.IsRemove[observedNodeUID] = true
+		planner.IsNodeRemove[observedNodeUID] = true
 	}
 	// build update inventory i.e. move observed storageset's
 	// from old to a newly desired node based on create & remove
@@ -326,119 +343,98 @@ func NewStorageSetsPlanner(
 	//
 	// NOTE:
 	//	This essentially is the logic to detach disks (as specified
-	// in the StorageSets) from old nodes & attach them to newly
-	// desired nodes.
-	for removeNodeUID := range planner.IsRemove {
-		for createNodeUID := range planner.IsCreate {
-			planner.Updates[removeNodeUID] = createNodeUID
-			// nullify create & remove inventory since
-			// they are accomodated by update inventory
-			planner.IsRemove[removeNodeUID] = false
-			planner.IsCreate[createNodeUID] = false
+	// in CStorClusterStorageSet) from old nodes & attach them
+	// to newly desired nodes.
+	for removeNodeUID := range planner.IsNodeRemove {
+		for createNodeUID := range planner.IsNodeCreate {
+			if !planner.IsNodeRemove[removeNodeUID] {
+				// break out of the inner loop
+				break
+			}
+			if !planner.IsNodeCreate[createNodeUID] {
+				// continue with next item of this inner loop
+				continue
+			}
+			// plan the replacement
+			planner.NodeUpdates[removeNodeUID] = createNodeUID
+			// nullify nodes from create & remove inventory since
+			// they are now accomodated by update inventory
+			planner.IsNodeRemove[removeNodeUID] = false
+			planner.IsNodeCreate[createNodeUID] = false
 		}
 	}
 	return planner, nil
 }
 
 // Plan provides the list of desired StorageSets
-func (p *StorageSetsPlanner) Plan(config *types.CStorClusterConfig) ([]*unstructured.Unstructured, error) {
+func (p *StorageSetListPlanner) Plan() ([]*unstructured.Unstructured, error) {
 	var finalStorageSets []*unstructured.Unstructured
-	updateDiskObjs, err := p.updateDiskOnly(config)
+	syncedObjs, err := p.sync()
 	if err != nil {
 		return nil, err
 	}
-	createObjs := p.create(config)
+	createdObjs := p.create()
 	p.remove()
-	updateObjs, err := p.update(config)
+	updatedObjs, err := p.updateNode()
 	if err != nil {
 		return nil, err
 	}
-	finalStorageSets = append(finalStorageSets, updateDiskObjs...)
-	finalStorageSets = append(finalStorageSets, createObjs...)
-	finalStorageSets = append(finalStorageSets, updateObjs...)
+	finalStorageSets = append(finalStorageSets, syncedObjs...)
+	finalStorageSets = append(finalStorageSets, createdObjs...)
+	finalStorageSets = append(finalStorageSets, updatedObjs...)
 	return finalStorageSets, nil
 }
 
-// updateDiskOnly returns the list of CStorClusterStorageSet(s)
-// with updated disk info if any.
-func (p *StorageSetsPlanner) updateDiskOnly(config *types.CStorClusterConfig) ([]*unstructured.Unstructured, error) {
+// sync returns the list of CStorClusterStorageSet(s)
+// with synced state.
+func (p *StorageSetListPlanner) sync() ([]*unstructured.Unstructured, error) {
 	var storageSets []*unstructured.Unstructured
-	for uid, isnoop := range p.IsNoop {
-		if !isnoop {
+	for uid, isNodeNoop := range p.IsNodeNoop {
+		if !isNodeNoop {
 			continue
 		}
 
 		glog.V(3).Infof(
-			"Will sync CStorClusterStorageSet %s %s with disk details",
+			"Will sync CStorClusterStorageSet %q / %q",
 			p.ObservedStorageSetObjs[uid].GetNamespace(),
 			p.ObservedStorageSetObjs[uid].GetName(),
 		)
 
-		copy := p.ObservedStorageSetObjs[uid].DeepCopy()
-
-		// set new disk details
-		//
-		// NOTE:
-		//	Disk details might not have changed. However we shall
-		// still set them to keep the logic idempotent.
-		disk := map[string]interface{}{
-			"capacity": config.Spec.DiskConfig.MinCapacity.String(),
-			"count":    config.Spec.DiskConfig.MinCount.String(),
-		}
-		err := unstructured.SetNestedField(copy.Object, disk, "spec", "disk")
-		if err != nil {
-			return nil, err
-		}
-
-		storageSets = append(storageSets, copy)
+		storageSets = append(
+			storageSets,
+			p.getStorageSetDesiredState(
+				p.ObservedStorageSetObjs[uid].GetName(), uid,
+			),
+		)
 	}
 	return storageSets, nil
 }
 
-// create returns a list of CStorClusterStorageSet(s) that will
-// get created in the cluster
-func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstructured.Unstructured {
+// create returns a list of newly desired CStorClusterStorageSet(s)
+// that will get created in the cluster
+func (p *StorageSetListPlanner) create() []*unstructured.Unstructured {
 	var storageSets []*unstructured.Unstructured
-	for nodeUID, iscreate := range p.IsCreate {
+	for nodeUID, iscreate := range p.IsNodeCreate {
 		if !iscreate {
 			continue
 		}
-
-		// log it for debuggability purposes
 		glog.V(2).Infof(
+			// log it for debuggability purposes
 			"Will create CStorClusterStorageSet with node uid %s", nodeUID,
 		)
-
-		storageSet := &unstructured.Unstructured{}
-		storageSet.SetUnstructuredContent(map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"generateName": "ccplan-", // ccplan -> CStorClusterPlan
-				"namespace":    p.ClusterPlan.GetNamespace(),
-			},
-			"spec": map[string]interface{}{
-				"node": map[string]interface{}{
-					"name": p.PlannedNodeNames[nodeUID],
-					"uid":  nodeUID,
-				},
-				"disk": map[string]interface{}{
-					"capacity": config.Spec.DiskConfig.MinCapacity,
-					"count":    config.Spec.DiskConfig.MinCount,
-				},
-				"externalProvisioner": map[string]interface{}{
-					"csiAttacherName":  config.Spec.DiskConfig.ExternalProvisioner.CSIAttacherName,
-					"storageClassName": config.Spec.DiskConfig.ExternalProvisioner.StorageClassName,
-				},
-			},
-		})
-		// create annotations with CStorClusterPlan UID
-		storageSet.SetAnnotations(map[string]string{
-			types.AnnKeyCStorClusterPlanUID: string(p.ClusterPlan.GetUID()),
-		})
-		// below is the right way to set APIVersion & Kind
-		storageSet.SetAPIVersion(string(types.APIVersionDAOMayaDataV1Alpha1))
-		storageSet.SetKind(string(types.KindCStorClusterStorageSet))
-		// add the built up unstruct instance
-		storageSets = append(storageSets, storageSet)
+		// TODO (@amitkumardas):
+		// Does use of an UID result in name over shooting
+		// its max length?
+		//
+		// NOTE:
+		//	This naming adheres to **deterministic naming
+		// principle** which handles simultaneous
+		// reconciliations of desired state to result in
+		// creation of only one instance of CStorClusterStorageSet
+		storageSetName := p.ClusterPlan.GetName() + "-" + nodeUID
+		storageSets = append(
+			storageSets, p.getStorageSetDesiredState(storageSetName, nodeUID),
+		)
 	}
 	return storageSets
 }
@@ -450,8 +446,8 @@ func (p *StorageSetsPlanner) create(config *types.CStorClusterConfig) []*unstruc
 // 	This is a noop function since metac will remove the
 // resources if they were part of the request but are not
 // sent in the response
-func (p *StorageSetsPlanner) remove() {
-	for uid, isremove := range p.IsRemove {
+func (p *StorageSetListPlanner) remove() {
+	for uid, isremove := range p.IsNodeRemove {
 		if !isremove {
 			continue
 		}
@@ -465,51 +461,66 @@ func (p *StorageSetsPlanner) remove() {
 	}
 }
 
-// update will return a list of modified CStorClusterStorageSet(s)
-// which in turn will get updated at the cluster.
-func (p *StorageSetsPlanner) update(config *types.CStorClusterConfig) ([]*unstructured.Unstructured, error) {
+// updateNode will return a list of modified
+// CStorClusterStorageSet(s) which will form the new desired state.
+func (p *StorageSetListPlanner) updateNode() ([]*unstructured.Unstructured, error) {
 	var updatedStorageSets []*unstructured.Unstructured
-	for oldNodeUID, newNodeUID := range p.Updates {
+	for oldNodeUID, newNodeUID := range p.NodeUpdates {
 		storageSet := p.ObservedStorageSetObjs[oldNodeUID]
-		copy := storageSet.DeepCopy()
 
-		// log it for debuggability purposes
 		glog.V(3).Infof(
-			"Will update CStorClusterStorageSet %s %s from node uid %s to %s",
-			copy.GetNamespace(), copy.GetName(), oldNodeUID, newNodeUID,
+			// log it for debuggability purposes
+			"Will update CStorClusterStorageSet %q / %q from node uid %q to %q",
+			storageSet.GetNamespace(), storageSet.GetName(), oldNodeUID, newNodeUID,
 		)
 
-		// set new node details
-		node := map[string]interface{}{
-			"name": p.PlannedNodeNames[newNodeUID],
-			"uid":  newNodeUID,
-		}
-		err := unstructured.SetNestedField(copy.Object, node, "spec", "node")
-		if err != nil {
-			return nil, err
-		}
-
-		// log it for debuggability purposes
-		glog.V(3).Infof(
-			"Will sync CStorClusterStorageSet %s %s with disk details",
-			copy.GetNamespace(), copy.GetName(),
+		updatedStorageSets = append(
+			updatedStorageSets,
+			p.getStorageSetDesiredState(storageSet.GetName(), newNodeUID),
 		)
-
-		// set new disk details
-		//
-		// NOTE:
-		//	Disk details might not have changed. However we shall
-		// still set them to keep the logic idempotent.
-		disk := map[string]interface{}{
-			"capacity": config.Spec.DiskConfig.MinCapacity.String(),
-			"count":    config.Spec.DiskConfig.MinCount.String(),
-		}
-		err = unstructured.SetNestedField(copy.Object, disk, "spec", "disk")
-		if err != nil {
-			return nil, err
-		}
-
-		updatedStorageSets = append(updatedStorageSets, copy)
 	}
 	return updatedStorageSets, nil
+}
+
+// getStorageSetDesiredState returns the desired state of StorageSet
+// based on the given node UID.
+//
+// NOTE:
+//	The returned instance is idempotent and hence can be used during
+// create & update operations
+func (p *StorageSetListPlanner) getStorageSetDesiredState(
+	storageSetName string, nodeUID string,
+) *unstructured.Unstructured {
+	storageSet := &unstructured.Unstructured{}
+	storageSet.SetUnstructuredContent(map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"name":      storageSetName,
+			"namespace": p.ClusterPlan.GetNamespace(),
+		},
+		"spec": map[string]interface{}{
+			"node": map[string]interface{}{
+				"name": p.PlannedNodeNames[nodeUID],
+				"uid":  nodeUID,
+			},
+			"disk": map[string]interface{}{
+				"capacity": p.ClusterConfig.Spec.DiskConfig.MinCapacity,
+				"count":    p.ClusterConfig.Spec.DiskConfig.MinCount,
+			},
+			"externalProvisioner": map[string]interface{}{
+				"csiAttacherName":  p.ClusterConfig.Spec.DiskConfig.ExternalProvisioner.CSIAttacherName,
+				"storageClassName": p.ClusterConfig.Spec.DiskConfig.ExternalProvisioner.StorageClassName,
+			},
+		},
+	})
+	// create annotations that refers to the instance which
+	// triggered creation of this storage set i.e. CStorClusterPlan
+	storageSet.SetAnnotations(
+		map[string]string{
+			types.AnnKeyCStorClusterPlanUID: string(p.ClusterPlan.GetUID()),
+		},
+	)
+	// below is the right way to set APIVersion & Kind
+	storageSet.SetAPIVersion(string(types.APIVersionDAOMayaDataV1Alpha1))
+	storageSet.SetKind(string(types.KindCStorClusterStorageSet))
+	return storageSet
 }

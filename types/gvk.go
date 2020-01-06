@@ -21,17 +21,21 @@ const (
 	// custom resources defined in this project
 	GroupDAOMayaDataIO string = "dao.mayadata.io"
 
+	// GroupOpenEBSIO refers to the group for all
+	// custom resources defined in openebs
+	GroupOpenEBSIO string = "openebs.io"
+
 	// VersionV1Alpha1 refers to v1alpha1 version of the
 	// custom resources used here
 	VersionV1Alpha1 string = "v1alpha1"
 
 	// APIVersionDAOMayaDataV1Alpha1 refers to v1alpha1 api
 	// version of DAO based custom resources
-	APIVersionDAOMayaDataV1Alpha1 string = "dao.mayadata.io/v1alpha1"
+	APIVersionDAOMayaDataV1Alpha1 string = GroupDAOMayaDataIO + "/" + VersionV1Alpha1
 
 	// APIVersionOpenEBSV1Alpha1 refers to v1alpha1 api
 	// version of openebs based custom resources
-	APIVersionOpenEBSV1Alpha1 string = "openebs.io/v1alpha1"
+	APIVersionOpenEBSV1Alpha1 string = GroupOpenEBSIO + "/" + VersionV1Alpha1
 )
 
 // Kind is a custom datatype to refer to kubernetes native

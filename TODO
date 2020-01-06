@@ -8,25 +8,26 @@
         - This will eliminate the current hot loop path experienced by 
             CStorClusterConfig reconciler that sets the defaults.
     - Create EVENTs against the watch instance in case of errors at reconciler
-    - deterministic names
+    - Deterministic names
         - CStorClusterStorageSet(s)
             - make use of the node that is set in its spec
             - use the node UID as its name's suffix
-            - use cscplan- as its name's prefix
-            - e.g. cscplan-<node uid that used in StorageSet during later's creation>
+            - use CStorClusterConfig name as its name's prefix
+            - e.g. <CStorClusterConfig name>-<node uid that used in StorageSet during later's creation>
         - Storage(s)
-            - make use of StorageSet name as its name's prefix
+            - make use of CStorClusterStorageSet name as its name's prefix
             - make use of count index as its name's suffix
             - e.g. <storagesetname>-1, <storagesetname>-2, etc
+            - count can be used since each Storage will have exactly same spec content
         - Remove / Scale Down should be done to young disks
             - current logic removes young nodes.
             - however, young nodes may attach old disks i.e. bigger data
     - Finish the TODO markers in the code
     - Create/Update construction should be same & hence should come from one func
         - This is very important to make the code adhere to being idempotent
+    - Check use of runtime.DefaultUnstructuredConverter.FromUnstructured(...)
 - TODO - 1
     - write delete contollers
-    - maxAvailable, maxUnAvailable, etc
 - TODO - 2
     - update storage provisioner codebase
     - change ddp to dao
