@@ -404,6 +404,7 @@ func (r *Reconciler) validateClusterConfigAndSetDefaultsIfNotSet() error {
 		r.setRAIDTypeIfNotSet,
 		r.setMinDiskCountIfNotSet,
 		r.setMinDiskCapacityIfNotSet,
+		r.validateMinDiskCount,
 	}
 	for _, setDefaultFn := range setDefaultFns {
 		err := setDefaultFn()
@@ -517,6 +518,19 @@ func (r *Reconciler) setMinDiskCapacityIfNotSet() error {
 		return nil
 	}
 	r.CStorClusterConfig.Spec.DiskConfig.MinCapacity = DefaultMinDiskCapacity
+	return nil
+}
+
+func (r *Reconciler) validateMinDiskCount() error {
+	diskCount := r.CStorClusterConfig.Spec.DiskConfig.MinCount
+	defaultCount :=
+		RAIDTypeToDefaultMinDiskCount[r.CStorClusterConfig.Spec.PoolConfig.RAIDType]
+
+	if diskCount.Value()%defaultCount != 0 {
+		return errors.Errorf(
+			"Invalid disk count %d: Want multiples of %d", diskCount.Value(), defaultCount,
+		)
+	}
 	return nil
 }
 
