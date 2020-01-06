@@ -9,12 +9,12 @@
             CStorClusterConfig reconciler that sets the defaults.
     - Create EVENTs against the watch instance in case of errors at reconciler
     - Deterministic names
-        - CStorClusterStorageSet(s)
+        - CStorClusterStorageSet(s) - **DONE**
             - make use of the node that is set in its spec
             - use the node UID as its name's suffix
             - use CStorClusterConfig name as its name's prefix
             - e.g. <CStorClusterConfig name>-<node uid that used in StorageSet during later's creation>
-        - Storage(s)
+        - Storage(s) - **DONE**
             - make use of CStorClusterStorageSet name as its name's prefix
             - make use of count index as its name's suffix
             - e.g. <storagesetname>-1, <storagesetname>-2, etc

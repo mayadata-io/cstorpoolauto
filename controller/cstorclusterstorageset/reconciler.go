@@ -17,6 +17,8 @@ limitations under the License.
 package cstorclusterstorageset
 
 import (
+	"strconv"
+
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -125,11 +127,15 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				continue
 			}
 		}
-		// add attachments to response if they are not of kind Storage
+		// add other attachments to response i.e. those that are not of kind Storage
 		response.Attachments = append(response.Attachments, attachment)
 	}
 
-	reconciler, err := NewReconciler(request.Watch, observedStorages)
+	// TODO (@amitkumardas):
+	// 	Remove this commented code
+	//
+	//reconciler, err := NewReconciler(request.Watch, observedStorages)
+	reconciler, err := NewReconciler(request.Watch)
 	if err != nil {
 		errHandler.handle(err)
 		return nil
@@ -173,7 +179,7 @@ type ReconcileResponse struct {
 // NewReconciler returns a new instance of reconciler
 func NewReconciler(
 	storageSet *unstructured.Unstructured,
-	observedStorages []*unstructured.Unstructured,
+	//observedStorages []*unstructured.Unstructured,
 ) (*Reconciler, error) {
 	// transform storageset from unstructured to typed
 	var cstorClusterStorageSetTyped types.CStorClusterStorageSet
@@ -188,7 +194,7 @@ func NewReconciler(
 	// use above constructed object to build Reconciler instance
 	return &Reconciler{
 		CStorClusterStorageSet: &cstorClusterStorageSetTyped,
-		ObservedStorages:       observedStorages,
+		//ObservedStorages:       observedStorages,
 	}, nil
 }
 
@@ -203,7 +209,11 @@ func NewReconciler(
 //	The logic to either create, delete, update or noop is
 // handled by metac (which is the underlying library)
 func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
-	planner := NewStoragePlanner(r.CStorClusterStorageSet, r.ObservedStorages)
+	// TODO (@amitkumardas):
+	//	Remove this commented code
+	//
+	//planner := NewStoragePlanner(r.CStorClusterStorageSet, r.ObservedStorages)
+	planner := NewStoragePlanner(r.CStorClusterStorageSet)
 	desiredStorages, err := planner.Plan()
 	if err != nil {
 		return ReconcileResponse{}, err
@@ -220,7 +230,11 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 // created, removed, updated or perhaps does not require any
 // changes at all.
 type StoragePlanner struct {
-	ObservedStorages        []*unstructured.Unstructured
+	// TODO (@amitkumardas):
+	//	Remove this commented code
+	//
+	//ObservedStorages        []*unstructured.Unstructured
+	StorageSetName          string
 	StorageSetUID           k8stypes.UID
 	DesiredCount            resource.Quantity
 	DesiredCapacity         resource.Quantity
@@ -233,11 +247,18 @@ type StoragePlanner struct {
 // NewStoragePlanner returns a new instance of StoragePlanner
 func NewStoragePlanner(
 	storageSet *types.CStorClusterStorageSet,
-	observedStorages []*unstructured.Unstructured,
+	// TODO (@amitkumardas):
+	//	Remove this commented code
+	//
+	//observedStorages []*unstructured.Unstructured,
 ) *StoragePlanner {
 	// initialize the planner
 	return &StoragePlanner{
-		ObservedStorages:        observedStorages,
+		// TODO (@amitkumardas):
+		//	Remove this commented code
+		//
+		//ObservedStorages:        observedStorages,
+		StorageSetName:          storageSet.GetName(),
 		StorageSetUID:           storageSet.GetUID(),
 		DesiredCount:            storageSet.Spec.Disk.Count,
 		DesiredCapacity:         storageSet.Spec.Disk.Capacity,
@@ -253,104 +274,150 @@ func NewStoragePlanner(
 // not require any change at the cluster.
 func (p *StoragePlanner) Plan() ([]*unstructured.Unstructured, error) {
 	var finalStorages []*unstructured.Unstructured
-	if int64(len(p.ObservedStorages)) < p.DesiredCount.Value() {
-		// more storages are desired than what is currently observed
-		// hence create the diff
-		createObjs := p.create(p.DesiredCount.Value() - int64(len(p.ObservedStorages)))
-		finalStorages = append(finalStorages, createObjs...)
-	}
-	for _, storage := range p.ObservedStorages {
-		if int64(len(finalStorages)) == p.DesiredCount.Value() {
-			// we have already achieved the desired count of
-			// Storage(s)
-			break
-		}
-		// update to desired characteristics
-		err := p.update(storage)
-		if err != nil {
-			return nil, err
-		}
-		// add this updated Storage to the desired list
-		finalStorages = append(finalStorages, storage)
-	}
+	finalStorages = append(finalStorages, p.plan(p.DesiredCount.Value())...)
 	return finalStorages, nil
 }
+
+// plan returns the list of desired Storage instances
+// that in turn either get created or updated in the cluster
+func (p *StoragePlanner) plan(count int64) []*unstructured.Unstructured {
+	var desiredStorages []*unstructured.Unstructured
+	var i int64
+	for i = 0; i < count; i++ {
+		glog.V(3).Infof(
+			"Will sync Storage %d for CStorClusterStorageSet UID %q", i, p.StorageSetUID,
+		)
+		storageName := p.StorageSetName + "-" + strconv.FormatInt(i, 10)
+		desiredStorages = append(desiredStorages, p.getStorageDesiredState(storageName))
+	}
+	return desiredStorages
+}
+
+// Plan plans the desired Storages to be either **created**,
+// **removed**, **updated** or perhaps a **noop** i.e. does
+// not require any change at the cluster.
+//
+// TODO (@amitkumardas):
+// 	Remove this !!
+// func (p *StoragePlanner) Plan() ([]*unstructured.Unstructured, error) {
+// 	var finalStorages []*unstructured.Unstructured
+// 	if int64(len(p.ObservedStorages)) < p.DesiredCount.Value() {
+// 		// more storages are desired than what is currently observed
+// 		// hence create the diff
+// 		createObjs := p.create(p.DesiredCount.Value() - int64(len(p.ObservedStorages)))
+// 		finalStorages = append(finalStorages, createObjs...)
+// 	}
+// 	for _, storage := range p.ObservedStorages {
+// 		if int64(len(finalStorages)) == p.DesiredCount.Value() {
+// 			// we have already achieved the desired count of
+// 			// Storage(s)
+// 			break
+// 		}
+// 		// update to desired characteristics
+// 		err := p.update(storage)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		// add this updated Storage to the desired list
+// 		finalStorages = append(finalStorages, storage)
+// 	}
+// 	return finalStorages, nil
+// }
 
 // create will create the **Storage(s)** instances to achieve
 // the desired state.
 //
 // NOTE:
 //	It creates Storage instances based on the given count.
-func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
-	var desiredStorages []*unstructured.Unstructured
-	var i int64
-	for i = 0; i < count; i++ {
-		glog.V(3).Infof(
-			"Will create Storage for CStorClusterStorageSet UID %s ", p.StorageSetUID,
-		)
-
-		new := &unstructured.Unstructured{}
-		new.SetUnstructuredContent(map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"generateName": "ccsset-", // ccsset -> CStorClusterStorageSet
-				"namespace":    p.DesiredNamespace,
-			},
-			"spec": map[string]interface{}{
-				"capacity": p.DesiredCapacity,
-				"nodeName": p.DesiredNodeName,
-			},
-		})
-		// create annotations with CStorClusterStorageSet UID & others
-		new.SetAnnotations(map[string]string{
-			types.AnnKeyCStorClusterStorageSetUID:          string(p.StorageSetUID),
-			types.AnnKeyStorageProvisionerCSIAttacherName:  p.DesiredCSIAttacherName,
-			types.AnnKeyStorageProvisionerStorageClassName: p.DesiredStorageClassName,
-		})
-		// below is the right way to create APIVersion & Kind
-		new.SetAPIVersion(string(types.APIVersionDAOMayaDataV1Alpha1))
-		new.SetKind(string(types.KindStorage))
-		// add the newly built unstruct instance to the list
-		desiredStorages = append(desiredStorages, new)
-	}
-	return desiredStorages
-}
+//
+// TODO (@amitkumardas):
+//	Deprecate in favour of plan
+// func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
+// 	var desiredStorages []*unstructured.Unstructured
+// 	var i int64
+// 	for i = 0; i < count; i++ {
+// 		glog.V(3).Infof(
+// 			"Will create Storage %d for CStorClusterStorageSet UID %q", i, p.StorageSetUID,
+// 		)
+// 		storageName := p.StorageSetName + "-" + strconv.FormatInt(i, 10)
+// 		desiredStorages = append(desiredStorages, p.getStorageDesiredState(storageName))
+// 	}
+// 	return desiredStorages
+// }
 
 // update modifies the given Storage instance with the
 // desired storage capacity & node on which this storage
 // should get attached
-func (p *StoragePlanner) update(storage *unstructured.Unstructured) error {
-	glog.V(3).Infof(
-		"Will update Storage %s %s", storage.GetNamespace(), storage.GetName(),
-	)
+//
+// TODO (@amitkumardas):
+//	Deprecate in favour of plan
+// func (p *StoragePlanner) update(storage *unstructured.Unstructured) error {
+// 	glog.V(3).Infof(
+// 		"Will update Storage %s %s", storage.GetNamespace(), storage.GetName(),
+// 	)
 
-	err := unstructured.SetNestedMap(
-		storage.UnstructuredContent(),
-		map[string]interface{}{
-			"capacity": p.DesiredCapacity.String(),
+// 	err := unstructured.SetNestedMap(
+// 		storage.UnstructuredContent(),
+// 		map[string]interface{}{
+// 			"capacity": p.DesiredCapacity.String(),
+// 			"nodeName": p.DesiredNodeName,
+// 		},
+// 		"spec",
+// 	)
+// 	if err != nil {
+// 		return errors.Wrapf(
+// 			err,
+// 			"Failed to update specs for Storage %s %s",
+// 			storage.GetNamespace(), storage.GetName(),
+// 		)
+// 	}
+
+// 	// sync the annotations
+// 	newAnns := k8s.MergeToAnnotations(
+// 		types.AnnKeyStorageProvisionerCSIAttacherName,
+// 		p.DesiredCSIAttacherName,
+// 		storage.GetAnnotations(),
+// 	)
+// 	newAnns = k8s.MergeToAnnotations(
+// 		types.AnnKeyStorageProvisionerStorageClassName,
+// 		p.DesiredStorageClassName,
+// 		newAnns,
+// 	)
+// 	storage.SetAnnotations(newAnns)
+
+// 	return nil
+// }
+
+// getStorageDesiredState returns the desired state of the
+// Storage resource. This returned structure is idempotent
+// and hence can be used during create &/ update based
+// reconciliations.
+func (p *StoragePlanner) getStorageDesiredState(storageName string) *unstructured.Unstructured {
+	storage := &unstructured.Unstructured{}
+	storage.SetUnstructuredContent(map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"name":      storageName,
+			"namespace": p.DesiredNamespace,
+		},
+		"spec": map[string]interface{}{
+			"capacity": p.DesiredCapacity,
 			"nodeName": p.DesiredNodeName,
 		},
-		"spec",
-	)
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"Failed to update specs for Storage %s %s",
-			storage.GetNamespace(), storage.GetName(),
-		)
-	}
+	})
+	// set the desired annotations
+	storage.SetAnnotations(map[string]string{
+		// set CStorClusterStorageSet in annotations to indicate
+		// the resource that triggered creation of this Storage
+		types.AnnKeyCStorClusterStorageSetUID: string(p.StorageSetUID),
 
-	// sync the annotations
-	newAnns := k8s.MergeToAnnotations(
-		types.AnnKeyStorageProvisionerCSIAttacherName,
-		p.DesiredCSIAttacherName,
-		storage.GetAnnotations(),
-	)
-	newAnns = k8s.MergeToAnnotations(
-		types.AnnKeyStorageProvisionerStorageClassName,
-		p.DesiredStorageClassName,
-		newAnns,
-	)
-	storage.SetAnnotations(newAnns)
+		// CSIAttacherName will be used later during storage provisioning
+		types.AnnKeyStorageProvisionerCSIAttacherName: p.DesiredCSIAttacherName,
 
-	return nil
+		// StorageClassName will be used later during storage provisioning
+		types.AnnKeyStorageProvisionerStorageClassName: p.DesiredStorageClassName,
+	})
+	// below is the right way to set the desired APIVersion & Kind
+	storage.SetAPIVersion(string(types.APIVersionDAOMayaDataV1Alpha1))
+	storage.SetKind(string(types.KindStorage))
+	return storage
 }
