@@ -23,9 +23,10 @@
             - current logic removes young nodes.
             - however, young nodes may attach old disks i.e. bigger data
     - Finish the TODO markers in the code
-    - Create/Update construction should be same & hence should come from one func
+    - Create/Update construction should be same **In Progress**
         - This is very important to make the code adhere to being idempotent
     - Check use of runtime.DefaultUnstructuredConverter.FromUnstructured(...)
+    - Use k8s Events to show errors
 - TODO - 1
     - write delete contollers
 - TODO - 2
