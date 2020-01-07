@@ -2,31 +2,20 @@
 - TODO - 0
     - Need to have a CStorClusterDefault CR & corresponding reconciler
         - Its job will be to set defaults to CStorClusterConfig
-        - Then set the SetDefaultsCompleted condition
+        - Then set status.DefaultCompleted bool
         - This condition will be looked up by the reconciler that creates
             CStorClusterPlan
         - This will eliminate the current hot loop path experienced by 
             CStorClusterConfig reconciler that sets the defaults.
     - Create EVENTs against the watch instance in case of errors at reconciler
-    - Deterministic names
-        - CStorClusterStorageSet(s) - **DONE**
-            - make use of the node that is set in its spec
-            - use the node UID as its name's suffix
-            - use CStorClusterConfig name as its name's prefix
-            - e.g. <CStorClusterConfig name>-<node uid that used in StorageSet during later's creation>
-        - Storage(s) - **DONE**
-            - make use of CStorClusterStorageSet name as its name's prefix
-            - make use of count index as its name's suffix
-            - e.g. <storagesetname>-1, <storagesetname>-2, etc
-            - count can be used since each Storage will have exactly same spec content
-        - Remove / Scale Down should be done to young disks
-            - current logic removes young nodes.
-            - however, young nodes may attach old disks i.e. bigger data
+        - Should we have a separate CR to hold errors across the operators if any
+    - Remove / Scale Down should be done to young disks
+        - current logic removes young nodes.
+        - however, young nodes may attach old disks i.e. bigger data
     - Finish the TODO markers in the code
     - Create/Update construction should be same **In Progress**
         - This is very important to make the code adhere to being idempotent
     - Check use of runtime.DefaultUnstructuredConverter.FromUnstructured(...)
-    - Use k8s Events to show errors
 - TODO - 1
     - write delete contollers
 - TODO - 2
