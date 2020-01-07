@@ -346,22 +346,7 @@ func (r *Reconciler) syncClusterPlan() error {
 	var observedNodes []types.CStorClusterPlanNode
 	if r.CStorClusterPlan != nil {
 		observedNodes = r.CStorClusterPlan.Spec.Nodes
-	} else {
-		r.CStorClusterPlan = &types.CStorClusterPlan{}
-		r.CStorClusterPlan.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   types.GroupDAOMayaDataIO,
-			Version: types.VersionV1Alpha1,
-			Kind:    string(types.KindCStorClusterPlan),
-		})
-		// name & namespace are same as CStorClusterConfig
-		r.CStorClusterPlan.SetName(r.CStorClusterConfig.GetName())
-		r.CStorClusterPlan.SetNamespace(r.CStorClusterConfig.GetNamespace())
-		// create annotations with CStorClusterConfig UID
-		r.CStorClusterPlan.SetAnnotations(map[string]string{
-			types.AnnKeyCStorClusterConfigUID: string(r.CStorClusterConfig.GetUID()),
-		})
 	}
-
 	// Plan should be invoked only after CStorClusterConfig is
 	// set with defaults.
 	//
@@ -379,17 +364,43 @@ func (r *Reconciler) syncClusterPlan() error {
 	if len(desired) == 0 {
 		return errors.Errorf("No elgible nodes were found")
 	}
-	// desired nodes are set against CStorClusterPlan & not
+	r.CStorClusterPlan = r.getDesiredClusterPlan(desired)
+	return nil
+}
+
+func (r *Reconciler) getDesiredClusterPlan(
+	nodes []types.CStorClusterPlanNode,
+) *types.CStorClusterPlan {
+	plan := &types.CStorClusterPlan{}
+	plan.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   types.GroupDAOMayaDataIO,
+		Version: types.VersionV1Alpha1,
+		Kind:    string(types.KindCStorClusterPlan),
+	})
+	// name & namespace are same as CStorClusterConfig
+	plan.SetName(r.CStorClusterConfig.GetName())
+	plan.SetNamespace(r.CStorClusterConfig.GetNamespace())
+	// create annotations that refer to CStorClusterConfig UID
+	plan.SetAnnotations(map[string]string{
+		types.AnnKeyCStorClusterConfigUID: string(r.CStorClusterConfig.GetUID()),
+	})
+	// set the desired nodes
+	//
+	// NOTE:
+	// 	Desired nodes are set against CStorClusterPlan & not
 	// against CStorClusterConfig
 	//
 	// NOTE: (design decision)
 	//	We could have used these resulting/desired nodes to be
-	// set against cstorClusterConfig.status. However, we
+	// set against CStorClusterConfig.status. However, we
 	// prefered to use a dedicated resource i.e. CStorClusterPlan.
 	// A dedicated resource will provide a granular workflow
-	// to build up the CStorPoolCluster resource.
-	r.CStorClusterPlan.Spec.Nodes = desired
-	return nil
+	// to build up the CStorPoolCluster resource. This approach
+	// also avoids the hot loop of CStorClusterConfig. In other
+	// words reconciliation of this watched resource triggers
+	// reconciliation due to change in its status.
+	plan.Spec.Nodes = nodes
+	return plan
 }
 
 func (r *Reconciler) validateClusterConfigAndSetDefaultsIfNotSet() error {
