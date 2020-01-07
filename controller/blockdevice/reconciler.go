@@ -433,11 +433,11 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 ) ([]*unstructured.Unstructured, error) {
 	var annotated []*unstructured.Unstructured
 	for _, device := range devices {
-		isUnclaimFound, err := p.isBlockDeviceUnclaimed(device)
+		isUnclaimed, err := p.isBlockDeviceUnclaimed(device)
 		if err != nil {
 			return nil, err
 		}
-		if !isUnclaimFound {
+		if !isUnclaimed {
 			// TODO (@amitkumardas):
 			// 	Read previous notes on bug & enhancement required
 			// at metac
@@ -467,16 +467,16 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 		// in metac to merge annotations. Use of labels is a
 		// workaround that needs to be changed to annotations
 		// once metac fixes this bug.
-		newLbls := k8s.MergeToAnnotations(
-			types.AnnKeyCStorClusterStorageSetUID, string(p.StorageSet.GetUID()),
-			device.GetLabels(),
-		)
+		//newLbls := k8s.MergeToAnnotations(
+		//	types.AnnKeyCStorClusterStorageSetUID, string(p.StorageSet.GetUID()),
+		//	device.GetLabels(),
+		//)
 		// add CStorClusterPlan UID to device's
 		// existing annotations
-		newLbls = k8s.MergeToAnnotations(
-			types.AnnKeyCStorClusterPlanUID, cstorClusterPlanUID,
-			newLbls,
-		)
+		//newLbls = k8s.MergeToAnnotations(
+		//	types.AnnKeyCStorClusterPlanUID, cstorClusterPlanUID,
+		//	newLbls,
+		//)
 
 		new := &unstructured.Unstructured{}
 		new.SetAPIVersion(device.GetAPIVersion())
@@ -485,7 +485,17 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 		new.SetName(device.GetName())
 		// TODO (@amitkumardas):
 		//	Read above note on why labels vs. annotations
-		new.SetLabels(newLbls)
+		// TODO (@amitkumardas):
+		//	Remove this commented line of code
+		//new.SetLabels(newLbls)
+		// set labels in an idempotent manner
+		// metac will take care of merging these new labels to existing
+		new.SetLabels(
+			map[string]string{
+				types.AnnKeyCStorClusterStorageSetUID: string(p.StorageSet.GetUID()),
+				types.AnnKeyCStorClusterPlanUID:       cstorClusterPlanUID,
+			},
+		)
 
 		glog.V(2).Infof(
 			"BlockDevice %s %s associated successfully: CStorClusterStorageSet %s: CStorClusterPlan %s",
@@ -515,7 +525,7 @@ func (p *StorageToBlockDeviceAssociator) isBlockDeviceUnclaimed(
 		)
 	}
 	glog.V(3).Infof(
-		"BlockDevice %s %s has claim state %s: Storage %s %s",
+		"BlockDevice %q / %q has claim state %q: Storage %q / %q",
 		device.GetNamespace(), device.GetName(),
 		status,
 		p.Storage.GetNamespace(), p.Storage.GetName(),

@@ -1,5 +1,6 @@
 #### TODO
 - TODO - 0
+    - Update go dependency to include latest version of Metac
     - Need to have a CStorClusterDefault CR & corresponding reconciler
         - Its job will be to set defaults to CStorClusterConfig
         - Then set status.DefaultCompleted bool
