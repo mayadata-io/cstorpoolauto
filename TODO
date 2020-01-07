@@ -1,6 +1,13 @@
 #### TODO
 - TODO - 0
     - Update go dependency to include latest version of Metac
+    - update go version
+    - make use of github actions
+    - update makefile
+    - update dockerfile to include distroless binaries
+    - add badges to README
+    - make use of k8s/verify.go to avoid nested if conditions
+    - Add protection in form of finalizers to avoid accidental deletion of resources
     - Need to have a CStorClusterDefault CR & corresponding reconciler
         - Its job will be to set defaults to CStorClusterConfig
         - Then set status.DefaultCompleted bool

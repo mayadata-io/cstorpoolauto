@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package k8s
+package pointer
 
 // BoolPtr returns a pointer to the given bool
 func BoolPtr(b bool) *bool {

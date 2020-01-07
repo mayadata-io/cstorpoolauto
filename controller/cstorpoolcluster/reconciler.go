@@ -380,7 +380,7 @@ func (p *Planner) isReadyByNodeCount() bool {
 	return true
 }
 
-// isReadyByNodeDiskCount will return false if cluster
+// isReadyByNodeDiskCount will return false if node
 // does not have desired disks
 //
 // NOTE:
