@@ -29,16 +29,37 @@ type Eval struct {
 	obj     *unstructured.Unstructured
 	err     error
 	success *bool
+
+	// annotations derived from above obj
+	annotations map[string]string
+	// labels derived from above obj
+	labels map[string]string
 }
 
 // Verify returns a new instance of Eval
 func Verify(obj *unstructured.Unstructured) *Eval {
-	if obj == nil {
-		return &Eval{
-			err: errors.Errorf("Nil object provided"),
-		}
+	e := &Eval{}
+	if obj == nil || obj.Object == nil {
+		e.err = errors.Errorf("Nil object provided")
+		return e
 	}
-	return &Eval{obj: obj}
+	// We do not use GetAnnotations() since it swallows error if any
+	anns, _, err := unstructured.NestedStringMap(obj.Object, "metadata", "annotations")
+	if err != nil {
+		e.err = err
+		return e
+	}
+	// We do not use GetLabels() since it swallows error if any
+	lbls, _, err := unstructured.NestedStringMap(obj.Object, "metadata", "labels")
+	if err != nil {
+		e.err = err
+		return e
+	}
+	return &Eval{
+		obj:         obj,
+		annotations: anns,
+		labels:      lbls,
+	}
 }
 
 func (e *Eval) skip() bool {
@@ -99,7 +120,7 @@ func (e *Eval) HasAnn(key, value string) *Eval {
 	if e.skip() {
 		return e
 	}
-	found := e.hasPair(e.obj.GetAnnotations(), key, value)
+	found := e.hasPair(e.annotations, key, value)
 	e.success = pointer.BoolPtr(found)
 	return e
 }
@@ -110,14 +131,13 @@ func (e *Eval) HasAnns(given map[string]string) *Eval {
 	if e.skip() {
 		return e
 	}
-	anns := e.obj.GetAnnotations()
-	if len(given) == 0 || len(anns) == 0 {
+	if len(given) == 0 || len(e.annotations) == 0 {
 		e.success = pointer.BoolPtr(false)
 		return e
 	}
 	var found bool
 	for key, val := range given {
-		found = e.hasPair(anns, key, val)
+		found = e.hasPair(e.annotations, key, val)
 		if !found {
 			break
 		}
@@ -132,7 +152,7 @@ func (e *Eval) HasLabel(key, value string) *Eval {
 	if e.skip() {
 		return e
 	}
-	found := e.hasPair(e.obj.GetLabels(), key, value)
+	found := e.hasPair(e.labels, key, value)
 	e.success = pointer.BoolPtr(found)
 	return e
 }
@@ -143,14 +163,13 @@ func (e *Eval) HasLabels(given map[string]string) *Eval {
 	if e.skip() {
 		return e
 	}
-	lbls := e.obj.GetLabels()
-	if len(given) == 0 || len(lbls) == 0 {
+	if len(given) == 0 || len(e.labels) == 0 {
 		e.success = pointer.BoolPtr(false)
 		return e
 	}
 	var found bool
 	for key, val := range given {
-		found = e.hasPair(lbls, key, val)
+		found = e.hasPair(e.labels, key, val)
 		if !found {
 			break
 		}
