@@ -38,6 +38,15 @@ func TestVerifyIsKind(t *testing.T) {
 			kind:    "MyResource",
 			isFound: true,
 		},
+		"invalid obj kind": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kinds": "MyResource",
+				},
+			},
+			kind:    "MyResource",
+			isFound: false,
+		},
 		"missing given kind": {
 			obj: &unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -96,6 +105,15 @@ func TestVerifyIsAPIVersion(t *testing.T) {
 			},
 			apiVersion: "dao.mayadata.io/v1",
 			isFound:    true,
+		},
+		"invalid obj api version": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersions": "dao.mayadata.io/v1",
+				},
+			},
+			apiVersion: "dao.mayadata.io/v1",
+			isFound:    false,
 		},
 		"missing given api version": {
 			obj: &unstructured.Unstructured{
@@ -161,6 +179,21 @@ func TestVerifyHasLabel(t *testing.T) {
 			lblKey:  "name",
 			lblVal:  "dao",
 			isFound: true,
+		},
+		"invalid obj labels type - map[string]string": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"labels": map[string]string{
+							"name": "dao",
+						},
+					},
+				},
+			},
+			lblKey:  "name",
+			lblVal:  "dao",
+			isFound: false,
+			isErr:   true,
 		},
 		"missing given label": {
 			obj: &unstructured.Unstructured{
@@ -236,6 +269,21 @@ func TestVerifyHasAnn(t *testing.T) {
 			annKey:  "name",
 			annVal:  "dao",
 			isFound: true,
+		},
+		"invalid obj annotations type - map[string]string": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"annotations": map[string]string{
+							"name": "dao",
+						},
+					},
+				},
+			},
+			annKey:  "name",
+			annVal:  "dao",
+			isFound: false,
+			isErr:   true,
 		},
 		"missing given annotations": {
 			obj: &unstructured.Unstructured{
