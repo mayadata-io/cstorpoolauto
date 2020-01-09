@@ -105,7 +105,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	}
 
 	glog.V(3).Infof(
-		"Will apply CStorPoolCluster for CStorClusterPlan %s %s:",
+		"Will apply CStorPoolCluster for CStorClusterPlan %q / %q:",
 		request.Watch.GetNamespace(), request.Watch.GetName(),
 	)
 
@@ -214,7 +214,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	//response.Status = op.Status
 
 	glog.V(3).Infof(
-		"CStorPoolCluster applied successfully for CStorClusterPlan %s %s: %s",
+		"CStorPoolCluster applied successfully for CStorClusterPlan %q / %q: %s",
 		request.Watch.GetNamespace(), request.Watch.GetName(),
 		metac.GetDetailsFromResponse(response),
 	)
@@ -362,14 +362,14 @@ func (p *Planner) isReadyByNodeCount() bool {
 	desiredNodeCount := len(p.CStorClusterPlan.Spec.Nodes)
 	if desiredNodeCount == 0 {
 		glog.V(3).Infof(
-			"Will skip applying CStorPoolCluster %s %s: 0 desired nodes",
+			"Skip CStorPoolCluster %q / %q: 0 desired nodes",
 			p.CStorClusterPlan.GetNamespace(), p.CStorClusterPlan.GetName(),
 		)
 		return false
 	}
 	if desiredNodeCount != len(p.ObservedStorageSets) {
 		glog.V(3).Infof(
-			"Will skip applying CStorPoolCluster %s %s: Desired Node(s) %d: Observed StorageSet(s) %d",
+			"Skip CStorPoolCluster %q / %q: Want Node(s) %d: Got Nodes i.e. StorageSet(s) %d",
 			p.CStorClusterPlan.GetNamespace(),
 			p.CStorClusterPlan.GetName(),
 			desiredNodeCount,
@@ -393,9 +393,9 @@ func (p *Planner) isReadyByNodeCount() bool {
 func (p *Planner) isReadyByNodeDiskCount() bool {
 	for storageSetUID, desiredDiskCount := range p.storageSetToDesiredDiskCount {
 		observedDeviceCount := int64(len(p.storageSetToBlockDevices[storageSetUID]))
-		if desiredDiskCount.CmpInt64(observedDeviceCount) != 0 {
+		if desiredDiskCount.CmpInt64(observedDeviceCount) > 0 {
 			glog.V(3).Infof(
-				"Will skip applying CStorPoolCluster %s %s: Desired Disk(s) %s: Observed Disks(s) %d: StorageSet UID %s",
+				"Skip CStorPoolCluster %q / %q: Want Disk(s) %s: Got Disks(s) %d: StorageSet UID %q",
 				p.CStorClusterPlan.GetNamespace(),
 				p.CStorClusterPlan.GetName(),
 				desiredDiskCount.String(),

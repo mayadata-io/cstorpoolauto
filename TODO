@@ -1,5 +1,10 @@
 #### TODO
 - TODO - 0
+    - Eliminate the need to check logs - Make it easy
+        - Store warnings, infos, errors of all controllers in cstorpoolauto
+        - Store them against a CR
+        - Infos or Warnings should be based on verbose level of this CR
+        - Info, warn or error should have context info as well
     - Update go dependency to include latest version of Metac
     - update go version
     - make use of github actions
