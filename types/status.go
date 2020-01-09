@@ -76,7 +76,7 @@ const (
 	StatusPhaseError StatusPhase = "Error"
 )
 
-// DeviceClaimState defines the observed state of BlockDevice
+// DeviceClaimState defines the observed claim state of BlockDevice
 type DeviceClaimState string
 
 const (
@@ -84,6 +84,21 @@ const (
 	// not bound to any BDC, all cleanup jobs have been completed
 	// and is available for claiming.
 	BlockDeviceUnclaimed DeviceClaimState = "Unclaimed"
+
+	// BlockDeviceClaimed represents that the block device is
+	// bound to any BDC currently
+	BlockDeviceClaimed DeviceClaimState = "Claimed"
+)
+
+// DeviceState defines the observed state of BlockDevice
+type DeviceState string
+
+const (
+	// BlockDeviceActive represents a Active BlockDevice
+	BlockDeviceActive DeviceState = "Active"
+
+	// BlockDeviceInactive represents an Inactive BlockDevice
+	BlockDeviceInactive DeviceState = "Inactive"
 )
 
 // now returns the current time in following format
