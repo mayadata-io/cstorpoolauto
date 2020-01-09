@@ -156,10 +156,24 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 			uid, _ := k8s.GetAnnotationForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
 			)
-			if string(request.Watch.GetUID()) == uid {
-				// this is one of the desired CStorClusterStorageSet(s)
-				observedStorageSets = append(observedStorageSets, attachment)
+			if string(request.Watch.GetUID()) != uid {
+				continue
 			}
+			// pick only if state is Active
+			state, _, _ :=
+				unstructured.NestedString(attachment.Object, "status", "state")
+			if state != string(types.BlockDeviceActive) {
+				continue
+			}
+			// pick only if claimState is either Claimed or Unclaimed
+			claimState, _, _ :=
+				unstructured.NestedString(attachment.Object, "status", "claimState")
+			if claimState != string(types.BlockDeviceClaimed) &&
+				claimState != string(types.BlockDeviceUnclaimed) {
+				continue
+			}
+			// this is one of the desired CStorClusterStorageSet(s)
+			observedStorageSets = append(observedStorageSets, attachment)
 		}
 		if attachment.GetKind() == string(types.KindCStorClusterConfig) {
 			// verify further if this belongs to the current watch
