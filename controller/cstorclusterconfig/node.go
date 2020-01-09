@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	metac "openebs.io/metac/apis/metacontroller/v1alpha1"
@@ -33,9 +34,42 @@ import (
 type ByCreationTime []*unstructured.Unstructured
 
 func (u ByCreationTime) Len() int { return len(u) }
+
+// Less will return true if i-th element has creation time
+// earlier than j-th item. In other words true will be returned
+// if i-th item is older than j-th item.
 func (u ByCreationTime) Less(i, j int) bool {
-	return u[i].GetCreationTimestamp().Time.Sub(u[j].GetCreationTimestamp().Time) < 0
+	if len(u) == 0 || len(u)-1 < i || len(u)-1 < j {
+		return false
+	}
+
+	var iMetaTime metav1.Time
+	var errMsg = "Failed to get creation timestamp: Index %d: Found %t: %+v"
+	iCT, found, err :=
+		unstructured.NestedString(u[i].Object, "metadata", "creationTimestamp")
+	if err != nil || !found {
+		panic(errors.Errorf(errMsg, i, found, err))
+	}
+	err = iMetaTime.UnmarshalQueryParameter(iCT)
+	if err != nil {
+		panic(errors.Errorf(errMsg, i, found, err))
+	}
+
+	var jMetaTime metav1.Time
+	jCT, found, err := unstructured.NestedString(u[j].Object, "metadata", "creationTimestamp")
+	if err != nil || !found {
+		panic(errors.Errorf(errMsg, j, found, err))
+	}
+	err = jMetaTime.UnmarshalQueryParameter(jCT)
+	if err != nil {
+		panic(errors.Errorf(errMsg, j, found, err))
+	}
+	iTime := iMetaTime.Time
+	jTime := jMetaTime.Time
+	// return true if both are equal or iTime is older than jTime
+	return iTime.Equal(jTime) || iTime.Before(jTime)
 }
+
 func (u ByCreationTime) Swap(i, j int) { u[i], u[j] = u[j], u[i] }
 
 // NodeList is a helper struct that exposes operations
@@ -43,13 +77,20 @@ func (u ByCreationTime) Swap(i, j int) { u[i], u[j] = u[j], u[i] }
 // be of kind Node
 type NodeList []*unstructured.Unstructured
 
-// PickByCount returns a list of node based on the
+// TryPickUptoCount returns a list of node based on the
 // provided count
-func (l NodeList) PickByCount(count int64) []*unstructured.Unstructured {
+func (l NodeList) TryPickUptoCount(count int64) []*unstructured.Unstructured {
+	nodeCount := int64(len(l))
+	if nodeCount == 0 {
+		return nil
+	}
 	var picks []*unstructured.Unstructured
 	var i int64
 	for i = 0; i < count; i++ {
 		picks = append(picks, l[i])
+		if nodeCount == i+1 {
+			break
+		}
 	}
 	return picks
 }
@@ -57,9 +98,9 @@ func (l NodeList) PickByCount(count int64) []*unstructured.Unstructured {
 // FindByNameAndUID returns the node instance based on the
 // given name & uid
 func (l NodeList) FindByNameAndUID(name string, uid k8stypes.UID) *unstructured.Unstructured {
-	for _, available := range l {
-		if available.GetName() == name && available.GetUID() == uid {
-			return available
+	for _, node := range l {
+		if node.GetName() == name && node.GetUID() == uid {
+			return node
 		}
 	}
 	return nil
@@ -279,7 +320,7 @@ func (s *NodePlanner) Plan(conf NodePlannerConfig) ([]types.CStorClusterPlanNode
 	allowedNodeList := NodeList(allowedNodes)
 	if len(conf.ObservedNodes) == 0 {
 		// this is the first time desired nodes are getting evaluated
-		desired := allowedNodeList.PickByCount(conf.MinPoolCount.Value())
+		desired := allowedNodeList.TryPickUptoCount(conf.MinPoolCount.Value())
 		return NodeList(desired).AsCStorClusterPlanNodes(), nil
 	}
 	// logic for observed nodes i.e. these nodes were evaluated
