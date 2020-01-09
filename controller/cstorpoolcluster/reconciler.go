@@ -145,17 +145,6 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				// once metac fixes this bug.
 				attachment.GetLabels(), types.AnnKeyCStorClusterPlanUID,
 			)
-			if string(request.Watch.GetUID()) == uid {
-				// this is one of the desired BlockDevice(s)
-				observedBlockDevices = append(observedBlockDevices, attachment)
-			}
-		}
-		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
-			// verify further if this belongs to the current watch
-			// i.e. CStorClusterPlan
-			uid, _ := k8s.GetAnnotationForKey(
-				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
-			)
 			if string(request.Watch.GetUID()) != uid {
 				continue
 			}
@@ -172,8 +161,19 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 				claimState != string(types.BlockDeviceUnclaimed) {
 				continue
 			}
-			// this is one of the desired CStorClusterStorageSet(s)
-			observedStorageSets = append(observedStorageSets, attachment)
+			// finally this is one of the desired BlockDevice(s)
+			observedBlockDevices = append(observedBlockDevices, attachment)
+		}
+		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
+			// verify further if this belongs to the current watch
+			// i.e. CStorClusterPlan
+			uid, _ := k8s.GetAnnotationForKey(
+				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
+			)
+			if string(request.Watch.GetUID()) == uid {
+				// this is one of the desired CStorClusterStorageSet(s)
+				observedStorageSets = append(observedStorageSets, attachment)
+			}
 		}
 		if attachment.GetKind() == string(types.KindCStorClusterConfig) {
 			// verify further if this belongs to the current watch
