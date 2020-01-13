@@ -230,6 +230,10 @@ type NodePlanner struct {
 
 	// nodes that match the node selector terms
 	allowedNodes []*unstructured.Unstructured
+
+	// functions that make it easy to mock this structure
+	getAllNodeCountFn     func() int64
+	getAllowedNodeCountFn func() (int64, error)
 }
 
 // NodePlannerConfig contains observed nodes & related
@@ -255,6 +259,9 @@ func (s *NodePlanner) GetAllNodes() []*unstructured.Unstructured {
 // GetAllNodeCount returns the number of nodes from the list
 // of resources
 func (s *NodePlanner) GetAllNodeCount() int64 {
+	if s.getAllNodeCountFn != nil {
+		return s.getAllNodeCountFn()
+	}
 	return int64(len(s.GetAllNodes()))
 }
 
@@ -303,6 +310,9 @@ func (s *NodePlanner) GetAllowedNodesOrCached() ([]*unstructured.Unstructured, e
 // GetAllowedNodeCount gets the allowed nodes based on
 // node selector terms
 func (s *NodePlanner) GetAllowedNodeCount() (int64, error) {
+	if s.getAllowedNodeCountFn != nil {
+		return s.getAllowedNodeCountFn()
+	}
 	allowedNodes, err := s.GetAllowedNodesOrCached()
 	if err != nil {
 		return 0, err

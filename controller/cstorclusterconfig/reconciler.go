@@ -218,6 +218,14 @@ type Reconciler struct {
 	CStorClusterPlan   *types.CStorClusterPlan
 	Resources          []*unstructured.Unstructured
 	NodePlanner        *NodePlanner
+
+	// values that get validated / defaulted before finally get into
+	// the desired state
+	minPoolCount    int64
+	maxPoolCount    int64
+	poolRAIDType    types.PoolRAIDType
+	minDiskCount    int64
+	minDiskCapacity int64
 }
 
 // ReconcileResponse is a helper struct used to form the response
@@ -279,7 +287,7 @@ func NewReconciler(
 //	Due care has been taken to let this logic be idempotent
 func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 	syncFns := []func() error{
-		r.validateClusterConfigAndSetDefaultsIfNotSet,
+		r.syncClusterConfig,
 		r.syncClusterPlan,
 	}
 	for _, syncFn := range syncFns {
@@ -295,18 +303,18 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 
 // makeReconcileResponse builds reconcile response
 func (r *Reconciler) makeReconcileResponse() (ReconcileResponse, error) {
-	// convert updated CStorClusterConfig from typed to unstruct
-	clusterConfigRaw, err := json.Marshal(r.CStorClusterConfig)
-	if err != nil {
-		return ReconcileResponse{},
-			errors.Wrapf(err, "Can't marshal CStorClusterConfig")
-	}
-	var clusterConfig unstructured.Unstructured
-	err = json.Unmarshal(clusterConfigRaw, &clusterConfig)
-	if err != nil {
-		return ReconcileResponse{},
-			errors.Wrapf(err, "Can't unmarshal CStorClusterConfig")
-	}
+	// // convert updated CStorClusterConfig from typed to unstruct
+	// clusterConfigRaw, err := json.Marshal(r.CStorClusterConfig)
+	// if err != nil {
+	// 	return ReconcileResponse{},
+	// 		errors.Wrapf(err, "Can't marshal CStorClusterConfig")
+	// }
+	// var clusterConfig unstructured.Unstructured
+	// err = json.Unmarshal(clusterConfigRaw, &clusterConfig)
+	// if err != nil {
+	// 	return ReconcileResponse{},
+	// 		errors.Wrapf(err, "Can't unmarshal CStorClusterConfig")
+	// }
 
 	// convert updated CStorClusterConfigPlan from typed to unstruct
 	clusterConfigPlanRaw, err := json.Marshal(r.CStorClusterPlan)
@@ -322,7 +330,7 @@ func (r *Reconciler) makeReconcileResponse() (ReconcileResponse, error) {
 	}
 
 	return ReconcileResponse{
-		CStorClusterConfig: &clusterConfig,
+		CStorClusterConfig: r.getDesiredClusterConfig(),
 		CStorClusterPlan:   &clusterConfigPlan,
 	}, nil
 }
@@ -403,7 +411,7 @@ func (r *Reconciler) getDesiredClusterPlan(
 	return plan
 }
 
-func (r *Reconciler) validateClusterConfigAndSetDefaultsIfNotSet() error {
+func (r *Reconciler) syncClusterConfig() error {
 	// these default funcs follow a pre-defined order
 	//
 	// NOTE:
@@ -415,6 +423,7 @@ func (r *Reconciler) validateClusterConfigAndSetDefaultsIfNotSet() error {
 		r.setRAIDTypeIfNotSet,
 		r.setMinDiskCountIfNotSet,
 		r.setMinDiskCapacityIfNotSet,
+		r.validateRAIDType,
 		r.validateMinDiskCount,
 	}
 	for _, setDefaultFn := range setDefaultFns {
@@ -426,120 +435,195 @@ func (r *Reconciler) validateClusterConfigAndSetDefaultsIfNotSet() error {
 	return nil
 }
 
+func (r *Reconciler) getDesiredClusterConfig() *unstructured.Unstructured {
+	cConfig := &unstructured.Unstructured{}
+	cConfig.SetUnstructuredContent(
+		map[string]interface{}{
+			"spec": map[string]interface{}{
+				"minPoolCount": r.minPoolCount,
+				"maxPoolCount": r.maxPoolCount,
+				"diskConfig": map[string]interface{}{
+					"minCapacity": r.minDiskCapacity,
+					"minCount":    r.minDiskCount,
+				},
+				"poolConfig": map[string]interface{}{
+					"raidType": r.poolRAIDType,
+				},
+			},
+		},
+	)
+	cConfig.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   types.GroupDAOMayaDataIO,
+		Version: types.VersionV1Alpha1,
+		Kind:    string(types.KindCStorClusterConfig),
+	})
+	// name & namespace are same as CStorClusterConfig
+	cConfig.SetName(r.CStorClusterConfig.GetName())
+	cConfig.SetNamespace(r.CStorClusterConfig.GetNamespace())
+	return cConfig
+}
+
 // setMinPoolCountIfNotSet sets the min pool counts. Minimum pool
 // count is set to the lowest value amongst the following:
 // - Number of worker nodes
 // - Number of eligible nodes from node selector policy
 // - A default min value
 func (r *Reconciler) setMinPoolCountIfNotSet() error {
-	if r.CStorClusterConfig.Spec.MinPoolCount.CmpInt64(0) == -1 {
+	var minPoolCount int64
+	minPoolCount = r.CStorClusterConfig.Spec.MinPoolCount.Value()
+	if minPoolCount < 0 {
 		return errors.Errorf(
-			"Invalid MinPoolCount %d: Want positive value",
-			r.CStorClusterConfig.Spec.MinPoolCount.Value(),
+			"Invalid MinPoolCount %d: Want positive value", minPoolCount,
 		)
 	}
-	if r.CStorClusterConfig.Spec.MinPoolCount.CmpInt64(0) != 0 {
+	if minPoolCount > 0 {
 		// don't set default value if it is already configured
+		r.minPoolCount = minPoolCount
 		return nil
 	}
+	// at this point min pool count may not have been set
+	// & hence should be having 0 as its value
+	//
+	// TODO (@amitkumardas):
+	//	It might be better to have min pool count as a pointer
+	// to differentiate between a value that is not set vs.
+	// value set to 0
 	availableNodeCount := r.NodePlanner.GetAllNodeCount()
 	eligibleNodeCount, err := r.NodePlanner.GetAllowedNodeCount()
 	if err != nil {
 		return err
 	}
 	// start by setting min pool count to default value
-	minPoolCount := DefaultMinPoolCount
+	minPoolCount = DefaultMinPoolCount
 	if availableNodeCount < minPoolCount {
-		// use the lowest value
+		// use the lowest of two
 		minPoolCount = availableNodeCount
 	}
 	if eligibleNodeCount < minPoolCount {
-		// use the lowest value
+		// use the lowest of two
 		minPoolCount = eligibleNodeCount
 	}
+	// if min comes out to be 0 or negative then we don't
+	// support it
+	//
+	// TODO (@amitkumardas):
+	//	0 may be a valid value that we might want to consider
+	// e.g. scale down to 0 pools
 	if minPoolCount <= 0 {
-		return errors.Errorf("MinPoolCount can't be 0: Preferred nodes not found")
+		return errors.Errorf(
+			"Preferred nodes not found: MinPoolCount evaluates to %d:",
+			minPoolCount,
+		)
 	}
-	// set the min value
-	r.CStorClusterConfig.Spec.MinPoolCount.Set(minPoolCount)
+	// store the min pool count to be returned later as desired state
+	r.minPoolCount = minPoolCount
 	return nil
 }
 
 func (r *Reconciler) setMaxPoolCountIfNotSet() error {
-	if r.CStorClusterConfig.Spec.MaxPoolCount.CmpInt64(0) == 0 {
+	var maxPoolCount int64
+	var minPoolCount int64
+	minPoolCount = r.minPoolCount
+	maxPoolCount = r.CStorClusterConfig.Spec.MaxPoolCount.Value()
+	if maxPoolCount == 0 {
 		// max pool count is not set, so set it as min + 2
-		r.CStorClusterConfig.Spec.MaxPoolCount.Set(
-			r.CStorClusterConfig.Spec.MinPoolCount.Value() + 2,
-		)
+		maxPoolCount = minPoolCount + 2
 		return nil
 	}
-	if r.CStorClusterConfig.Spec.MinPoolCount.Cmp(r.CStorClusterConfig.Spec.MaxPoolCount) == 1 {
+	// check further if min is greater than max which is an error
+	if minPoolCount > maxPoolCount {
 		return errors.Errorf(
 			"MaxPoolCount %d can't be less than MinPoolCount %d",
-			r.CStorClusterConfig.Spec.MaxPoolCount.Value(),
-			r.CStorClusterConfig.Spec.MinPoolCount.Value(),
+			maxPoolCount,
+			minPoolCount,
 		)
 	}
+	// store the value to be returned later as the desired state
+	r.maxPoolCount = maxPoolCount
 	return nil
 }
 
 func (r *Reconciler) setRAIDTypeIfNotSet() error {
-	if r.CStorClusterConfig.Spec.PoolConfig.RAIDType == "" {
-		r.CStorClusterConfig.Spec.PoolConfig.RAIDType = types.PoolRAIDTypeDefault
-		return nil
-	}
-	switch r.CStorClusterConfig.Spec.PoolConfig.RAIDType {
-	case types.PoolRAIDTypeStripe, types.PoolRAIDTypeMirror,
-		types.PoolRAIDTypeRAIDZ, types.PoolRAIDTypeRAIDZ2:
-		// do nothing
-	default:
-		return errors.Errorf(
-			"Invalid RAID type %s", r.CStorClusterConfig.Spec.PoolConfig.RAIDType,
-		)
+	r.poolRAIDType = r.CStorClusterConfig.Spec.PoolConfig.RAIDType
+	if r.poolRAIDType == "" {
+		r.poolRAIDType = types.PoolRAIDTypeDefault
 	}
 	return nil
 }
 
 func (r *Reconciler) setMinDiskCountIfNotSet() error {
-	if r.CStorClusterConfig.Spec.DiskConfig.MinCount.CmpInt64(0) == -1 {
+	var minDiskCount int64
+	minDiskCount = r.CStorClusterConfig.Spec.DiskConfig.MinCount.Value()
+	if minDiskCount < 0 {
 		return errors.Errorf(
-			"Invalid MinDiskCount %d: Want positive value",
-			r.CStorClusterConfig.Spec.DiskConfig.MinCount.Value(),
+			"Invalid MinDiskCount %d: Want positive value", minDiskCount,
 		)
 	}
-	if r.CStorClusterConfig.Spec.DiskConfig.MinCount.CmpInt64(0) == 1 {
+	if minDiskCount > 0 {
 		// no need to set default since it is already configured
+		r.minDiskCount = minDiskCount
 		return nil
 	}
-	r.CStorClusterConfig.Spec.DiskConfig.MinCount.Set(
-		RAIDTypeToDefaultMinDiskCount[r.CStorClusterConfig.Spec.PoolConfig.RAIDType],
-	)
+	// at this point, min disk count was not set
+	// hence, set it to default min value based on RAIDType
+	//
+	// TODO (@amitkumardas):
+	//  It may be good to use pointer to represent MinCount.
+	// This will help in differentiating a value that was not
+	// set vs. a value that was set to 0.
+	r.minDiskCount =
+		RAIDTypeToDefaultMinDiskCount[r.poolRAIDType]
 	return nil
 }
 
 func (r *Reconciler) setMinDiskCapacityIfNotSet() error {
-	if r.CStorClusterConfig.Spec.DiskConfig.MinCapacity.CmpInt64(0) == -1 {
+	var minDiskCapacity int64
+	minDiskCapacity = r.CStorClusterConfig.Spec.DiskConfig.MinCapacity.Value()
+	if minDiskCapacity < 0 {
 		return errors.Errorf(
 			"Invalid MinDiskCapacity %s: Want positive value",
 			r.CStorClusterConfig.Spec.DiskConfig.MinCapacity.String(),
 		)
 	}
-	if r.CStorClusterConfig.Spec.DiskConfig.MinCapacity.CmpInt64(0) != 0 {
+	if minDiskCapacity > 0 {
 		// no need to set default since it is already configured
+		r.minDiskCapacity = minDiskCapacity
 		return nil
 	}
-	r.CStorClusterConfig.Spec.DiskConfig.MinCapacity = DefaultMinDiskCapacity
+	r.minDiskCapacity = DefaultMinDiskCapacity.Value()
+	return nil
+}
+
+func (r *Reconciler) validateRAIDType() error {
+	// verify if the RAID type that was set against the resource is valid
+	switch r.poolRAIDType {
+	case types.PoolRAIDTypeStripe, types.PoolRAIDTypeMirror,
+		types.PoolRAIDTypeRAIDZ, types.PoolRAIDTypeRAIDZ2:
+		// do nothing
+	default:
+		return errors.Errorf(
+			"Invalid RAID type %s", r.poolRAIDType,
+		)
+	}
 	return nil
 }
 
 func (r *Reconciler) validateMinDiskCount() error {
-	diskCount := r.CStorClusterConfig.Spec.DiskConfig.MinCount
-	defaultCount :=
-		RAIDTypeToDefaultMinDiskCount[r.CStorClusterConfig.Spec.PoolConfig.RAIDType]
-
-	if diskCount.Value()%defaultCount != 0 {
+	diskCount := r.minDiskCount
+	if diskCount == 0 {
 		return errors.Errorf(
-			"Invalid disk count %d: Want multiples of %d", diskCount.Value(), defaultCount,
+			"Invalid min disk count '0'",
+		)
+	}
+	defaultCount := RAIDTypeToDefaultMinDiskCount[r.poolRAIDType]
+	if defaultCount == 0 {
+		return errors.Errorf(
+			"Can't eval default disk count: RAID type %q is not set", r.poolRAIDType,
+		)
+	}
+	if diskCount%defaultCount != 0 {
+		return errors.Errorf(
+			"Invalid disk count %d: Want multiples of %d", diskCount, defaultCount,
 		)
 	}
 	return nil
