@@ -60,10 +60,10 @@ curl https://openebs.github.io/charts/openebs-operator-1.5.0.yaml > openebs-oper
 kubectl apply -f openebs-operator-1.5.0.yaml
 echo -e "\n++ Applied openebs successfully"
 
-echo -e "\n++ Applying cspc operator"
-curl https://raw.githubusercontent.com/openebs/openebs/master/k8s/cspc-operator.yaml > cspc-operator.yaml
-kubectl apply -f cspc-operator.yaml
-echo -e "\n++ Applied cspc operator successfully"
+echo -e "\n++ Applying cstor operator"
+curl https://raw.githubusercontent.com/openebs/openebs/master/k8s/cstor-operator.yaml > cstor-operator.yaml
+kubectl apply -f cstor-operator.yaml
+echo -e "\n++ Applied cstor operator successfully"
 
 echo -e "\n++ Applying a sample cstorpoolauto"
 kubectl apply -f basic.yaml
