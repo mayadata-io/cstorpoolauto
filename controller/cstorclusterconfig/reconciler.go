@@ -289,26 +289,22 @@ func (r *Reconciler) syncClusterPlan() error {
 	}
 	// Plan should be invoked only after CStorClusterConfig is
 	// set with defaults.
-	if r.ClusterConfig == nil {
-		return errors.Errorf(
-			"Can't sync cluster plan: Nil ClusterConfig",
-		)
-	}
+	//
 	// The CStorClusterConfig defaults are passed via
 	// NodePlannerConfig to help finding the eligible nodes
 	// that are fit to form CStorPoolCluster
-	desired, err := r.NodePlanner.Plan(NodePlannerConfig{
+	nodes, err := r.NodePlanner.Plan(NodePlannerConfig{
 		ObservedNodes: observedNodes,
-		MinPoolCount:  r.ClusterConfig.Spec.MinPoolCount,
-		MaxPoolCount:  r.ClusterConfig.Spec.MaxPoolCount,
+		MinPoolCount:  *resource.NewQuantity(r.minPoolCount, resource.DecimalExponent),
+		MaxPoolCount:  *resource.NewQuantity(r.maxPoolCount, resource.DecimalExponent),
 	})
 	if err != nil {
 		return err
 	}
-	if len(desired) == 0 {
+	if len(nodes) == 0 {
 		return errors.Errorf("No elgible nodes were found")
 	}
-	r.desiredNodes = desired
+	r.desiredNodes = nodes
 	return nil
 }
 

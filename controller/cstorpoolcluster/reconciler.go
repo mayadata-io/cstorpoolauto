@@ -37,38 +37,10 @@ type reconcileErrHandler struct {
 }
 
 func (h *reconcileErrHandler) handle(err error) {
-	// Error has been handled elaborately. This logic ensures
-	// error message is propagated to the resource & hence seen via
-	// 'kubectl get CStorClusterPlan -oyaml'.
-	//
-	// In addition, errors are logged as well.
 	glog.Errorf(
 		"Failed to apply CStorPoolCluster for CStorClusterPlan %s %s: %+v",
 		h.clusterPlan.GetNamespace(), h.clusterPlan.GetName(), err,
 	)
-
-	conds, mergeErr :=
-		k8s.MergeStatusConditions(
-			h.clusterPlan, types.MakeCStorClusterPlanCSPCApplyErrCond(err),
-		)
-	if mergeErr != nil {
-		glog.Errorf(
-			"Can't set status conditions for CStorClusterPlan %s %s: %+v",
-			h.clusterPlan.GetNamespace(), h.clusterPlan.GetName(), mergeErr,
-		)
-		// Note: Merge error will reset the conditions which will make
-		// things worse since various controllers will be reconciling
-		// based on these conditions.
-		//
-		// Hence it is better to set response status to nil to let metac
-		// preserve old status conditions if any.
-		h.response.Status = nil
-	} else {
-		// response status will be set against the watch's status by metac
-		h.response.Status = map[string]interface{}{}
-		h.response.Status["phase"] = types.CStorClusterPlanStatusPhaseError
-		h.response.Status["conditions"] = conds
-	}
 	// will skip reconciliation process at metac since there was an error
 	h.response.SkipReconcile = true
 }
@@ -89,9 +61,7 @@ func (h *reconcileErrHandler) handle(err error) {
 //
 // NOTE:
 //	Returning error will panic this process. We would rather want this
-// controller to run continuously. Hence, the errors are logged and at
-// the same time, these errors are posted against the watch here
-// CStorClusterPlan status conditions.
+// controller to run continuously. Hence, the errors are logged.
 func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) error {
 	if request == nil {
 		return errors.Errorf(
@@ -218,14 +188,10 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		// will stop further reconciliation at metac since cluster is
 		// not ready to create CStorPoolCluster
 		response.SkipReconcile = true
+		// trigger a new reconciliation after configured seconds
+		// hoping that cluster will be ready to form CStorPoolCluster
+		response.ResyncAfterSeconds = 10
 	}
-
-	// TODO (@amitkumardas):
-	//
-	// Can't set status as this creates a never ending hot loop
-	// In other words, this updates the watch & reconciliations
-	// of this watch due to other controllers get impacted
-	//response.Status = op.Status
 
 	glog.V(3).Infof(
 		"CStorPoolCluster applied successfully for CStorClusterPlan %q / %q: %s",
@@ -568,6 +534,28 @@ func (p *Planner) buildDesiredPools() []interface{} {
 	return pools
 }
 
+func (p *Planner) getDesiredCStorPoolCluster() *unstructured.Unstructured {
+	cspc := &unstructured.Unstructured{}
+	cspc.SetUnstructuredContent(map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"name":      p.CStorClusterPlan.GetName(),
+			"namespace": p.CStorClusterPlan.GetNamespace(),
+		},
+		"spec": map[string]interface{}{
+			"pools": p.buildDesiredPools(),
+		},
+	})
+	// create annotations with CStorClusterPlan UID & CStorClusterConfig UID
+	cspc.SetAnnotations(map[string]string{
+		types.AnnKeyCStorClusterPlanUID:   string(p.CStorClusterPlan.GetUID()),
+		types.AnnKeyCStorClusterConfigUID: string(p.ObservedClusterConfig.GetUID()),
+	})
+	// below is the right way to set APIVersion & Kind
+	cspc.SetAPIVersion(string(types.APIVersionOpenEBSV1Alpha1))
+	cspc.SetKind(string(types.KindCStorPoolCluster))
+	return cspc
+}
+
 // Plan builds the desired CStorPoolCluster (i.e. CSPC) instance
 func (p *Planner) Plan() (*unstructured.Unstructured, error) {
 	err := p.init()
@@ -579,23 +567,5 @@ func (p *Planner) Plan() (*unstructured.Unstructured, error) {
 		// ready to reconcile CStorPoolCluster
 		return nil, nil
 	}
-	desired := &unstructured.Unstructured{}
-	desired.SetUnstructuredContent(map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"name":      p.CStorClusterPlan.GetName(),
-			"namespace": p.CStorClusterPlan.GetNamespace(),
-		},
-		"spec": map[string]interface{}{
-			"pools": p.buildDesiredPools(),
-		},
-	})
-	// create annotations with CStorClusterPlan UID & CStorClusterConfig UID
-	desired.SetAnnotations(map[string]string{
-		types.AnnKeyCStorClusterPlanUID:   string(p.CStorClusterPlan.GetUID()),
-		types.AnnKeyCStorClusterConfigUID: string(p.ObservedClusterConfig.GetUID()),
-	})
-	// below is the right way to set APIVersion & Kind
-	desired.SetAPIVersion(string(types.APIVersionOpenEBSV1Alpha1))
-	desired.SetKind(string(types.KindCStorPoolCluster))
-	return desired, nil
+	return p.getDesiredCStorPoolCluster(), nil
 }
