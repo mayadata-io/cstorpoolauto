@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestReconcilerSetMinPoolCountIfNotSet(t *testing.T) {
@@ -157,8 +159,8 @@ func TestReconcilerSetMinPoolCountIfNotSet(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			r := &Reconciler{
-				CStorClusterConfig: mock.CStorClusterConfig,
-				NodePlanner:        mock.NodePlanner,
+				ClusterConfig: mock.CStorClusterConfig,
+				NodePlanner:   mock.NodePlanner,
 			}
 			got := r.setMinPoolCountIfNotSet()
 			if mock.isErr && got == nil {
@@ -210,8 +212,8 @@ func TestReconcilerSetMaxPoolCountIfNotSet(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			r := &Reconciler{
-				CStorClusterConfig: mock.CStorClusterConfig,
-				minPoolCount:       mock.minPoolCount,
+				ClusterConfig: mock.CStorClusterConfig,
+				minPoolCount:  mock.minPoolCount,
 			}
 			got := r.setMaxPoolCountIfNotSet()
 			if mock.isErr && got == nil {
@@ -313,7 +315,7 @@ func TestReconcilerSetRAIDTypeIfNotSet(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			r := &Reconciler{
-				CStorClusterConfig: mock.CStorClusterConfig,
+				ClusterConfig: mock.CStorClusterConfig,
 			}
 			got := r.setRAIDTypeIfNotSet()
 			if mock.isErr && got == nil {
@@ -419,7 +421,7 @@ func TestReconcilerSetMinDiskCountIfNotSet(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			r := &Reconciler{
-				CStorClusterConfig: mock.CStorClusterConfig,
+				ClusterConfig: mock.CStorClusterConfig,
 			}
 			got := r.setMinDiskCountIfNotSet()
 			if mock.isErr && got == nil {
@@ -479,7 +481,7 @@ func TestReconcilerSetMinDiskCapacityIfNotSet(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			r := &Reconciler{
-				CStorClusterConfig: mock.CStorClusterConfig,
+				ClusterConfig: mock.CStorClusterConfig,
 			}
 			got := r.setMinDiskCapacityIfNotSet()
 			if mock.isErr && got == nil {
@@ -710,7 +712,7 @@ func TestReconcilerValidateDiskExternalProvisioner(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			r := &Reconciler{
-				CStorClusterConfig: mock.CStorClusterConfig,
+				ClusterConfig: mock.CStorClusterConfig,
 			}
 			got := r.validateDiskExternalProvisioner()
 			if mock.isErr && got == nil {
@@ -815,8 +817,8 @@ func TestReconcilerSyncClusterConfig(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			r := &Reconciler{
-				CStorClusterConfig: mock.CStorClusterConfig,
-				NodePlanner:        mock.NodePlanner,
+				ClusterConfig: mock.CStorClusterConfig,
+				NodePlanner:   mock.NodePlanner,
 			}
 			got := r.syncClusterConfig()
 			if mock.isErr && got == nil {
@@ -824,6 +826,205 @@ func TestReconcilerSyncClusterConfig(t *testing.T) {
 			}
 			if !mock.isErr && got != nil {
 				t.Fatalf("Expected no error got [%+v]", got)
+			}
+		})
+	}
+}
+
+func TestNewReconciler(t *testing.T) {
+	var tests = map[string]struct {
+		ClusterConfig *unstructured.Unstructured
+		ClusterPlan   *unstructured.Unstructured
+		isErr         bool
+	}{
+		"ClusterConfig = nil && ClusterPlan = nil": {
+			ClusterConfig: nil,
+			ClusterPlan:   nil,
+			isErr:         true,
+		},
+		"ClusterConfig = empty && ClusterPlan = nil": {
+			ClusterConfig: &unstructured.Unstructured{},
+			ClusterPlan:   nil,
+			isErr:         false,
+		},
+		"ClusterConfig = in-valid && ClusterPlan = nil": {
+			ClusterConfig: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "ABC",
+				},
+			},
+			ClusterPlan: nil,
+			isErr:       false,
+		},
+		"ClusterConfig = valid && ClusterPlan = nil": {
+			ClusterConfig: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "CStorClusterConfig",
+				},
+			},
+			ClusterPlan: nil,
+			isErr:       false,
+		},
+		"ClusterConfig = valid && ClusterPlan = empty": {
+			ClusterConfig: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "CStorClusterConfig",
+				},
+			},
+			ClusterPlan: &unstructured.Unstructured{},
+			isErr:       false,
+		},
+		"ClusterConfig = valid && ClusterPlan = in-valid": {
+			ClusterConfig: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "CStorClusterConfig",
+				},
+			},
+			ClusterPlan: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "DEF",
+				},
+			},
+			isErr: false,
+		},
+		"ClusterConfig = valid && ClusterPlan = valid": {
+			ClusterConfig: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "CStorClusterConfig",
+				},
+			},
+			ClusterPlan: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "CStorClusterPlan",
+				},
+			},
+			isErr: false,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			r, err := NewReconciler(mock.ClusterConfig, mock.ClusterPlan, nil)
+			if mock.isErr && err == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got [%+v]", err)
+			}
+			if !mock.isErr && mock.ClusterConfig != nil && r.ClusterConfig == nil {
+				t.Fatalf("Expected not nil ClusterConfig got nil")
+			}
+			if !mock.isErr && mock.ClusterPlan != nil && r.ClusterPlan == nil {
+				t.Fatalf("Expected not nil ClusterPlan got nil")
+			}
+			if !mock.isErr && mock.ClusterPlan == nil && r.ClusterPlan != nil {
+				t.Fatalf("Expected nil ClusterPlan got [%+v]", r.ClusterPlan)
+			}
+		})
+	}
+}
+
+func TestReconcilerTestSyncClusterPlan(t *testing.T) {
+	var tests = map[string]struct {
+		ClusterPlan   *types.CStorClusterPlan
+		ClusterConfig *types.CStorClusterConfig
+		nodePlanFn    func(NodePlannerConfig) ([]types.CStorClusterPlanNode, error)
+		isErr         bool
+	}{
+		"ClusterPlan = nil && ClusterConfig = nil && Planned nodes = nil": {
+			nodePlanFn: func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
+				return nil, nil
+			},
+			isErr: true,
+		},
+		"ClusterPlan = nil && ClusterConfig = nil && Planned nodes = empty": {
+			nodePlanFn: func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
+				return []types.CStorClusterPlanNode{}, nil
+			},
+			isErr: true,
+		},
+		"ClusterPlan = nil && ClusterConfig = nil && Planned nodes count = 1": {
+			nodePlanFn: func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
+				return []types.CStorClusterPlanNode{
+					types.CStorClusterPlanNode{},
+				}, nil
+			},
+			isErr: true,
+		},
+		"ClusterPlan = nil && ClusterConfig = not-nil && Planned nodes count = 1": {
+			ClusterConfig: &types.CStorClusterConfig{},
+			nodePlanFn: func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
+				return []types.CStorClusterPlanNode{
+					types.CStorClusterPlanNode{},
+				}, nil
+			},
+			isErr: false,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			r := &Reconciler{
+				ClusterConfig: mock.ClusterConfig,
+				ClusterPlan:   mock.ClusterPlan,
+				NodePlanner: &NodePlanner{
+					planFn: mock.nodePlanFn,
+				},
+			}
+			got := r.syncClusterPlan()
+			if mock.isErr && got == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && got != nil {
+				t.Fatalf("Expected no error got [%+v]", got)
+			}
+		})
+	}
+}
+
+func TestReconcilerGetDesiredClusterPlan(t *testing.T) {
+	var tests = map[string]struct {
+		ClusterConfig *types.CStorClusterConfig
+		desiredNodes  []types.CStorClusterPlanNode
+		expectPlan    *unstructured.Unstructured
+	}{
+		"desired nodes = nil": {
+			ClusterConfig: &types.CStorClusterConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+			},
+			expectPlan: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "dao.mayadata.io/v1alpha1",
+					"metadata": map[string]interface{}{
+						"namespace": "default",
+					},
+				},
+			},
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			r := &Reconciler{
+				ClusterConfig: mock.ClusterConfig,
+			}
+			got := r.getDesiredClusterPlan(mock.desiredNodes)
+			if got.GetAPIVersion() != mock.expectPlan.GetAPIVersion() {
+				t.Fatalf(
+					"Expected APIVersion %s got %s",
+					got.GetAPIVersion(), mock.expectPlan.GetAPIVersion(),
+				)
+			}
+			if got.GetNamespace() != mock.expectPlan.GetNamespace() {
+				t.Fatalf(
+					"Expected Namespace %s got %s",
+					got.GetNamespace(), mock.expectPlan.GetNamespace(),
+				)
 			}
 		})
 	}
