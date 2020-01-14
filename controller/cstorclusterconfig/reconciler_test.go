@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func TestReconcilerSetMinPoolCountIfNotSet(t *testing.T) {
@@ -927,33 +927,54 @@ func TestNewReconciler(t *testing.T) {
 
 func TestReconcilerTestSyncClusterPlan(t *testing.T) {
 	var tests = map[string]struct {
-		ClusterPlan   *types.CStorClusterPlan
-		ClusterConfig *types.CStorClusterConfig
-		nodePlanFn    func(NodePlannerConfig) ([]types.CStorClusterPlanNode, error)
-		isErr         bool
+		ClusterPlan *types.CStorClusterPlan
+		nodePlanFn  func(NodePlannerConfig) ([]types.CStorClusterPlanNode, error)
+		isErr       bool
 	}{
-		"ClusterPlan = nil && ClusterConfig = nil && Planned nodes = nil": {
+		"ClusterPlan = nil && Planned nodes = nil": {
 			nodePlanFn: func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
 				return nil, nil
 			},
 			isErr: true,
 		},
-		"ClusterPlan = nil && ClusterConfig = nil && Planned nodes = empty": {
+		"ClusterPlan = nil && Planned nodes = empty": {
 			nodePlanFn: func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
 				return []types.CStorClusterPlanNode{}, nil
 			},
 			isErr: true,
 		},
-		"ClusterPlan = nil && ClusterConfig = nil && Planned nodes count = 1": {
+		"ClusterPlan = nil && Planned nodes count = 1": {
 			nodePlanFn: func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
 				return []types.CStorClusterPlanNode{
 					types.CStorClusterPlanNode{},
 				}, nil
 			},
-			isErr: true,
+			isErr: false,
 		},
-		"ClusterPlan = nil && ClusterConfig = not-nil && Planned nodes count = 1": {
-			ClusterConfig: &types.CStorClusterConfig{},
+		"ClusterPlan = empty && Planned nodes count = 1": {
+			ClusterPlan: &types.CStorClusterPlan{},
+			nodePlanFn: func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
+				return []types.CStorClusterPlanNode{
+					types.CStorClusterPlanNode{},
+				}, nil
+			},
+			isErr: false,
+		},
+		"ClusterPlan = 2 node && Planned nodes count = 1": {
+			ClusterPlan: &types.CStorClusterPlan{
+				Spec: types.CStorClusterPlanSpec{
+					Nodes: []types.CStorClusterPlanNode{
+						types.CStorClusterPlanNode{
+							Name: "node1",
+							UID:  "101",
+						},
+						types.CStorClusterPlanNode{
+							Name: "node2",
+							UID:  "102",
+						},
+					},
+				},
+			},
 			nodePlanFn: func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
 				return []types.CStorClusterPlanNode{
 					types.CStorClusterPlanNode{},
@@ -967,8 +988,7 @@ func TestReconcilerTestSyncClusterPlan(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			r := &Reconciler{
-				ClusterConfig: mock.ClusterConfig,
-				ClusterPlan:   mock.ClusterPlan,
+				ClusterPlan: mock.ClusterPlan,
 				NodePlanner: &NodePlanner{
 					planFn: mock.nodePlanFn,
 				},
