@@ -37,16 +37,16 @@
     - add status.conditions to storage API
     - set Storage's UID against PVC's annotations
 - TODO - 3
-    - refactor clusterconfig reconciler
+    - refactor clusterconfig reconciler - In Progress
     - manage status/conditions of clusterconfig
     - refactor reconcile logic to:
         - Defaulter,
         - CStorClusterPlanner & 
         - NodePlanner
 - TODO - 4
-    - test scripts / demos
+    - Demos - Done
 - TODO - 5
-    - Unit Tests for cstorpoolauto
+    - Unit Tests - In Progress
 - TODO - 6
     - refactor storage provisioner to use metac
 - TODO - 7

@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // GetNestedSlice returns the slice found at given field path
@@ -216,4 +217,22 @@ func GetAnnotationForKey(given map[string]string, key string) (string, bool) {
 	}
 	val, found := given[key]
 	return val, found
+}
+
+// UnstructToTyped transforms the provided unstruct instance
+// to target type
+func UnstructToTyped(src *unstructured.Unstructured, target interface{}) error {
+	if src == nil || src.UnstructuredContent() == nil {
+		return errors.Errorf(
+			"Can't transform unstruct to typed: Nil unstruct content",
+		)
+	}
+	if target == nil {
+		return errors.Errorf(
+			"Can't transform unstruct to typed: Nil target",
+		)
+	}
+	return runtime.DefaultUnstructuredConverter.FromUnstructured(
+		src.UnstructuredContent(), target,
+	)
 }

@@ -232,6 +232,7 @@ type NodePlanner struct {
 	allowedNodes []*unstructured.Unstructured
 
 	// functions that make it easy to mock this structure
+	planFn                func(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error)
 	getAllNodeCountFn     func() int64
 	getAllowedNodeCountFn func() (int64, error)
 }
@@ -323,6 +324,15 @@ func (s *NodePlanner) GetAllowedNodeCount() (int64, error) {
 // Plan runs through node planner config to determine
 // the latest desired nodes that should form the CStorPoolCluster
 func (s *NodePlanner) Plan(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
+	if s.planFn != nil {
+		return s.planFn(conf)
+	}
+	return s.plan(conf)
+}
+
+// plan runs through node planner config to determine
+// the latest desired nodes that should form the CStorPoolCluster
+func (s *NodePlanner) plan(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
 	allowedNodes, err := s.GetAllowedNodesOrCached()
 	if err != nil {
 		return nil, err

@@ -79,3 +79,18 @@ type CStorClusterPlanStatusCondition struct {
 	Reason           string         `json:"reason,omitempty"`
 	LastObservedTime string         `json:"lastObservedTime"`
 }
+
+// MakeNodeSlice returns a slice of unstructured maps from
+// the given slice of CStorClusterPlanNode
+func MakeNodeSlice(given []CStorClusterPlanNode) []map[string]interface{} {
+	var nodeSlice []map[string]interface{}
+	for _, node := range given {
+		nodeSlice = append(nodeSlice,
+			map[string]interface{}{
+				"name": node.Name,
+				"uid":  node.UID,
+			},
+		)
+	}
+	return nodeSlice
+}
