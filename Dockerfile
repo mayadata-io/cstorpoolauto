@@ -1,4 +1,4 @@
-# Build cspauto binary
+# Build cstorpoolauto binary
 FROM golang:1.12.7 as builder
 
 WORKDIR /
