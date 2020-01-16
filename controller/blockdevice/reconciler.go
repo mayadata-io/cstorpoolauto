@@ -169,7 +169,13 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		errHandler.handle(err)
 		return nil
 	}
-	response.Attachments = append(response.Attachments, op.DesiredBlockDevices...)
+	// check if association ever happened in this attempt
+	if op.isSkipAssociation {
+		response.SkipReconcile = true
+		response.ResyncAfterSeconds = 3
+	} else {
+		response.Attachments = append(response.Attachments, op.DesiredBlockDevices...)
+	}
 
 	// TODO (@amitkumardas):
 	//
@@ -199,7 +205,13 @@ type Reconciler struct {
 // CStorClusterStorageSet
 type ReconcileResponse struct {
 	DesiredBlockDevices []*unstructured.Unstructured
-	Status              map[string]interface{}
+
+	// isSkipAssociation is set to true if association was
+	// not performed for reasons such as required conditions
+	// were not met to proceed further
+	isSkipAssociation bool
+
+	Status map[string]interface{}
 }
 
 // Reconcile observed state of CStorClusterStorageSet to its desired
@@ -211,7 +223,7 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 		PVC:               r.PVC,
 		ObservedResources: r.ObservedResources,
 	}
-	desiredBlockDevices, err := associator.Associate()
+	desiredBlockDevices, isAssociate, err := associator.Associate()
 	if err != nil {
 		return ReconcileResponse{}, err
 	}
@@ -223,6 +235,7 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 	// build & return reconcile response
 	return ReconcileResponse{
 		DesiredBlockDevices: desiredBlockDevices,
+		isSkipAssociation:   !isAssociate,
 		//Status:              status,
 	}, nil
 }
@@ -273,7 +286,10 @@ type StorageToBlockDeviceAssociator struct {
 // Associate will first filter the matching BlockDevice(s
 // and then add Storage related annotations against each
 // device.
-func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructured, error) {
+//
+// This method returns false in its second argument if
+// associating of devices was skipped.
+func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructured, bool, error) {
 	var final []*unstructured.Unstructured
 	// extract PV name from PVC
 	//
@@ -281,7 +297,7 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 	pvName, found, err :=
 		unstructured.NestedString(p.PVC.UnstructuredContent(), "spec", "volumeName")
 	if err != nil {
-		return nil, errors.Wrapf(
+		return nil, false, errors.Wrapf(
 			err,
 			"Failed to fetch spec.volumeName from PVC %s %s",
 			p.PVC.GetNamespace(), p.PVC.GetName(),
@@ -308,7 +324,7 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 		// metac will try to delete the observed block devices
 		// but will fail since deleteAny is not enabled
 		//return observedBlockDevices, nil
-		return []*unstructured.Unstructured{}, nil
+		return []*unstructured.Unstructured{}, false, nil
 	}
 	// TODO (@amitkumardas):
 	// 	Read above note w.r.t bug & enhancement
@@ -317,7 +333,7 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 	matchingBlockDevices, _, err :=
 		p.filterBlockDevicesWithPVName(observedBlockDevices, pvName)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if len(matchingBlockDevices) == 0 {
 		glog.V(3).Infof(
@@ -328,24 +344,24 @@ func (p *StorageToBlockDeviceAssociator) Associate() ([]*unstructured.Unstructur
 		// 	Read above note w.r.t bug & enhancement
 		//
 		// return observedBlockDevices, nil
-		return []*unstructured.Unstructured{}, nil
+		return []*unstructured.Unstructured{}, false, nil
 	}
 	if len(matchingBlockDevices) > 1 {
-		return nil, errors.Errorf(
+		return nil, false, errors.Errorf(
 			"Found %d BlockDevices with PV %s: Want exactly one BlockDevice",
 			len(matchingBlockDevices), pvName,
 		)
 	}
 	annotated, err := p.annotateBlockDevicesIfUnclaimed(matchingBlockDevices)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	// TODO (@amitkumardas):
 	// 	Read above note w.r.t bug & enhancement
 	// We shall return only the matching device
 	//
 	//final = append(final, nonMatchingBlockDevices...)
-	return append(final, annotated...), nil
+	return append(final, annotated...), true, nil
 }
 
 func (p *StorageToBlockDeviceAssociator) getObservedBlockDevices() []*unstructured.Unstructured {
