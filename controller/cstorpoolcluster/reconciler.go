@@ -190,7 +190,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		response.SkipReconcile = true
 		// trigger a new reconciliation after configured seconds
 		// hoping that cluster will be ready to form CStorPoolCluster
-		response.ResyncAfterSeconds = 10
+		response.ResyncAfterSeconds = 3
 	}
 
 	glog.V(3).Infof(

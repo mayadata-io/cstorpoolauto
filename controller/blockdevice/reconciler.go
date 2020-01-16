@@ -154,6 +154,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	if pvc == nil {
 		glog.V(3).Infof("Will skip association of BlockDevice with Storage: Missing PVC")
 		response.SkipReconcile = true
+		response.ResyncAfterSeconds = 3
 		return nil
 	}
 
