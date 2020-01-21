@@ -4,8 +4,8 @@
         - Store warnings, errors of all controllers in cstorpoolauto
         - Store them against a CR
         - Warn or error should have context info as well
-    - Update go dependency to include latest version of Metac - DONE
-    - update go version - DONE
+    - update go version
+    - use latest version of Metac
     - Make use of github actions
     - Update Makefile
     - Update Dockerfile to include distroless binaries

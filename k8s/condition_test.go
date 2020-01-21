@@ -55,6 +55,7 @@ func TestVerifyIsKind(t *testing.T) {
 			},
 			kind:    "",
 			isFound: false,
+			isErr:   true,
 		},
 		"no matching kind": {
 			obj: &unstructured.Unstructured{
@@ -76,7 +77,8 @@ func TestVerifyIsKind(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			got, err := Verify(mock.obj).IsOfKind(mock.kind).Check()
+			e := NewCondition(mock.obj)
+			got, err := e.IsKind(mock.kind).Check()
 			if mock.isErr && err == nil {
 				t.Fatalf("Want error got nil")
 			}
@@ -85,6 +87,24 @@ func TestVerifyIsKind(t *testing.T) {
 			}
 			if mock.isFound != got {
 				t.Fatalf("Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(e.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", e.FailureReasons())
+			}
+
+			lCond := NewLazyCondition()
+			got, err = lCond.IsKind(mock.kind).Check(mock.obj)
+			if mock.isErr && err == nil {
+				t.Fatalf("Fn: Want error got nil")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Fn: Expected no error got [%v]", err)
+			}
+			if mock.isFound != got {
+				t.Fatalf("Fn: Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(lCond.FailureReasons()) == 0 {
+				t.Fatalf("Fn: Expected failures got none [%#v]", lCond.FailureReasons())
 			}
 		})
 	}
@@ -123,6 +143,7 @@ func TestVerifyIsAPIVersion(t *testing.T) {
 			},
 			apiVersion: "",
 			isFound:    false,
+			isErr:      true,
 		},
 		"no matching api version": {
 			obj: &unstructured.Unstructured{
@@ -144,7 +165,8 @@ func TestVerifyIsAPIVersion(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			got, err := Verify(mock.obj).IsOfAPIVersion(mock.apiVersion).Check()
+			e := NewCondition(mock.obj)
+			got, err := e.IsAPIVersion(mock.apiVersion).Check()
 			if mock.isErr && err == nil {
 				t.Fatalf("Want error got nil")
 			}
@@ -153,6 +175,24 @@ func TestVerifyIsAPIVersion(t *testing.T) {
 			}
 			if mock.isFound != got {
 				t.Fatalf("Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(e.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", e.FailureReasons())
+			}
+
+			lCond := NewLazyCondition()
+			got, err = lCond.IsAPIVersion(mock.apiVersion).Check(mock.obj)
+			if mock.isErr && err == nil {
+				t.Fatalf("Fn: Want error got nil")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Fn: Expected no error got %v", err)
+			}
+			if mock.isFound != got {
+				t.Fatalf("Fn: Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(lCond.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", lCond.FailureReasons())
 			}
 		})
 	}
@@ -207,6 +247,7 @@ func TestVerifyHasLabel(t *testing.T) {
 			},
 			lblKey:  "",
 			isFound: false,
+			isErr:   true,
 		},
 		"no matching label": {
 			obj: &unstructured.Unstructured{
@@ -233,8 +274,8 @@ func TestVerifyHasLabel(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			got, err :=
-				Verify(mock.obj).HasLabel(mock.lblKey, mock.lblVal).Check()
+			e := NewCondition(mock.obj)
+			got, err := e.HasLabel(mock.lblKey, mock.lblVal).Check()
 			if mock.isErr && err == nil {
 				t.Fatalf("Want error got nil")
 			}
@@ -243,6 +284,24 @@ func TestVerifyHasLabel(t *testing.T) {
 			}
 			if mock.isFound != got {
 				t.Fatalf("Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(e.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", e.FailureReasons())
+			}
+
+			lCond := NewLazyCondition()
+			got, err = lCond.HasLabel(mock.lblKey, mock.lblVal).Check(mock.obj)
+			if mock.isErr && err == nil {
+				t.Fatalf("Fn: Want error got nil")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Fn: Expected no error got %v", err)
+			}
+			if mock.isFound != got {
+				t.Fatalf("Fn: Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(lCond.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", lCond.FailureReasons())
 			}
 		})
 	}
@@ -256,7 +315,38 @@ func TestVerifyHasAnn(t *testing.T) {
 		isFound bool
 		isErr   bool
 	}{
-		"matching annotations": {
+		"runtime error - invalid ann type map[string]string": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"annotations": map[string]string{
+							"hi":  "hello",
+							"app": "cstor",
+						},
+					},
+				},
+			},
+			annKey:  "app",
+			annVal:  "cstor",
+			isFound: false,
+			isErr:   true,
+		},
+		"one matching annotation": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"annotations": map[string]interface{}{
+							"hi":  "hello",
+							"app": "cstor",
+						},
+					},
+				},
+			},
+			annKey:  "app",
+			annVal:  "cstor",
+			isFound: true,
+		},
+		"exact matching annotations": {
 			obj: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -270,21 +360,6 @@ func TestVerifyHasAnn(t *testing.T) {
 			annVal:  "dao",
 			isFound: true,
 		},
-		"invalid obj annotations type - map[string]string": {
-			obj: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"annotations": map[string]string{
-							"name": "dao",
-						},
-					},
-				},
-			},
-			annKey:  "name",
-			annVal:  "dao",
-			isFound: false,
-			isErr:   true,
-		},
 		"missing given annotations": {
 			obj: &unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -297,6 +372,7 @@ func TestVerifyHasAnn(t *testing.T) {
 			},
 			annKey:  "",
 			isFound: false,
+			isErr:   true,
 		},
 		"no matching annotations": {
 			obj: &unstructured.Unstructured{
@@ -323,8 +399,8 @@ func TestVerifyHasAnn(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			got, err :=
-				Verify(mock.obj).HasAnn(mock.annKey, mock.annVal).Check()
+			e := NewCondition(mock.obj)
+			got, err := e.HasAnn(mock.annKey, mock.annVal).Check()
 			if mock.isErr && err == nil {
 				t.Fatalf("Want error got nil")
 			}
@@ -333,6 +409,24 @@ func TestVerifyHasAnn(t *testing.T) {
 			}
 			if mock.isFound != got {
 				t.Fatalf("Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(e.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", e.FailureReasons())
+			}
+
+			lCond := NewLazyCondition()
+			got, err = lCond.HasAnn(mock.annKey, mock.annVal).Check(mock.obj)
+			if mock.isErr && err == nil {
+				t.Fatalf("Fn: Want error got nil")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Fn: Expected no error got %v", err)
+			}
+			if mock.isFound != got {
+				t.Fatalf("Fn: Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(lCond.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", lCond.FailureReasons())
 			}
 		})
 	}
@@ -376,8 +470,9 @@ func TestVerifyHasAnns(t *testing.T) {
 			},
 			anns:    map[string]string{},
 			isFound: false,
+			isErr:   true,
 		},
-		"no matching annotations": {
+		"not a full match of annotations": {
 			obj: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -390,6 +485,21 @@ func TestVerifyHasAnns(t *testing.T) {
 			anns: map[string]string{
 				"name": "dao",
 				"app":  "cstor",
+			},
+			isFound: false,
+		},
+		"complete mis-match of annotations": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"annotations": map[string]interface{}{
+							"app": "cstor",
+						},
+					},
+				},
+			},
+			anns: map[string]string{
+				"name": "dao",
 			},
 			isFound: false,
 		},
@@ -412,15 +522,15 @@ func TestVerifyHasAnns(t *testing.T) {
 			},
 			anns:    nil,
 			isFound: false,
-			isErr:   false,
+			isErr:   true,
 		},
 	}
 	for name, mock := range tests {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			got, err :=
-				Verify(mock.obj).HasAnns(mock.anns).Check()
+			e := NewCondition(mock.obj)
+			got, err := e.HasAnns(mock.anns).Check()
 			if mock.isErr && err == nil {
 				t.Fatalf("Want error got nil")
 			}
@@ -429,6 +539,24 @@ func TestVerifyHasAnns(t *testing.T) {
 			}
 			if mock.isFound != got {
 				t.Fatalf("Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(e.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", e.FailureReasons())
+			}
+
+			lCond := NewLazyCondition()
+			got, err = lCond.HasAnns(mock.anns).Check(mock.obj)
+			if mock.isErr && err == nil {
+				t.Fatalf("Fn: Want error got nil")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Fn: Expected no error got %v", err)
+			}
+			if mock.isFound != got {
+				t.Fatalf("Fn: Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(lCond.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", lCond.FailureReasons())
 			}
 		})
 	}
@@ -441,6 +569,41 @@ func TestVerifyHasLabels(t *testing.T) {
 		isFound bool
 		isErr   bool
 	}{
+		"runtime error - invalid labels type - map[string]string": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"labels": map[string]string{
+							"name": "dao12",
+							"app":  "cstor2",
+						},
+					},
+				},
+			},
+			lbls: map[string]string{
+				"name": "dao12",
+				"app":  "cstor2",
+			},
+			isFound: false,
+			isErr:   true,
+		},
+		"exact matching labels": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"labels": map[string]interface{}{
+							"name": "dao12",
+							"app":  "cstor2",
+						},
+					},
+				},
+			},
+			lbls: map[string]string{
+				"name": "dao12",
+				"app":  "cstor2",
+			},
+			isFound: true,
+		},
 		"matching labels": {
 			obj: &unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -472,6 +635,7 @@ func TestVerifyHasLabels(t *testing.T) {
 			},
 			lbls:    map[string]string{},
 			isFound: false,
+			isErr:   true,
 		},
 		"no matching labels": {
 			obj: &unstructured.Unstructured{
@@ -486,6 +650,21 @@ func TestVerifyHasLabels(t *testing.T) {
 			lbls: map[string]string{
 				"name": "dao",
 				"app":  "cstor",
+			},
+			isFound: false,
+		},
+		"complete mis-match of labels": {
+			obj: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"labels": map[string]interface{}{
+							"app": "cstor",
+						},
+					},
+				},
+			},
+			lbls: map[string]string{
+				"name": "dao",
 			},
 			isFound: false,
 		},
@@ -508,15 +687,15 @@ func TestVerifyHasLabels(t *testing.T) {
 			},
 			lbls:    nil,
 			isFound: false,
-			isErr:   false,
+			isErr:   true,
 		},
 	}
 	for name, mock := range tests {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			got, err :=
-				Verify(mock.obj).HasLabels(mock.lbls).Check()
+			e := NewCondition(mock.obj)
+			got, err := e.HasLabels(mock.lbls).Check()
 			if mock.isErr && err == nil {
 				t.Fatalf("Want error got nil")
 			}
@@ -525,6 +704,24 @@ func TestVerifyHasLabels(t *testing.T) {
 			}
 			if mock.isFound != got {
 				t.Fatalf("Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(e.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", e.FailureReasons())
+			}
+
+			lCond := NewLazyCondition()
+			got, err = lCond.HasLabels(mock.lbls).Check(mock.obj)
+			if mock.isErr && err == nil {
+				t.Fatalf("Fn: Want error got nil")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Fn: Expected no error got %v", err)
+			}
+			if mock.isFound != got {
+				t.Fatalf("Fn: Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(lCond.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", lCond.FailureReasons())
 			}
 		})
 	}
@@ -564,12 +761,13 @@ func TestVerifyEverything(t *testing.T) {
 				},
 			},
 			lbls: map[string]string{
-				"name": "dao",
+				"zone": "east-2",
 				"app":  "cstor",
 			},
 			anns: map[string]string{
 				"name": "dao",
 				"app":  "cstor",
+				"zone": "east-2",
 			},
 			lblKey:     "app",
 			lblVal:     "cstor",
@@ -609,7 +807,7 @@ func TestVerifyEverything(t *testing.T) {
 			annVal:     "dao",
 			kind:       "MyResource",
 			apiVersion: "dao.mayadata.io/v1",
-			isFound:    false,
+			isFound:    true,
 		},
 		"missing given anns": {
 			obj: &unstructured.Unstructured{
@@ -641,7 +839,7 @@ func TestVerifyEverything(t *testing.T) {
 			annVal:     "dao",
 			kind:       "MyResource",
 			apiVersion: "dao.mayadata.io/v1",
-			isFound:    false,
+			isFound:    true,
 		},
 		"no matching labels": {
 			obj: &unstructured.Unstructured{
@@ -762,7 +960,7 @@ func TestVerifyEverything(t *testing.T) {
 			annVal:     "dao",
 			kind:       "MyResource",
 			apiVersion: "dao.mayadata.io/v1",
-			isFound:    false,
+			isFound:    true,
 		},
 		"nil given anns": {
 			obj: &unstructured.Unstructured{
@@ -794,7 +992,7 @@ func TestVerifyEverything(t *testing.T) {
 			annVal:     "dao",
 			kind:       "MyResource",
 			apiVersion: "dao.mayadata.io/v1",
-			isFound:    false,
+			isFound:    true,
 		},
 		"missing kind": {
 			obj: &unstructured.Unstructured{
@@ -829,7 +1027,7 @@ func TestVerifyEverything(t *testing.T) {
 			annVal:     "dao",
 			kind:       "",
 			apiVersion: "dao.mayadata.io/v1",
-			isFound:    false,
+			isFound:    true,
 		},
 		"missing label": {
 			obj: &unstructured.Unstructured{
@@ -864,7 +1062,7 @@ func TestVerifyEverything(t *testing.T) {
 			annVal:     "dao",
 			kind:       "MyResource",
 			apiVersion: "dao.mayadata.io/v1",
-			isFound:    false,
+			isFound:    true,
 		},
 		"missing ann": {
 			obj: &unstructured.Unstructured{
@@ -899,7 +1097,7 @@ func TestVerifyEverything(t *testing.T) {
 			annVal:     "dao",
 			kind:       "MyResource",
 			apiVersion: "dao.mayadata.io/v1",
-			isFound:    false,
+			isFound:    true,
 		},
 		"missing api version": {
 			obj: &unstructured.Unstructured{
@@ -934,22 +1132,41 @@ func TestVerifyEverything(t *testing.T) {
 			annVal:     "dao",
 			kind:       "MyResource",
 			apiVersion: "",
-			isFound:    false,
+			isFound:    true,
 		},
 	}
 	for name, mock := range tests {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			got, err :=
-				Verify(mock.obj).
-					IsOfKind(mock.kind).
-					IsOfAPIVersion(mock.apiVersion).
-					HasLabels(mock.lbls).
-					HasAnns(mock.anns).
-					HasLabel(mock.lblKey, mock.lblVal).
-					HasAnn(mock.annKey, mock.annVal).
-					Check()
+			e := NewCondition(mock.obj)
+			lCond := NewLazyCondition()
+			if mock.kind != "" {
+				e.IsKind(mock.kind)
+				lCond.IsKind(mock.kind)
+			}
+			if mock.apiVersion != "" {
+				e.IsAPIVersion(mock.apiVersion)
+				lCond.IsAPIVersion(mock.apiVersion)
+			}
+			if len(mock.lbls) != 0 {
+				e.HasLabels(mock.lbls)
+				lCond.HasLabels(mock.lbls)
+			}
+			if len(mock.anns) != 0 {
+				e.HasAnns(mock.anns)
+				lCond.HasAnns(mock.anns)
+			}
+			if mock.lblKey != "" {
+				e.HasLabel(mock.lblKey, mock.lblVal)
+				lCond.HasLabel(mock.lblKey, mock.lblVal)
+			}
+			if mock.annKey != "" {
+				e.HasAnn(mock.annKey, mock.annVal)
+				lCond.HasAnn(mock.annKey, mock.annVal)
+			}
+			// test e
+			got, err := e.Check()
 			if mock.isErr && err == nil {
 				t.Fatalf("Want error got nil")
 			}
@@ -958,6 +1175,23 @@ func TestVerifyEverything(t *testing.T) {
 			}
 			if mock.isFound != got {
 				t.Fatalf("Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(e.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", e.FailureReasons())
+			}
+			// test lazy condition
+			got, err = lCond.Check(mock.obj)
+			if mock.isErr && err == nil {
+				t.Fatalf("Want error got nil")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got %v", err)
+			}
+			if mock.isFound != got {
+				t.Fatalf("Expected %t got %t", mock.isFound, got)
+			}
+			if !mock.isErr && !mock.isFound && len(lCond.FailureReasons()) == 0 {
+				t.Fatalf("Expected failures got none [%#v]", lCond.FailureReasons())
 			}
 		})
 	}
