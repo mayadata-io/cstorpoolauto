@@ -20,11 +20,11 @@ import (
 	"openebs.io/metac/controller/generic"
 	"openebs.io/metac/start"
 
-	"cstorpoolauto/controller/blockdevice"
-	"cstorpoolauto/controller/cstorclusterconfig"
-	"cstorpoolauto/controller/cstorclusterplan"
-	"cstorpoolauto/controller/cstorclusterstorageset"
-	"cstorpoolauto/controller/cstorpoolcluster"
+	"mayadata.io/cstorpoolauto/controller/blockdevice"
+	"mayadata.io/cstorpoolauto/controller/cstorclusterconfig"
+	"mayadata.io/cstorpoolauto/controller/cstorclusterplan"
+	"mayadata.io/cstorpoolauto/controller/cstorclusterstorageset"
+	"mayadata.io/cstorpoolauto/controller/cstorpoolcluster"
 )
 
 // main function is the entry point of this binary.

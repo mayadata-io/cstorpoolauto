@@ -17,7 +17,7 @@ limitations under the License.
 package k8s
 
 import (
-	"cstorpoolauto/types"
+	"mayadata.io/cstorpoolauto/types"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
