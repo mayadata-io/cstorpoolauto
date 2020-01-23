@@ -17,7 +17,7 @@ limitations under the License.
 package k8s
 
 import (
-	"cstorpoolauto/util/pointer"
+	"mayadata.io/cstorpoolauto/util/pointer"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

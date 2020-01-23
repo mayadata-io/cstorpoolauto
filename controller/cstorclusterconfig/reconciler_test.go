@@ -17,7 +17,7 @@ limitations under the License.
 package cstorclusterconfig
 
 import (
-	"cstorpoolauto/types"
+	"mayadata.io/cstorpoolauto/types"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/resource"

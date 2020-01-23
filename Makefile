@@ -25,6 +25,7 @@ $(ALL_SRC): ;
 .PHONY: vendor
 vendor: go.mod go.sum
 	@GO111MODULE=on go mod download
+	@GO111MODULE=on go mod tidy
 	@GO111MODULE=on go mod vendor
 
 .PHONY: test

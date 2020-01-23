@@ -1,7 +1,39 @@
-# Build cstorpoolauto binary
-FROM golang:1.12.7 as builder
+# --------------------------
+# Test cstorpoolauto binary
+# --------------------------
+FROM golang:1.13.5 as tester
 
-WORKDIR /
+WORKDIR /mayadata.io/cstorpoolauto/
+
+# copy go modules manifests
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+# copy build manifests
+COPY Makefile Makefile
+
+# ensure vendoring is up-to-date by running make vendor 
+# in your local setup
+#
+# we cache the vendored dependencies before building and
+# copying source so that we don't need to re-download when
+# source changes don't invalidate our downloaded layer
+RUN go mod download
+RUN go mod tidy
+RUN go mod vendor
+
+# copy all
+COPY . .
+
+# test cstorpoolauto
+RUN make test
+
+# --------------------------
+# Build cstorpoolauto binary
+# --------------------------
+FROM golang:1.13.5 as builder
+
+WORKDIR /mayadata.io/cstorpoolauto/
 
 # copy go modules manifests
 COPY go.mod go.mod
@@ -13,32 +45,33 @@ COPY go.sum go.sum
 # we cache the vendored dependencies before building and
 # copying source so that we don't need to re-download when
 # source changes don't invalidate our downloaded layer
-RUN GO111MODULE=on go mod download
-RUN GO111MODULE=on go mod vendor
+RUN go mod download
+RUN go mod tidy
 
 # copy build manifests
 COPY Makefile Makefile
 
 # copy source files
-COPY cmd/ ./cmd/
-COPY k8s/ ./k8s/
-COPY types/ ./types/
-COPY util/ ./util/
-COPY controller/ ./controller/
+COPY cmd/ cmd/
+COPY k8s/ k8s/
+COPY types/ types/
+COPY util/ util/
+COPY controller/ controller/
 
-# build cspauto binary
-RUN make
+# build cstorpoolauto binary
+RUN make cstorpoolauto
 
-# Use debian as minimal base image to package the final binary
-FROM debian:stretch-slim
+# ---------------------------
+# Use distroless as minimal base image to package the final binary
+# Refer https://github.com/GoogleContainerTools/distroless
+# ---------------------------
+FROM gcr.io/distroless/static:nonroot
 
 WORKDIR /
 
-RUN apt-get update && \
-  apt-get install --no-install-recommends -y ca-certificates && \
-  rm -rf /var/lib/apt/lists/*
-
 COPY config/metac.yaml /etc/config/metac/metac.yaml
-COPY --from=builder /cstorpoolauto /usr/bin/
+COPY --from=builder /mayadata.io/cstorpoolauto/cstorpoolauto /usr/bin/
+
+USER nonroot:nonroot
 
 CMD ["/usr/bin/cstorpoolauto"]
