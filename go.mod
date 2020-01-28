@@ -1,4 +1,4 @@
-module mayadata.io/cstorpoolauto
+module mayadata-io/cstorpoolauto
 
 go 1.13
 
