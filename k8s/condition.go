@@ -219,7 +219,7 @@ func (e *Condition) hasPair(pairs map[string]string, key, value string) bool {
 		)
 		return false
 	}
-	got, _ := GetAnnotationForKey(pairs, key)
+	got, _ := GetValueForKey(pairs, key)
 	return got == value
 }
 

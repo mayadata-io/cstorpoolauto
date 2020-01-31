@@ -21,30 +21,81 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// GetNestedSlice returns the slice found at given field path
-// of the given object
-func GetNestedSlice(obj *unstructured.Unstructured, fields ...string) ([]interface{}, error) {
-	nestedSlice, found, err := unstructured.NestedSlice(obj.Object, fields...)
-	if err != nil || !found {
-		return nil,
+// GetQuantityOrError returns resource.Quantity value at given
+// field path of the given object or error if not found
+func GetQuantityOrError(obj *unstructured.Unstructured, fields ...string) (resource.Quantity, error) {
+	val, err := GetStringOrError(obj, fields...)
+	if err != nil {
+		return resource.Quantity{}, err
+	}
+	qty, err := resource.ParseQuantity(val)
+	if err != nil {
+		return resource.Quantity{}, errors.Wrapf(
+			err,
+			"Failed to parse %s with value %q: Kind %q: Name %q / %q",
+			strings.Join(fields, "."), val, obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+		)
+	}
+	return qty, nil
+}
+
+// GetStringOrError returns the string value at given
+// field path of the given object or error if not found
+func GetStringOrError(obj *unstructured.Unstructured, fields ...string) (string, error) {
+	val, found, err := unstructured.NestedString(obj.UnstructuredContent(), fields...)
+	if err != nil {
+		return "",
 			errors.Wrapf(
 				err,
-				"Failed to find slice at %s: Object %s %s",
-				strings.Join(fields, "."), obj.GetNamespace(), obj.GetName(),
+				"Failed to get value of %s: Kind %q: Name %q / %q",
+				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
 			)
 	}
-	if !found {
+	if !found || val == "" {
+		return "",
+			errors.Errorf(
+				"No value found at %s: Kind %q: Name %q / %q",
+				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	return val, nil
+}
+
+// GetSliceOrError returns the slice found at give field path
+// of the given object or error if nothing is found
+func GetSliceOrError(obj *unstructured.Unstructured, fields ...string) ([]interface{}, error) {
+	slice, found, err := GetSlice(obj, fields...)
+	if err != nil {
+		return nil, err
+	}
+	if !found || len(slice) == 0 {
 		return nil,
 			errors.Errorf(
-				"No slice is found at %s: Object %s %s",
-				strings.Join(fields, "."), obj.GetNamespace(), obj.GetName(),
+				"No values found at %s: Kind %q: Name %q / %q",
+				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
 			)
 	}
-	return nestedSlice, nil
+	return slice, nil
+}
+
+// GetSlice returns the slice found at given field path
+// of the given object
+func GetSlice(obj *unstructured.Unstructured, fields ...string) ([]interface{}, bool, error) {
+	slice, found, err := unstructured.NestedSlice(obj.UnstructuredContent(), fields...)
+	if err != nil {
+		return nil, false,
+			errors.Wrapf(
+				err,
+				"Failed to find slice at %s: Kind %q: Name %q / %q",
+				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	return slice, found, nil
 }
 
 // MergeNestedSlice merges the given map against a
@@ -53,7 +104,7 @@ func GetNestedSlice(obj *unstructured.Unstructured, fields ...string) ([]interfa
 //
 // TODO (@amitkumardas): Unit Tests
 func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]interface{}, fields ...string) ([]interface{}, error) {
-	nestedSlice, err := GetNestedSlice(obj, fields...)
+	slice, _, err := GetSlice(obj, fields...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +128,7 @@ func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]interface{}
 	}
 	var found bool
 	var foundAt int
-	for i, item := range nestedSlice {
+	for i, item := range slice {
 		itemMap, ok := item.(map[string]interface{})
 		if !ok {
 			return nil,
@@ -99,12 +150,12 @@ func MergeNestedSlice(obj *unstructured.Unstructured, new map[string]interface{}
 	}
 	if found {
 		// replace with new item
-		nestedSlice[foundAt] = new
+		slice[foundAt] = new
 	} else {
 		// add the new item
-		nestedSlice = append(nestedSlice, new)
+		slice = append(slice, new)
 	}
-	return nestedSlice, nil
+	return slice, nil
 }
 
 // MergeAndSetNestedSlice merges the provided map against a slice
@@ -177,12 +228,49 @@ func MergeAndSetStatusConditions(obj *unstructured.Unstructured, newCondition ma
 	return MergeAndSetNestedSlice(obj, newCondition, "status", "conditions")
 }
 
-// GetNestedMap returns the map found at given field path of the given
-// object
-func GetNestedMap(obj *unstructured.Unstructured, fields ...string) (map[string]interface{}, error) {
-	nestedMap, found, err := unstructured.NestedMap(obj.Object, fields...)
-	if err != nil || !found {
+// GetNestedMapOrError returns the map found at give field path
+// of the given object or error if nothing is found
+func GetNestedMapOrError(
+	obj *unstructured.Unstructured, fields ...string,
+) (map[string]interface{}, error) {
+	nmap, err := GetNestedMapOrFoundError(obj, fields...)
+	if err != nil {
 		return nil, err
+	}
+	if len(nmap) == 0 {
+		return nil,
+			errors.Errorf(
+				"No values found at %s: Kind %q: Name %q / %q",
+				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	return nmap, nil
+}
+
+// MustGetNestedMap returns the map found at give field path
+// of the given object or panics if nothing is found
+func MustGetNestedMap(obj *unstructured.Unstructured, fields ...string) map[string]interface{} {
+	nmap, err := GetNestedMapOrError(obj, fields...)
+	if err != nil {
+		panic(err)
+	}
+	return nmap
+}
+
+// GetNestedMapOrFoundError returns the map found at given field path of the given
+// object
+func GetNestedMapOrFoundError(
+	obj *unstructured.Unstructured, fields ...string,
+) (map[string]interface{}, error) {
+	nestedMap, found, err := unstructured.NestedMap(obj.Object, fields...)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, errors.Errorf(
+			"No values found at %s: Kind %q: Name %q / %q",
+			strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+		)
 	}
 	return nestedMap, nil
 }
@@ -191,11 +279,38 @@ func GetNestedMap(obj *unstructured.Unstructured, fields ...string) (map[string]
 // of the given object. It returns empty map in case of error or
 // if this map was not found.
 func GetNestedMapOrEmpty(obj *unstructured.Unstructured, fields ...string) (map[string]interface{}, error) {
-	nestedMap, err := GetNestedMap(obj, fields...)
+	nestedMap, err := GetNestedMapOrFoundError(obj, fields...)
 	if nestedMap == nil {
 		nestedMap = map[string]interface{}{}
 	}
 	return nestedMap, err
+}
+
+// MustGetNestedSlice returns the slice found at give field path
+// of the given object or panics if nothing is found
+func MustGetNestedSlice(obj *unstructured.Unstructured, fields ...string) []interface{} {
+	slice, err := GetNestedSliceOrError(obj, fields...)
+	if err != nil {
+		panic(err)
+	}
+	return slice
+}
+
+// GetNestedSliceOrError returns the slice found at give field path
+// of the given object or error if nothing is found
+func GetNestedSliceOrError(obj *unstructured.Unstructured, fields ...string) ([]interface{}, error) {
+	slice, found, err := unstructured.NestedSlice(obj.UnstructuredContent(), fields...)
+	if err != nil {
+		return nil, err
+	}
+	if !found || len(slice) == 0 {
+		return nil,
+			errors.Errorf(
+				"No values found at %s: Kind %q: Name %q / %q",
+				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	return slice, nil
 }
 
 // MergeToAnnotations merges the given key value pair against the
@@ -209,9 +324,39 @@ func MergeToAnnotations(key, value string, given map[string]string) map[string]s
 	return given
 }
 
-// GetAnnotationForKey fetches the annotation value from the given
-// annotations & annotation key
-func GetAnnotationForKey(given map[string]string, key string) (string, bool) {
+// GetLabelForKeyOrError fetches the label value from the
+// given object & the provided label key. It returns error
+// if value is not found.
+func GetLabelForKeyOrError(obj *unstructured.Unstructured, key string) (string, error) {
+	val, found := GetValueForKey(obj.GetLabels(), key)
+	if !found || val == "" {
+		return "",
+			errors.Errorf(
+				"Label not found for key %q: Kind %q: Name %q / %q",
+				key, obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	return val, nil
+}
+
+// GetAnnotationForKeyOrError fetches the annotation value from the
+// given object & the provided annotation key. It returns error
+// if value is not found.
+func GetAnnotationForKeyOrError(obj *unstructured.Unstructured, key string) (string, error) {
+	val, found := GetValueForKey(obj.GetAnnotations(), key)
+	if !found || val == "" {
+		return "",
+			errors.Errorf(
+				"Annotation not found for key %q: Kind %q: Name %q / %q",
+				key, obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	return val, nil
+}
+
+// GetValueForKey fetches corresponding value from the given
+// key
+func GetValueForKey(given map[string]string, key string) (string, bool) {
 	if len(given) == 0 {
 		return "", false
 	}
