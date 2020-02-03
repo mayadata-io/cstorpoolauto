@@ -1239,17 +1239,25 @@ func TestPlannerInitNodeToObservedCSPCDevices(t *testing.T) {
 		},
 	}
 	var tests = map[string]struct {
-		cspc                  *unstructured.Unstructured
-		isErr                 bool
-		expectedNodeToDevices map[string][]string
+		cspc                *unstructured.Unstructured
+		isErr               bool
+		expectNodeCount     int
+		expectNodeToDevices map[string][]string
 	}{
 		"use above fake cspc obj": {
-			cspc:  obj,
-			isErr: false,
-			expectedNodeToDevices: map[string][]string{
+			cspc:            obj,
+			isErr:           false,
+			expectNodeCount: 2,
+			expectNodeToDevices: map[string][]string{
 				"node-001": []string{"bd11", "bd12", "bd13", "bd14", "bd15", "bd16"},
 				"node-002": []string{"bd21", "bd22", "bd23", "bd24", "bd25", "bd26"},
 			},
+		},
+		"use nil cspc obj": {
+			cspc:                nil,
+			isErr:               false,
+			expectNodeCount:     0,
+			expectNodeToDevices: map[string][]string{},
 		},
 	}
 	for name, mock := range tests {
@@ -1267,15 +1275,16 @@ func TestPlannerInitNodeToObservedCSPCDevices(t *testing.T) {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
 			if !mock.isErr {
-				if len(p.nodeNameToObservedCSPCDevices) != 2 {
+				if len(p.nodeNameToObservedCSPCDevices) != mock.expectNodeCount {
 					t.Fatalf(
-						"Expected pool count 2 got %d: [%+v]",
+						"Expected pool count %d got %d: [%+v]",
+						mock.expectNodeCount,
 						len(p.nodeNameToObservedCSPCDevices),
 						p.nodeNameToObservedCSPCDevices,
 					)
 				}
 				for nodeName, actualDevices := range p.nodeNameToObservedCSPCDevices {
-					expectedDevices := mock.expectedNodeToDevices[nodeName]
+					expectedDevices := mock.expectNodeToDevices[nodeName]
 					if len(expectedDevices) != len(actualDevices) {
 						t.Fatalf(
 							"Expected block device count %d got %d: NodeName %q",
