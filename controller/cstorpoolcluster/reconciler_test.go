@@ -20,8 +20,8 @@ import (
 	"reflect"
 	"testing"
 
-	"mayadata.io/cstorpoolauto/k8s"
 	"mayadata.io/cstorpoolauto/types"
+	"mayadata.io/cstorpoolauto/unstruct"
 	stringutil "mayadata.io/cstorpoolauto/util/string"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -693,14 +693,14 @@ func TestPlannerGetDesiredCStorPoolCluster(t *testing.T) {
 				)
 			}
 			// metadata equality check
-			gotMeta := k8s.MustGetNestedMap(got, "metadata")
-			expectMeta := k8s.MustGetNestedMap(expect, "metadata")
+			gotMeta := unstruct.MustGetNestedMap(got, "metadata")
+			expectMeta := unstruct.MustGetNestedMap(expect, "metadata")
 			if !reflect.DeepEqual(gotMeta, expectMeta) {
 				t.Fatalf("Expected cspc meta: [%+v] got: [%+v]", expectMeta, gotMeta)
 			}
 			// pools equality check
-			gotPools := k8s.MustGetNestedSlice(got, "spec", "pools")
-			expectPools := k8s.MustGetNestedSlice(expect, "spec", "pools")
+			gotPools := unstruct.MustGetNestedSlice(got, "spec", "pools")
+			expectPools := unstruct.MustGetNestedSlice(expect, "spec", "pools")
 			gotPoolCount := len(gotPools)
 			expectPoolCount := len(expectPools)
 			if gotPoolCount != expectPoolCount {

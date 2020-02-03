@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
-	"mayadata.io/cstorpoolauto/k8s"
+	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/util/metac"
 )
@@ -49,7 +49,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	)
 
 	conds, mergeErr :=
-		k8s.MergeStatusConditions(
+	unstruct.MergeStatusConditions(
 			h.storageSet,
 			types.MakeCStorClusterStorageSetReconcileErrCond(err),
 		)
@@ -116,7 +116,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	for _, attachment := range request.Attachments.List() {
 		if attachment.GetKind() == string(types.KindStorage) {
 			// verify further if this belongs to the current watch
-			uid, _ := k8s.GetValueForKey(
+			uid, _ := unstruct.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterStorageSetUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
