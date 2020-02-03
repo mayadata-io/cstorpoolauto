@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"openebs.io/metac/controller/generic"
 
-	"mayadata.io/cstorpoolauto/k8s"
+	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/util/metac"
 	stringutil "mayadata.io/cstorpoolauto/util/string"
@@ -46,7 +46,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	)
 
 	conds, mergeErr :=
-		k8s.MergeStatusConditions(
+	unstruct.MergeStatusConditions(
 			h.storage,
 			types.MakeStorageToBlockDeviceAssociationErrCond(err),
 		)
@@ -124,7 +124,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		}
 		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
 			// verify further if this belongs to the Storage i.e. watch
-			uid, _ := k8s.GetValueForKey(
+			uid, _ := unstruct.GetValueForKey(
 				request.Watch.GetAnnotations(), types.AnnKeyCStorClusterStorageSetUID,
 			)
 			if uid == string(attachment.GetUID()) {
@@ -134,7 +134,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		}
 		if attachment.GetKind() == string(types.KindPersistentVolumeClaim) {
 			// verify further if this belongs to the Storage i.e. watch
-			uid, _ := k8s.GetValueForKey(
+			uid, _ := unstruct.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyStorageUID,
 			)
 			if uid == string(request.Watch.GetUID()) {
@@ -257,7 +257,7 @@ func (r *Reconciler) getStorageStatusAsNoError() (map[string]interface{}, error)
 		return nil, errors.Errorf("Invalid storage: Can't find status.phase")
 	}
 	// get updated conditions
-	conds, err := k8s.MergeStatusConditions(
+	conds, err := unstruct.MergeStatusConditions(
 		r.Storage,
 		map[string]interface{}{
 			"type":             types.StorageToBlockDeviceAssociationErrorCondition,
@@ -398,7 +398,7 @@ func (p *StorageToBlockDeviceAssociator) isBlockDeviceMatchWithPVName(
 	device *unstructured.Unstructured, pvName string,
 ) (bool, error) {
 	// extract devlinks
-	devlinks, found, err := k8s.GetSlice(device, "spec", "devlinks")
+	devlinks, found, err := unstruct.GetSlice(device, "spec", "devlinks")
 	if err != nil {
 		return false, err
 	}
@@ -461,7 +461,7 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 		}
 		// proceed further for unclaimed device only
 		// extract CStorClusterPlan UID from CStorClusterStorageSet
-		cstorClusterPlanUID, err := k8s.GetAnnotationForKeyOrError(
+		cstorClusterPlanUID, err := unstruct.GetAnnotationForKeyOrError(
 			p.StorageSet, types.AnnKeyCStorClusterPlanUID,
 		)
 		if err != nil {
@@ -508,7 +508,7 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 func (p *StorageToBlockDeviceAssociator) isBlockDeviceUnclaimed(
 	device *unstructured.Unstructured,
 ) (bool, error) {
-	status, err := k8s.GetStringOrError(device, "status", "claimState")
+	status, err := unstruct.GetStringOrError(device, "status", "claimState")
 	if err != nil {
 		return false, err
 	}

@@ -24,8 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
-	"mayadata.io/cstorpoolauto/k8s"
 	"mayadata.io/cstorpoolauto/types"
+	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/util/metac"
 	stringutil "mayadata.io/cstorpoolauto/util/string"
 )
@@ -94,7 +94,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		if attachment.GetKind() == string(types.KindCStorPoolCluster) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
-			uid, _ := k8s.GetValueForKey(
+			uid, _ := unstruct.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
@@ -114,7 +114,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 			// in metac to merge annotations. Use of labels is a
 			// workaround that needs to be changed to annotations
 			// once metac fixes this bug.
-			uid, _ := k8s.GetValueForKey(
+			uid, _ := unstruct.GetValueForKey(
 				attachment.GetLabels(), types.AnnKeyCStorClusterPlanUID,
 			)
 			if string(request.Watch.GetUID()) != uid {
@@ -139,7 +139,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
-			uid, _ := k8s.GetValueForKey(
+			uid, _ := unstruct.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
@@ -150,7 +150,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		if attachment.GetKind() == string(types.KindCStorClusterConfig) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
-			uid, _ := k8s.GetValueForKey(
+			uid, _ := unstruct.GetValueForKey(
 				request.Watch.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
 			)
 			if string(attachment.GetUID()) == uid {
@@ -412,7 +412,7 @@ func (p *Planner) isReadyByNodeDiskCount() bool {
 // initDesiredRAIDType extracts raid type from CStorClusterConfig
 // and sets it as the desired raid type to create CStorPoolCluster
 func (p *Planner) initDesiredRAIDType() error {
-	raidType, err := k8s.GetStringOrError(
+	raidType, err := unstruct.GetStringOrError(
 		p.ObservedClusterConfig, "spec", "poolConfig", "raidType",
 	)
 	if err != nil {
@@ -433,14 +433,14 @@ func (p *Planner) initStorageSetMappings() error {
 	p.storageSetToDesiredDiskCount = map[string]resource.Quantity{}
 	for _, sSet := range p.ObservedStorageSets {
 		// map desired node name against StorageSet UID
-		nodeName, err := k8s.GetStringOrError(sSet, "spec", "node", "name")
+		nodeName, err := unstruct.GetStringOrError(sSet, "spec", "node", "name")
 		if err != nil {
 			return err
 		}
 		p.nodeNameToObservedStorageSetUID[nodeName] = string(sSet.GetUID())
 		p.storageSetUIDToObservedNodeName[string(sSet.GetUID())] = nodeName
 		// map StorageSet UID against desired disk count
-		diskCountQty, err := k8s.GetQuantityOrError(sSet, "spec", "disk", "count")
+		diskCountQty, err := unstruct.GetQuantityOrError(sSet, "spec", "disk", "count")
 		if err != nil {
 			return err
 		}
@@ -460,7 +460,7 @@ func (p *Planner) initStorageSetToObservedBlockDevices() error {
 		// workaround that needs to be changed to annotations
 		// once metac fixes this bug.
 		sSetUID, err :=
-			k8s.GetLabelForKeyOrError(device, types.AnnKeyCStorClusterStorageSetUID)
+			unstruct.GetLabelForKeyOrError(device, types.AnnKeyCStorClusterStorageSetUID)
 		if err != nil {
 			return err
 		}
@@ -481,11 +481,11 @@ func (p *Planner) initNodeToObservedCSPCDevices() error {
 
 	getNodeName := func(obj *unstructured.Unstructured) (err error) {
 		currentNodeName, err =
-			k8s.GetStringOrError(obj, "spec", "nodeSelector", "kubernetes.io/hostname")
+			unstruct.GetStringOrError(obj, "spec", "nodeSelector", "kubernetes.io/hostname")
 		return
 	}
 	getBlockDeviceName := func(obj *unstructured.Unstructured) error {
-		deviceName, err := k8s.GetStringOrError(obj, "spec", "blockDeviceName")
+		deviceName, err := unstruct.GetStringOrError(obj, "spec", "blockDeviceName")
 		if err != nil {
 			return err
 		}
@@ -494,20 +494,20 @@ func (p *Planner) initNodeToObservedCSPCDevices() error {
 		return nil
 	}
 	getBlockDevicesPerRAIDGroup := func(obj *unstructured.Unstructured) error {
-		blockDevices, err := k8s.GetSliceOrError(obj, "spec", "blockDevices")
+		blockDevices, err := unstruct.GetSliceOrError(obj, "spec", "blockDevices")
 		if err != nil {
 			return err
 		}
-		return k8s.SliceIterator(blockDevices).ForEach(getBlockDeviceName)
+		return unstruct.SliceIterator(blockDevices).ForEach(getBlockDeviceName)
 	}
 	getBlockDevicesPerPool := func(obj *unstructured.Unstructured) error {
-		raidGroups, err := k8s.GetSliceOrError(obj, "spec", "raidGroups")
+		raidGroups, err := unstruct.GetSliceOrError(obj, "spec", "raidGroups")
 		if err != nil {
 			return err
 		}
-		return k8s.SliceIterator(raidGroups).ForEach(getBlockDevicesPerRAIDGroup)
+		return unstruct.SliceIterator(raidGroups).ForEach(getBlockDevicesPerRAIDGroup)
 	}
-	pools, err := k8s.GetSliceOrError(p.ObservedCStorPoolCluster, "spec", "pools")
+	pools, err := unstruct.GetSliceOrError(p.ObservedCStorPoolCluster, "spec", "pools")
 	if err != nil {
 		return err
 	}
@@ -515,7 +515,7 @@ func (p *Planner) initNodeToObservedCSPCDevices() error {
 	// getBlockDevicesPerPool against each pool. This has been done
 	// to map current node name against blockdevices present under
 	// current node.
-	return k8s.SliceIterator(pools).ForEach(getNodeName, getBlockDevicesPerPool)
+	return unstruct.SliceIterator(pools).ForEach(getNodeName, getBlockDevicesPerPool)
 }
 
 // initNodeToDesiredCSPCDevices maps node name to desired

@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"openebs.io/metac/controller/generic"
 
-	"mayadata.io/cstorpoolauto/k8s"
+	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/util/metac"
 )
@@ -127,7 +127,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		}
 		if attachment.GetKind() == string(types.KindCStorClusterPlan) {
 			// verify further if CStorClusterPlan is what we are looking
-			uid, _ := k8s.GetValueForKey(
+			uid, _ := unstruct.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
@@ -217,7 +217,7 @@ func NewReconciler(
 
 	// transform CStorClusterConfig from unstructured to typed
 	var clusterConfigTyped types.CStorClusterConfig
-	err := k8s.UnstructToTyped(clusterConfig, &clusterConfigTyped)
+	err := unstruct.UnstructToTyped(clusterConfig, &clusterConfigTyped)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func NewReconciler(
 	// transform CStorClusterPlan from unstructured to typed
 	if clusterPlan != nil {
 		var clusterPlanTyped types.CStorClusterPlan
-		err := k8s.UnstructToTyped(clusterPlan, &clusterPlanTyped)
+		err := unstruct.UnstructToTyped(clusterPlan, &clusterPlanTyped)
 		if err != nil {
 			return nil, err
 		}

@@ -53,7 +53,7 @@ COPY Makefile Makefile
 
 # copy source files
 COPY cmd/ cmd/
-COPY k8s/ k8s/
+COPY unstruct/ unstruct/
 COPY types/ types/
 COPY util/ util/
 COPY controller/ controller/
