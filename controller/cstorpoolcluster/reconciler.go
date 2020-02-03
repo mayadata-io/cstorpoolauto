@@ -27,6 +27,7 @@ import (
 	"mayadata.io/cstorpoolauto/k8s"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/util/metac"
+	stringutil "mayadata.io/cstorpoolauto/util/string"
 )
 
 // reconcileErrHandler logs the error & updates these errors
@@ -85,7 +86,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		response:    response,
 	}
 
-	var desiredCStorPoolCluster *unstructured.Unstructured
+	var observedCStorPoolCluster *unstructured.Unstructured
 	var observedClusterConfig *unstructured.Unstructured
 	var observedBlockDevices []*unstructured.Unstructured
 	var observedStorageSets []*unstructured.Unstructured
@@ -93,26 +94,27 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		if attachment.GetKind() == string(types.KindCStorPoolCluster) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
-			uid, _ := k8s.GetAnnotationForKey(
+			uid, _ := k8s.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
 				// this is the desired CStorPoolCluster
-				desiredCStorPoolCluster = attachment
+				observedCStorPoolCluster = attachment
 				// we don't want to add to response now but later
-				// after its reconcile logic is executed
+				// as **desired state** after its reconciliation
 				continue
 			}
 		}
 		if attachment.GetKind() == string(types.KindBlockDevice) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
-			uid, _ := k8s.GetAnnotationForKey(
-				// TODO (@amitkumardas):
-				//	We are using labels since there might be a bug
-				// in metac to merge annotations. Use of labels is a
-				// workaround that needs to be changed to annotations
-				// once metac fixes this bug.
+			//
+			// TODO (@amitkumardas):
+			//	We are using labels since there might be a bug
+			// in metac to merge annotations. Use of labels is a
+			// workaround that needs to be changed to annotations
+			// once metac fixes this bug.
+			uid, _ := k8s.GetValueForKey(
 				attachment.GetLabels(), types.AnnKeyCStorClusterPlanUID,
 			)
 			if string(request.Watch.GetUID()) != uid {
@@ -137,7 +139,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
-			uid, _ := k8s.GetAnnotationForKey(
+			uid, _ := k8s.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterPlanUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
@@ -148,7 +150,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		if attachment.GetKind() == string(types.KindCStorClusterConfig) {
 			// verify further if this belongs to the current watch
 			// i.e. CStorClusterPlan
-			uid, _ := k8s.GetAnnotationForKey(
+			uid, _ := k8s.GetValueForKey(
 				request.Watch.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
 			)
 			if string(attachment.GetUID()) == uid {
@@ -166,11 +168,11 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	}
 
 	reconciler, err := NewReconciler(ReconcilerConfig{
-		CStorClusterPlan:        request.Watch,
-		DesiredCStorPoolCluster: desiredCStorPoolCluster,
-		ObservedClusterConfig:   observedClusterConfig,
-		ObservedStorageSets:     observedStorageSets,
-		ObservedBlockDevices:    observedBlockDevices,
+		ObservedCStorClusterPlan: request.Watch,
+		ObservedCStorPoolCluster: observedCStorPoolCluster,
+		ObservedClusterConfig:    observedClusterConfig,
+		ObservedStorageSets:      observedStorageSets,
+		ObservedBlockDevices:     observedBlockDevices,
 	})
 	if err != nil {
 		errHandler.handle(err)
@@ -204,21 +206,21 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 
 // Reconciler enables reconciliation of CStorClusterPlan instance
 type Reconciler struct {
-	CStorClusterPlan        *types.CStorClusterPlan
-	DesiredCStorPoolCluster *unstructured.Unstructured
-	ObservedClusterConfig   *unstructured.Unstructured
-	ObservedStorageSets     []*unstructured.Unstructured
-	ObservedBlockDevices    []*unstructured.Unstructured
+	ObservedCStorClusterPlan *types.CStorClusterPlan
+	ObservedCStorPoolCluster *unstructured.Unstructured
+	ObservedClusterConfig    *unstructured.Unstructured
+	ObservedStorageSets      []*unstructured.Unstructured
+	ObservedBlockDevices     []*unstructured.Unstructured
 }
 
 // ReconcilerConfig is a helper structure used to create a
 // new instance of Reconciler
 type ReconcilerConfig struct {
-	CStorClusterPlan        *unstructured.Unstructured
-	DesiredCStorPoolCluster *unstructured.Unstructured
-	ObservedClusterConfig   *unstructured.Unstructured
-	ObservedStorageSets     []*unstructured.Unstructured
-	ObservedBlockDevices    []*unstructured.Unstructured
+	ObservedCStorClusterPlan *unstructured.Unstructured
+	ObservedCStorPoolCluster *unstructured.Unstructured
+	ObservedClusterConfig    *unstructured.Unstructured
+	ObservedStorageSets      []*unstructured.Unstructured
+	ObservedBlockDevices     []*unstructured.Unstructured
 }
 
 // ReconcileResponse forms the response due to reconciliation of
@@ -232,7 +234,7 @@ type ReconcileResponse struct {
 func NewReconciler(conf ReconcilerConfig) (*Reconciler, error) {
 	// transform CStorClusterPlan from unstructured to typed
 	var cstorClusterPlanTyped types.CStorClusterPlan
-	cstorClusterPlanRaw, err := conf.CStorClusterPlan.MarshalJSON()
+	cstorClusterPlanRaw, err := conf.ObservedCStorClusterPlan.MarshalJSON()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Can't marshal CStorClusterPlan")
 	}
@@ -242,11 +244,11 @@ func NewReconciler(conf ReconcilerConfig) (*Reconciler, error) {
 	}
 	// use above constructed object to build Reconciler instance
 	return &Reconciler{
-		CStorClusterPlan:        &cstorClusterPlanTyped,
-		DesiredCStorPoolCluster: conf.DesiredCStorPoolCluster,
-		ObservedClusterConfig:   conf.ObservedClusterConfig,
-		ObservedStorageSets:     conf.ObservedStorageSets,
-		ObservedBlockDevices:    conf.ObservedBlockDevices,
+		ObservedCStorClusterPlan: &cstorClusterPlanTyped,
+		ObservedCStorPoolCluster: conf.ObservedCStorPoolCluster,
+		ObservedClusterConfig:    conf.ObservedClusterConfig,
+		ObservedStorageSets:      conf.ObservedStorageSets,
+		ObservedBlockDevices:     conf.ObservedBlockDevices,
 	}, nil
 }
 
@@ -254,11 +256,11 @@ func NewReconciler(conf ReconcilerConfig) (*Reconciler, error) {
 // state
 func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 	planner := Planner{
-		CStorClusterPlan:        r.CStorClusterPlan,
-		DesiredCStorPoolCluster: r.DesiredCStorPoolCluster,
-		ObservedClusterConfig:   r.ObservedClusterConfig,
-		ObservedStorageSets:     r.ObservedStorageSets,
-		ObservedBlockDevices:    r.ObservedBlockDevices,
+		ObservedCStorClusterPlan: r.ObservedCStorClusterPlan,
+		ObservedCStorPoolCluster: r.ObservedCStorPoolCluster,
+		ObservedClusterConfig:    r.ObservedClusterConfig,
+		ObservedStorageSets:      r.ObservedStorageSets,
+		ObservedBlockDevices:     r.ObservedBlockDevices,
 	}
 	desiredCStorPoolCluster, err := planner.Plan()
 	if err != nil {
@@ -271,10 +273,10 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 }
 
 func (r *Reconciler) getClusterPlanStatusAsNoError() map[string]interface{} {
-	types.MergeNoCSPCApplyErrorOnCStorClusterPlan(r.CStorClusterPlan)
+	types.MergeNoCSPCApplyErrorOnCStorClusterPlan(r.ObservedCStorClusterPlan)
 	return map[string]interface{}{
-		"phase":      r.CStorClusterPlan.Status.Phase,
-		"conditions": r.CStorClusterPlan.Status.Conditions,
+		"phase":      r.ObservedCStorClusterPlan.Status.Phase,
+		"conditions": r.ObservedCStorClusterPlan.Status.Conditions,
 	}
 }
 
@@ -282,20 +284,37 @@ func (r *Reconciler) getClusterPlanStatusAsNoError() map[string]interface{} {
 // to be created, or updated or perhaps does not require
 // any change.
 type Planner struct {
-	CStorClusterPlan        *types.CStorClusterPlan
-	DesiredCStorPoolCluster *unstructured.Unstructured
-	ObservedClusterConfig   *unstructured.Unstructured
-	ObservedStorageSets     []*unstructured.Unstructured
-	ObservedBlockDevices    []*unstructured.Unstructured
+	ObservedCStorClusterPlan *types.CStorClusterPlan
+	ObservedCStorPoolCluster *unstructured.Unstructured
+	ObservedClusterConfig    *unstructured.Unstructured
+	ObservedStorageSets      []*unstructured.Unstructured
+	ObservedBlockDevices     []*unstructured.Unstructured
 
 	// Node name to StorageSet UID
-	nodeToStorageSets map[string]string
+	nodeNameToObservedStorageSetUID map[string]string
+
+	// storage set UID to observed node name
+	storageSetUIDToObservedNodeName map[string]string
 
 	// StorageSet UID to desired disk count
 	storageSetToDesiredDiskCount map[string]resource.Quantity
 
-	// StorageSet UID to BlockDevice names
-	storageSetToBlockDevices map[string][]string
+	// StorageSet UID to desired BlockDevice names
+	storageSetToObservedBlockDevices map[string][]string
+
+	// Node name to Observed BlockDevices
+	//
+	// NOTE:
+	//	These observed block devices follow the exact order
+	// to those found in the CStorPoolCluster spec
+	nodeNameToObservedCSPCDevices map[string][]string
+
+	// Node name to Desired BlockDevices
+	//
+	// NOTE:
+	//	These desired block devices try to be in the same order
+	// to those found in CStorPoolCluster spec
+	nodeNameToDesiredCSPCDevices map[string][]string
 
 	desiredRAIDType string
 }
@@ -303,8 +322,10 @@ type Planner struct {
 func (p *Planner) init() error {
 	var initFuncs = []func() error{
 		p.initStorageSetMappings,
-		p.initStorageSetToBlockDevices,
 		p.initDesiredRAIDType,
+		p.initStorageSetToObservedBlockDevices,
+		p.initNodeToObservedCSPCDevices,
+		p.initNodeToDesiredCSPCDevices,
 	}
 	for _, fn := range initFuncs {
 		err := fn()
@@ -339,19 +360,19 @@ func (p *Planner) isReady() bool {
 // reconciliation since CStorPoolCluster should get
 // reconciled as state changes.
 func (p *Planner) isReadyByNodeCount() bool {
-	desiredNodeCount := len(p.CStorClusterPlan.Spec.Nodes)
+	desiredNodeCount := len(p.ObservedCStorClusterPlan.Spec.Nodes)
 	if desiredNodeCount == 0 {
 		glog.V(3).Infof(
 			"Skip CStorPoolCluster %q / %q: 0 desired nodes",
-			p.CStorClusterPlan.GetNamespace(), p.CStorClusterPlan.GetName(),
+			p.ObservedCStorClusterPlan.GetNamespace(), p.ObservedCStorClusterPlan.GetName(),
 		)
 		return false
 	}
 	if desiredNodeCount != len(p.ObservedStorageSets) {
 		glog.V(3).Infof(
 			"Skip CStorPoolCluster %q / %q: Want Node(s) %d: Got Nodes i.e. StorageSet(s) %d",
-			p.CStorClusterPlan.GetNamespace(),
-			p.CStorClusterPlan.GetName(),
+			p.ObservedCStorClusterPlan.GetNamespace(),
+			p.ObservedCStorClusterPlan.GetName(),
 			desiredNodeCount,
 			len(p.ObservedStorageSets),
 		)
@@ -372,12 +393,12 @@ func (p *Planner) isReadyByNodeCount() bool {
 // reconciled as state changes.
 func (p *Planner) isReadyByNodeDiskCount() bool {
 	for storageSetUID, desiredDiskCount := range p.storageSetToDesiredDiskCount {
-		observedDeviceCount := int64(len(p.storageSetToBlockDevices[storageSetUID]))
+		observedDeviceCount := int64(len(p.storageSetToObservedBlockDevices[storageSetUID]))
 		if desiredDiskCount.CmpInt64(observedDeviceCount) > 0 {
 			glog.V(3).Infof(
 				"Skip CStorPoolCluster %q / %q: Want Disk(s) %s: Got Disks(s) %d: StorageSet UID %q",
-				p.CStorClusterPlan.GetNamespace(),
-				p.CStorClusterPlan.GetName(),
+				p.ObservedCStorClusterPlan.GetNamespace(),
+				p.ObservedCStorClusterPlan.GetName(),
 				desiredDiskCount.String(),
 				observedDeviceCount,
 				storageSetUID,
@@ -391,17 +412,11 @@ func (p *Planner) isReadyByNodeDiskCount() bool {
 // initDesiredRAIDType extracts raid type from CStorClusterConfig
 // and sets it as the desired raid type to create CStorPoolCluster
 func (p *Planner) initDesiredRAIDType() error {
-	raidType, found, err := unstructured.NestedString(
-		p.ObservedClusterConfig.UnstructuredContent(), "spec", "poolConfig", "raidType",
+	raidType, err := k8s.GetStringOrError(
+		p.ObservedClusterConfig, "spec", "poolConfig", "raidType",
 	)
 	if err != nil {
-		return errors.Wrapf(
-			err,
-			"Failed to get spec.poolConfig.raidType from CStorClusterConfig",
-		)
-	}
-	if !found || raidType == "" {
-		return errors.Errorf("RAID type not found in CStorClusterConfig")
+		return err
 	}
 	p.desiredRAIDType = raidType
 	return nil
@@ -414,88 +429,168 @@ func (p *Planner) initDesiredRAIDType() error {
 // - Maps desired node name to CStorClusterStorageSet UID
 // - Maps CStorClusterStorageSet UID to desired device count
 func (p *Planner) initStorageSetMappings() error {
-	p.nodeToStorageSets = map[string]string{}
+	p.nodeNameToObservedStorageSetUID = map[string]string{}
 	p.storageSetToDesiredDiskCount = map[string]resource.Quantity{}
 	for _, sSet := range p.ObservedStorageSets {
-		// node to list of StorageSet
-		nodeName, found, err :=
-			unstructured.NestedString(sSet.UnstructuredContent(), "spec", "node", "name")
+		// map desired node name against StorageSet UID
+		nodeName, err := k8s.GetStringOrError(sSet, "spec", "node", "name")
 		if err != nil {
 			return err
 		}
-		if !found || nodeName == "" {
-			return errors.Errorf(
-				"Can't find spec.node.name from StorageSet %s %s:",
-				sSet.GetNamespace(), sSet.GetName(),
-			)
-		}
-		p.nodeToStorageSets[nodeName] = string(sSet.GetUID())
-
-		// StorageSet to desired disk count
-		diskCount, found, err :=
-			unstructured.NestedString(sSet.UnstructuredContent(), "spec", "disk", "count")
+		p.nodeNameToObservedStorageSetUID[nodeName] = string(sSet.GetUID())
+		p.storageSetUIDToObservedNodeName[string(sSet.GetUID())] = nodeName
+		// map StorageSet UID against desired disk count
+		diskCountQty, err := k8s.GetQuantityOrError(sSet, "spec", "disk", "count")
 		if err != nil {
 			return err
 		}
-		if !found || diskCount == "" {
-			return errors.Errorf(
-				"Can't find spec.disk.count from StorageSet %s %s:",
-				sSet.GetNamespace(), sSet.GetName(),
-			)
-		}
-		diskCountParsed, err := resource.ParseQuantity(diskCount)
-		if err != nil {
-			return errors.Wrapf(
-				err,
-				"Failed to parse spec.disk.count %s from StoragetSet %s %s",
-				diskCount, sSet.GetNamespace(), sSet.GetName(),
-			)
-		}
-		p.storageSetToDesiredDiskCount[string(sSet.GetUID())] = diskCountParsed
+		p.storageSetToDesiredDiskCount[string(sSet.GetUID())] = diskCountQty
 	}
 	return nil
 }
 
-// initStorageSetToBlockDevices maps CStorClusterStorageSet UID
-// to desired BlockDevice(s)
-func (p *Planner) initStorageSetToBlockDevices() error {
-	p.storageSetToBlockDevices = map[string][]string{}
+// initStorageSetToObservedBlockDevices maps CStorClusterStorageSet UID
+// to observed BlockDevice(s)
+func (p *Planner) initStorageSetToObservedBlockDevices() error {
+	p.storageSetToObservedBlockDevices = map[string][]string{}
 	for _, device := range p.ObservedBlockDevices {
-		sSetUID, found := k8s.GetAnnotationForKey(
-			// TODO (@amitkumardas):
-			//	We are using labels since there might be a bug
-			// in metac to merge annotations. Use of labels is a
-			// workaround that needs to be changed to annotations
-			// once metac fixes this bug.
-			device.GetLabels(), types.AnnKeyCStorClusterStorageSetUID,
-		)
-		if !found || sSetUID == "" {
-			return errors.Errorf(
-				"Can't find CStorClusterStorageSet UID at %s in BlockDevice %s %s",
-				types.AnnKeyCStorClusterStorageSetUID, device.GetNamespace(), device.GetName(),
-			)
+		// TODO (@amitkumardas):
+		//	We are using labels since there might be a bug
+		// in metac to merge annotations. Use of labels is a
+		// workaround that needs to be changed to annotations
+		// once metac fixes this bug.
+		sSetUID, err :=
+			k8s.GetLabelForKeyOrError(device, types.AnnKeyCStorClusterStorageSetUID)
+		if err != nil {
+			return err
 		}
-		desiredDevices := p.storageSetToBlockDevices[sSetUID]
-		desiredDevices = append(desiredDevices, device.GetName())
-		p.storageSetToBlockDevices[sSetUID] = desiredDevices
+		devices := p.storageSetToObservedBlockDevices[sSetUID]
+		devices = append(devices, device.GetName())
+		p.storageSetToObservedBlockDevices[sSetUID] = devices
 	}
 	return nil
 }
 
-// buildDesiredBlockDevicesByNodeName builds that fragment of the
-// CStorPoolCluster spec that deals with specifying block devices.
-// The resulting fragment is based on the given node name.
-func (p *Planner) buildDesiredBlockDevicesByNodeName(nodeName string) []interface{} {
-	var desiredBlockDevices []interface{}
-	storageSetUID := p.nodeToStorageSets[nodeName]
-	blockDeviceNames := p.storageSetToBlockDevices[storageSetUID]
-	for _, deviceName := range blockDeviceNames {
-		new := map[string]interface{}{
-			"blockDeviceName": deviceName,
-		}
-		desiredBlockDevices = append(desiredBlockDevices, new)
+// initNodeToObservedCSPCDevices maps node name to observed
+// devices in the same order they are observed in CStorPoolCluster
+func (p *Planner) initNodeToObservedCSPCDevices() error {
+	// currentNodeName holds the current node name of the
+	// CStorPoolCluster nodes that are under iteration
+	var currentNodeName string
+	p.nodeNameToObservedCSPCDevices = map[string][]string{}
+
+	getNodeName := func(obj *unstructured.Unstructured) (err error) {
+		currentNodeName, err =
+			k8s.GetStringOrError(obj, "spec", "nodeSelector", "kubernetes.io/hostname")
+		return
 	}
-	return desiredBlockDevices
+	getBlockDeviceName := func(obj *unstructured.Unstructured) error {
+		deviceName, err := k8s.GetStringOrError(obj, "spec", "blockDeviceName")
+		if err != nil {
+			return err
+		}
+		p.nodeNameToObservedCSPCDevices[currentNodeName] =
+			append(p.nodeNameToObservedCSPCDevices[currentNodeName], deviceName)
+		return nil
+	}
+	getBlockDevicesPerRAIDGroup := func(obj *unstructured.Unstructured) error {
+		blockDevices, err := k8s.GetSliceOrError(obj, "spec", "blockDevices")
+		if err != nil {
+			return err
+		}
+		return k8s.SliceIterator(blockDevices).ForEach(getBlockDeviceName)
+	}
+	getBlockDevicesPerPool := func(obj *unstructured.Unstructured) error {
+		raidGroups, err := k8s.GetSliceOrError(obj, "spec", "raidGroups")
+		if err != nil {
+			return err
+		}
+		return k8s.SliceIterator(raidGroups).ForEach(getBlockDevicesPerRAIDGroup)
+	}
+	pools, err := k8s.GetSliceOrError(p.ObservedCStorPoolCluster, "spec", "pools")
+	if err != nil {
+		return err
+	}
+	// Below iteration will iterate pools & run both getNodeName &
+	// getBlockDevicesPerPool against each pool. This has been done
+	// to map current node name against blockdevices present under
+	// current node.
+	return k8s.SliceIterator(pools).ForEach(getNodeName, getBlockDevicesPerPool)
+}
+
+// initNodeToDesiredCSPCDevices maps node name to desired
+// BlockDevice(s)
+func (p *Planner) initNodeToDesiredCSPCDevices() error {
+	p.nodeNameToDesiredCSPCDevices = map[string][]string{}
+	for sSetUID, observedBlockDevices := range p.storageSetToObservedBlockDevices {
+		if sSetUID == "" {
+			return errors.Errorf(
+				"Failed to map node to desired cspc devices: Empty StorageSet UID",
+			)
+		}
+		nodeName := p.storageSetUIDToObservedNodeName[sSetUID]
+		if nodeName == "" {
+			return errors.Errorf(
+				"Failed to map node to desired cspc devices: Empty node name",
+			)
+		}
+		observedCSPCDevices := p.nodeNameToObservedCSPCDevices[nodeName]
+		p.nodeNameToDesiredCSPCDevices[nodeName] =
+			stringutil.NewEquality(observedCSPCDevices, observedBlockDevices).Merge()
+	}
+	return nil
+}
+
+// buildDesiredRAIDGroupsByNodeName builds that fragment of the
+// CStorPoolCluster spec that deals with raid groups.
+// The resulting fragment is based on the given node name.
+func (p *Planner) buildDesiredRAIDGroupsByNodeName(nodeName string) []interface{} {
+	buildBlockDevices := func(deviceNames []string) []interface{} {
+		var blockDevices []interface{}
+		for _, deviceName := range deviceNames {
+			blockDevices = append(
+				blockDevices, map[string]interface{}{
+					"blockDeviceName": deviceName,
+				},
+			)
+		}
+		return blockDevices
+	}
+	buildSingleRAIDGroup := func(deviceNames []string) interface{} {
+		return map[string]interface{}{
+			"type":         p.desiredRAIDType,
+			"isWriteCache": false,
+			"isSpare":      false,
+			"isReadCache":  false,
+			"blockDevices": buildBlockDevices(deviceNames),
+		}
+	}
+	buildAllRAIDGroupsPerNode := func(deviceNames []string) []interface{} {
+		var raidGroupList []interface{}
+		var raidGroup []string
+
+		diskCountPerGroup :=
+			int(types.RAIDTypeToDefaultMinDiskCount[types.PoolRAIDType(p.desiredRAIDType)])
+		for idx, deviceName := range deviceNames {
+			raidGroup = append(raidGroup, deviceName)
+			// Following logic takes care of distributing disks based
+			// on RAID type.
+			//
+			// NOTE:
+			//	Disks get distributed as follows:
+			// 	- Mirror has 2 disks per raid group
+			//	- RAIDZ has 3 disks per raid group
+			//  - RAIDZ2 has 6 disks per raid group
+			//  - Stripe has 1 disk per raid group
+			if (idx+1)%diskCountPerGroup == 0 {
+				raidGroupList = append(raidGroupList, buildSingleRAIDGroup(raidGroup))
+				// reset the raidGroup to make way to build next raidGroup for this pool
+				raidGroup = nil
+			}
+		}
+		return raidGroupList
+	}
+	return buildAllRAIDGroupsPerNode(p.nodeNameToDesiredCSPCDevices[nodeName])
 }
 
 // buildDesiredPoolByNodeName builds that fragment of CStorPoolCluster
@@ -503,18 +598,10 @@ func (p *Planner) buildDesiredBlockDevicesByNodeName(nodeName string) []interfac
 // fragment is based on the given node name.
 func (p *Planner) buildDesiredPoolByNodeName(nodeName string) interface{} {
 	return map[string]interface{}{
-		"nodeSelector": map[string]string{
+		"nodeSelector": map[string]interface{}{
 			"kubernetes.io/hostname": nodeName,
 		},
-		"raidGroups": []interface{}{
-			map[string]interface{}{
-				"type":         p.desiredRAIDType,
-				"isWriteCache": false,
-				"isSpare":      false,
-				"isReadCache":  false,
-				"blockDevices": p.buildDesiredBlockDevicesByNodeName(nodeName),
-			},
-		},
+		"raidGroups": p.buildDesiredRAIDGroupsByNodeName(nodeName),
 		"poolConfig": map[string]interface{}{
 			"defaultRaidGroupType": p.desiredRAIDType,
 			"overProvisioning":     false,
@@ -527,7 +614,21 @@ func (p *Planner) buildDesiredPoolByNodeName(nodeName string) interface{} {
 // that deals with specifying all the desired pool instances.
 func (p *Planner) buildDesiredPools() []interface{} {
 	var pools []interface{}
-	for node := range p.nodeToStorageSets {
+	// TODO (@amitkumardas):
+	//
+	//	Since we are using a map i.e. nodeNameToObservedStorageSetUID
+	// the nodeName will reorder & hence result in a diff
+	// between observed CSPC vs. desired CSPC even though
+	// there is no semantic difference.
+	//
+	// NOTE:
+	//	spec.pools in CSPC is an array type
+	//
+	// FUTURE:
+	//	To make the desired pools follow the same order as that
+	// of observed pools, we could store the nodes in the same
+	// order as they are found in observed CSPC.
+	for node := range p.nodeNameToObservedStorageSetUID {
 		pool := p.buildDesiredPoolByNodeName(node)
 		pools = append(pools, pool)
 	}
@@ -538,8 +639,8 @@ func (p *Planner) getDesiredCStorPoolCluster() *unstructured.Unstructured {
 	cspc := &unstructured.Unstructured{}
 	cspc.SetUnstructuredContent(map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"name":      p.CStorClusterPlan.GetName(),
-			"namespace": p.CStorClusterPlan.GetNamespace(),
+			"name":      p.ObservedCStorClusterPlan.GetName(),
+			"namespace": p.ObservedCStorClusterPlan.GetNamespace(),
 		},
 		"spec": map[string]interface{}{
 			"pools": p.buildDesiredPools(),
@@ -547,7 +648,7 @@ func (p *Planner) getDesiredCStorPoolCluster() *unstructured.Unstructured {
 	})
 	// create annotations with CStorClusterPlan UID & CStorClusterConfig UID
 	cspc.SetAnnotations(map[string]string{
-		types.AnnKeyCStorClusterPlanUID:   string(p.CStorClusterPlan.GetUID()),
+		types.AnnKeyCStorClusterPlanUID:   string(p.ObservedCStorClusterPlan.GetUID()),
 		types.AnnKeyCStorClusterConfigUID: string(p.ObservedClusterConfig.GetUID()),
 	})
 	// below is the right way to set APIVersion & Kind

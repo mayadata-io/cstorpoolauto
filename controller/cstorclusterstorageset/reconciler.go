@@ -116,7 +116,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	for _, attachment := range request.Attachments.List() {
 		if attachment.GetKind() == string(types.KindStorage) {
 			// verify further if this belongs to the current watch
-			uid, _ := k8s.GetAnnotationForKey(
+			uid, _ := k8s.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterStorageSetUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
@@ -131,10 +131,6 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		response.Attachments = append(response.Attachments, attachment)
 	}
 
-	// TODO (@amitkumardas):
-	// 	Remove this commented code
-	//
-	//reconciler, err := NewReconciler(request.Watch, observedStorages)
 	reconciler, err := NewReconciler(request.Watch)
 	if err != nil {
 		errHandler.handle(err)
@@ -177,10 +173,7 @@ type ReconcileResponse struct {
 }
 
 // NewReconciler returns a new instance of reconciler
-func NewReconciler(
-	storageSet *unstructured.Unstructured,
-	//observedStorages []*unstructured.Unstructured,
-) (*Reconciler, error) {
+func NewReconciler(storageSet *unstructured.Unstructured) (*Reconciler, error) {
 	// transform storageset from unstructured to typed
 	var cstorClusterStorageSetTyped types.CStorClusterStorageSet
 	cstorClusterStorageSetRaw, err := storageSet.MarshalJSON()
@@ -194,7 +187,6 @@ func NewReconciler(
 	// use above constructed object to build Reconciler instance
 	return &Reconciler{
 		CStorClusterStorageSet: &cstorClusterStorageSetTyped,
-		//ObservedStorages:       observedStorages,
 	}, nil
 }
 
@@ -209,10 +201,6 @@ func NewReconciler(
 //	The logic to either create, delete, update or noop is
 // handled by metac (which is the underlying library)
 func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
-	// TODO (@amitkumardas):
-	//	Remove this commented code
-	//
-	//planner := NewStoragePlanner(r.CStorClusterStorageSet, r.ObservedStorages)
 	planner := NewStoragePlanner(r.CStorClusterStorageSet)
 	desiredStorages, err := planner.Plan()
 	if err != nil {
@@ -230,10 +218,6 @@ func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
 // created, removed, updated or perhaps does not require any
 // changes at all.
 type StoragePlanner struct {
-	// TODO (@amitkumardas):
-	//	Remove this commented code
-	//
-	//ObservedStorages        []*unstructured.Unstructured
 	StorageSetName          string
 	StorageSetUID           k8stypes.UID
 	DesiredCount            resource.Quantity
@@ -245,19 +229,9 @@ type StoragePlanner struct {
 }
 
 // NewStoragePlanner returns a new instance of StoragePlanner
-func NewStoragePlanner(
-	storageSet *types.CStorClusterStorageSet,
-	// TODO (@amitkumardas):
-	//	Remove this commented code
-	//
-	//observedStorages []*unstructured.Unstructured,
-) *StoragePlanner {
+func NewStoragePlanner(storageSet *types.CStorClusterStorageSet) *StoragePlanner {
 	// initialize the planner
 	return &StoragePlanner{
-		// TODO (@amitkumardas):
-		//	Remove this commented code
-		//
-		//ObservedStorages:        observedStorages,
 		StorageSetName:          storageSet.GetName(),
 		StorageSetUID:           storageSet.GetUID(),
 		DesiredCount:            storageSet.Spec.Disk.Count,
@@ -292,101 +266,6 @@ func (p *StoragePlanner) plan(count int64) []*unstructured.Unstructured {
 	}
 	return desiredStorages
 }
-
-// Plan plans the desired Storages to be either **created**,
-// **removed**, **updated** or perhaps a **noop** i.e. does
-// not require any change at the cluster.
-//
-// TODO (@amitkumardas):
-// 	Remove this !!
-// func (p *StoragePlanner) Plan() ([]*unstructured.Unstructured, error) {
-// 	var finalStorages []*unstructured.Unstructured
-// 	if int64(len(p.ObservedStorages)) < p.DesiredCount.Value() {
-// 		// more storages are desired than what is currently observed
-// 		// hence create the diff
-// 		createObjs := p.create(p.DesiredCount.Value() - int64(len(p.ObservedStorages)))
-// 		finalStorages = append(finalStorages, createObjs...)
-// 	}
-// 	for _, storage := range p.ObservedStorages {
-// 		if int64(len(finalStorages)) == p.DesiredCount.Value() {
-// 			// we have already achieved the desired count of
-// 			// Storage(s)
-// 			break
-// 		}
-// 		// update to desired characteristics
-// 		err := p.update(storage)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		// add this updated Storage to the desired list
-// 		finalStorages = append(finalStorages, storage)
-// 	}
-// 	return finalStorages, nil
-// }
-
-// create will create the **Storage(s)** instances to achieve
-// the desired state.
-//
-// NOTE:
-//	It creates Storage instances based on the given count.
-//
-// TODO (@amitkumardas):
-//	Deprecate in favour of plan
-// func (p *StoragePlanner) create(count int64) []*unstructured.Unstructured {
-// 	var desiredStorages []*unstructured.Unstructured
-// 	var i int64
-// 	for i = 0; i < count; i++ {
-// 		glog.V(3).Infof(
-// 			"Will create Storage %d for CStorClusterStorageSet UID %q", i, p.StorageSetUID,
-// 		)
-// 		storageName := p.StorageSetName + "-" + strconv.FormatInt(i, 10)
-// 		desiredStorages = append(desiredStorages, p.getStorageDesiredState(storageName))
-// 	}
-// 	return desiredStorages
-// }
-
-// update modifies the given Storage instance with the
-// desired storage capacity & node on which this storage
-// should get attached
-//
-// TODO (@amitkumardas):
-//	Deprecate in favour of plan
-// func (p *StoragePlanner) update(storage *unstructured.Unstructured) error {
-// 	glog.V(3).Infof(
-// 		"Will update Storage %s %s", storage.GetNamespace(), storage.GetName(),
-// 	)
-
-// 	err := unstructured.SetNestedMap(
-// 		storage.UnstructuredContent(),
-// 		map[string]interface{}{
-// 			"capacity": p.DesiredCapacity.String(),
-// 			"nodeName": p.DesiredNodeName,
-// 		},
-// 		"spec",
-// 	)
-// 	if err != nil {
-// 		return errors.Wrapf(
-// 			err,
-// 			"Failed to update specs for Storage %s %s",
-// 			storage.GetNamespace(), storage.GetName(),
-// 		)
-// 	}
-
-// 	// sync the annotations
-// 	newAnns := k8s.MergeToAnnotations(
-// 		types.AnnKeyStorageProvisionerCSIAttacherName,
-// 		p.DesiredCSIAttacherName,
-// 		storage.GetAnnotations(),
-// 	)
-// 	newAnns = k8s.MergeToAnnotations(
-// 		types.AnnKeyStorageProvisionerStorageClassName,
-// 		p.DesiredStorageClassName,
-// 		newAnns,
-// 	)
-// 	storage.SetAnnotations(newAnns)
-
-// 	return nil
-// }
 
 // getStorageDesiredState returns the desired state of the
 // Storage resource. This returned structure is idempotent

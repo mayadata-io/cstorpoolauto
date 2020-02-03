@@ -124,7 +124,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		}
 		if attachment.GetKind() == string(types.KindCStorClusterStorageSet) {
 			// verify further if this belongs to the Storage i.e. watch
-			uid, _ := k8s.GetAnnotationForKey(
+			uid, _ := k8s.GetValueForKey(
 				request.Watch.GetAnnotations(), types.AnnKeyCStorClusterStorageSetUID,
 			)
 			if uid == string(attachment.GetUID()) {
@@ -134,7 +134,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		}
 		if attachment.GetKind() == string(types.KindPersistentVolumeClaim) {
 			// verify further if this belongs to the Storage i.e. watch
-			uid, _ := k8s.GetAnnotationForKey(
+			uid, _ := k8s.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyStorageUID,
 			)
 			if uid == string(request.Watch.GetUID()) {
@@ -398,14 +398,9 @@ func (p *StorageToBlockDeviceAssociator) isBlockDeviceMatchWithPVName(
 	device *unstructured.Unstructured, pvName string,
 ) (bool, error) {
 	// extract devlinks
-	devlinks, found, err :=
-		unstructured.NestedSlice(device.UnstructuredContent(), "spec", "devlinks")
+	devlinks, found, err := k8s.GetSlice(device, "spec", "devlinks")
 	if err != nil {
-		return false, errors.Wrapf(
-			err,
-			"Failed to fetch spec.devlinks from BlockDevice %s %s",
-			device.GetNamespace(), device.GetName(),
-		)
+		return false, err
 	}
 	if !found || len(devlinks) == 0 {
 		glog.V(3).Infof("Can't find spec.devlinks for BlockDevice %s %s",
@@ -466,16 +461,19 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 		}
 		// proceed further for unclaimed device only
 		// extract CStorClusterPlan UID from CStorClusterStorageSet
-		cstorClusterPlanUID, found := k8s.GetAnnotationForKey(
-			p.StorageSet.GetAnnotations(),
-			types.AnnKeyCStorClusterPlanUID,
+		cstorClusterPlanUID, err := k8s.GetAnnotationForKeyOrError(
+			p.StorageSet, types.AnnKeyCStorClusterPlanUID,
 		)
-		if !found || cstorClusterPlanUID == "" {
-			return nil, errors.Errorf(
-				"Can't find CStorClusterPlan UID from StorageSet %s %s",
-				p.StorageSet.GetNamespace(), p.StorageSet.GetName(),
-			)
+		if err != nil {
+			return nil, err
 		}
+
+		new := &unstructured.Unstructured{}
+		new.SetAPIVersion(device.GetAPIVersion())
+		new.SetKind(device.GetKind())
+		new.SetNamespace(device.GetNamespace())
+		new.SetName(device.GetName())
+
 		// add CStorClusterStorageSet UID to device's
 		// existing annotations
 		//
@@ -484,29 +482,9 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 		// in metac to merge annotations. Use of labels is a
 		// workaround that needs to be changed to annotations
 		// once metac fixes this bug.
-		//newLbls := k8s.MergeToAnnotations(
-		//	types.AnnKeyCStorClusterStorageSetUID, string(p.StorageSet.GetUID()),
-		//	device.GetLabels(),
-		//)
-		// add CStorClusterPlan UID to device's
-		// existing annotations
-		//newLbls = k8s.MergeToAnnotations(
-		//	types.AnnKeyCStorClusterPlanUID, cstorClusterPlanUID,
-		//	newLbls,
-		//)
-
-		new := &unstructured.Unstructured{}
-		new.SetAPIVersion(device.GetAPIVersion())
-		new.SetKind(device.GetKind())
-		new.SetNamespace(device.GetNamespace())
-		new.SetName(device.GetName())
-		// TODO (@amitkumardas):
-		//	Read above note on why labels vs. annotations
-		// TODO (@amitkumardas):
-		//	Remove this commented line of code
-		//new.SetLabels(newLbls)
-		// set labels in an idempotent manner
-		// metac will take care of merging these new labels to existing
+		//
+		// set in an idempotent manner since metac will take
+		// care of merging these new labels to existing
 		new.SetLabels(
 			map[string]string{
 				types.AnnKeyCStorClusterStorageSetUID: string(p.StorageSet.GetUID()),
@@ -530,16 +508,9 @@ func (p *StorageToBlockDeviceAssociator) annotateBlockDevicesIfUnclaimed(
 func (p *StorageToBlockDeviceAssociator) isBlockDeviceUnclaimed(
 	device *unstructured.Unstructured,
 ) (bool, error) {
-	status, found, err :=
-		unstructured.NestedString(device.UnstructuredContent(), "status", "claimState")
+	status, err := k8s.GetStringOrError(device, "status", "claimState")
 	if err != nil {
 		return false, err
-	}
-	if !found || status == "" {
-		return false, errors.Errorf(
-			"Can't find status.claimState for BlockDevice %s %s",
-			device.GetNamespace(), device.GetName(),
-		)
 	}
 	glog.V(3).Infof(
 		"BlockDevice %q / %q has claim state %q: Storage %q / %q",

@@ -46,15 +46,6 @@ const (
 // DefaultMinDiskCapacity is the default min disk capacity
 var DefaultMinDiskCapacity resource.Quantity = resource.MustParse("100Gi")
 
-// RAIDTypeToDefaultMinDiskCount maps pool instance's raid type
-// to its default minimum disk count
-var RAIDTypeToDefaultMinDiskCount = map[types.PoolRAIDType]int64{
-	types.PoolRAIDTypeMirror: 2,
-	types.PoolRAIDTypeStripe: 1,
-	types.PoolRAIDTypeRAIDZ:  3,
-	types.PoolRAIDTypeRAIDZ2: 6,
-}
-
 type reconcileErrHandler struct {
 	clusterConfig *unstructured.Unstructured
 	hookResponse  *generic.SyncHookResponse
@@ -136,7 +127,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		}
 		if attachment.GetKind() == string(types.KindCStorClusterPlan) {
 			// verify further if CStorClusterPlan is what we are looking
-			uid, _ := k8s.GetAnnotationForKey(
+			uid, _ := k8s.GetValueForKey(
 				attachment.GetAnnotations(), types.AnnKeyCStorClusterConfigUID,
 			)
 			if string(request.Watch.GetUID()) == uid {
@@ -497,7 +488,7 @@ func (r *Reconciler) setMinDiskCountIfNotSet() error {
 	// This will help in differentiating a value that was not
 	// set vs. a value that was set to 0.
 	r.minDiskCount =
-		RAIDTypeToDefaultMinDiskCount[r.poolRAIDType]
+		types.RAIDTypeToDefaultMinDiskCount[r.poolRAIDType]
 	return nil
 }
 
@@ -540,7 +531,7 @@ func (r *Reconciler) validateMinDiskCount() error {
 			"Invalid min disk count '0'",
 		)
 	}
-	defaultCount := RAIDTypeToDefaultMinDiskCount[r.poolRAIDType]
+	defaultCount := types.RAIDTypeToDefaultMinDiskCount[r.poolRAIDType]
 	if defaultCount == 0 {
 		return errors.Errorf(
 			"Can't eval default disk count: RAID type %q is not set", r.poolRAIDType,
