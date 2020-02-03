@@ -478,7 +478,12 @@ func (p *Planner) initNodeToObservedCSPCDevices() error {
 	// CStorPoolCluster nodes that are under iteration
 	var currentNodeName string
 	p.nodeNameToObservedCSPCDevices = map[string][]string{}
-
+	if p.ObservedCStorPoolCluster == nil {
+		// for the very first reconcile events there may not
+		// be any CStorPoolCluster
+		return nil
+	}
+	// defines a series of local functions
 	getNodeName := func(obj *unstructured.Unstructured) (err error) {
 		currentNodeName, err =
 			unstruct.GetStringOrError(obj, "spec", "nodeSelector", "kubernetes.io/hostname")
@@ -507,15 +512,20 @@ func (p *Planner) initNodeToObservedCSPCDevices() error {
 		}
 		return unstruct.SliceIterator(raidGroups).ForEach(getBlockDevicesPerRAIDGroup)
 	}
+	// logic starts here
 	pools, err := unstruct.GetSliceOrError(p.ObservedCStorPoolCluster, "spec", "pools")
 	if err != nil {
 		return err
 	}
-	// Below iteration will iterate pools & run both getNodeName &
-	// getBlockDevicesPerPool against each pool. This has been done
-	// to map current node name against blockdevices present under
-	// current node.
-	return unstruct.SliceIterator(pools).ForEach(getNodeName, getBlockDevicesPerPool)
+	// Below iteration will iterate pools & run both:
+	//	1/ getNodeName &
+	// 	2/ getBlockDevicesPerPool
+	// against each pool. This has been done to map observed node name
+	// against observed blockdevices.
+	return unstruct.SliceIterator(pools).ForEach(
+		getNodeName,
+		getBlockDevicesPerPool,
+	)
 }
 
 // initNodeToDesiredCSPCDevices maps node name to desired
