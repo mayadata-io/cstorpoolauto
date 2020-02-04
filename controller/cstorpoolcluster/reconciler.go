@@ -297,7 +297,7 @@ type Planner struct {
 	storageSetUIDToObservedNodeName map[string]string
 
 	// StorageSet UID to desired disk count
-	storageSetToDesiredDiskCount map[string]resource.Quantity
+	storageSetUIDToDesiredDiskCount map[string]resource.Quantity
 
 	// StorageSet UID to desired BlockDevice names
 	storageSetToObservedBlockDevices map[string][]string
@@ -392,7 +392,7 @@ func (p *Planner) isReadyByNodeCount() bool {
 // reconciliation since CStorPoolCluster should get
 // reconciled as state changes.
 func (p *Planner) isReadyByNodeDiskCount() bool {
-	for storageSetUID, desiredDiskCount := range p.storageSetToDesiredDiskCount {
+	for storageSetUID, desiredDiskCount := range p.storageSetUIDToDesiredDiskCount {
 		observedDeviceCount := int64(len(p.storageSetToObservedBlockDevices[storageSetUID]))
 		if desiredDiskCount.CmpInt64(observedDeviceCount) > 0 {
 			glog.V(3).Infof(
@@ -430,7 +430,8 @@ func (p *Planner) initDesiredRAIDType() error {
 // - Maps CStorClusterStorageSet UID to desired device count
 func (p *Planner) initStorageSetMappings() error {
 	p.nodeNameToObservedStorageSetUID = map[string]string{}
-	p.storageSetToDesiredDiskCount = map[string]resource.Quantity{}
+	p.storageSetUIDToDesiredDiskCount = map[string]resource.Quantity{}
+	p.storageSetUIDToObservedNodeName = map[string]string{}
 	for _, sSet := range p.ObservedStorageSets {
 		// map desired node name against StorageSet UID
 		nodeName, err := unstruct.GetStringOrError(sSet, "spec", "node", "name")
@@ -444,7 +445,7 @@ func (p *Planner) initStorageSetMappings() error {
 		if err != nil {
 			return err
 		}
-		p.storageSetToDesiredDiskCount[string(sSet.GetUID())] = diskCountQty
+		p.storageSetUIDToDesiredDiskCount[string(sSet.GetUID())] = diskCountQty
 	}
 	return nil
 }

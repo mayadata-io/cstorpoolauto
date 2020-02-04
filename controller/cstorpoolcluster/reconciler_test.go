@@ -29,6 +29,221 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+func TestInitStorageSetMappings(t *testing.T) {
+	var tests = map[string]struct {
+		ObservedStorageSets                   []*unstructured.Unstructured
+		expectMapCount                        int
+		expectStorageSetUIDToDesiredDiskCount map[string]resource.Quantity
+		expectStorageSetUIDToObservedNodeName map[string]string
+		isErr                                 bool
+	}{
+		"nil ObservedStorageSets": {
+			ObservedStorageSets:                   nil,
+			expectMapCount:                        0,
+			expectStorageSetUIDToDesiredDiskCount: map[string]resource.Quantity{},
+			expectStorageSetUIDToObservedNodeName: map[string]string{},
+			isErr:                                 false,
+		},
+		"empty ObservedStorageSets": {
+			ObservedStorageSets:                   []*unstructured.Unstructured{},
+			expectMapCount:                        0,
+			expectStorageSetUIDToDesiredDiskCount: map[string]resource.Quantity{},
+			expectStorageSetUIDToObservedNodeName: map[string]string{},
+			isErr:                                 false,
+		},
+		"invalid ObservedStorageSet - disk count invalid": {
+			ObservedStorageSets: []*unstructured.Unstructured{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"uid": "sset-101",
+						},
+						"spec": map[string]interface{}{
+							"node": map[string]interface{}{
+								"name": "node-101",
+							},
+							"disk": map[string]interface{}{
+								"count": "junk",
+							},
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		"invalid ObservedStorageSet - disk count missing": {
+			ObservedStorageSets: []*unstructured.Unstructured{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"uid": "sset-101",
+						},
+						"spec": map[string]interface{}{
+							"node": map[string]interface{}{
+								"name": "node-101",
+							},
+							"disk": map[string]interface{}{
+								"count": "",
+							},
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		"invalid ObservedStorageSet - node name missing": {
+			ObservedStorageSets: []*unstructured.Unstructured{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"uid": "sset-101",
+						},
+						"spec": map[string]interface{}{
+							"node": map[string]interface{}{
+								"name": "",
+							},
+							"disk": map[string]interface{}{
+								"count": "2",
+							},
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		"invalid ObservedStorageSet - node missing": {
+			ObservedStorageSets: []*unstructured.Unstructured{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"uid": "sset-101",
+						},
+						"spec": map[string]interface{}{
+							"disk": map[string]interface{}{
+								"count": "2",
+							},
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		"single ObservedStorageSet": {
+			ObservedStorageSets: []*unstructured.Unstructured{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"uid": "sset-101",
+						},
+						"spec": map[string]interface{}{
+							"node": map[string]interface{}{
+								"name": "node-101",
+							},
+							"disk": map[string]interface{}{
+								"count": "2",
+							},
+						},
+					},
+				},
+			},
+			expectMapCount: 1,
+			expectStorageSetUIDToDesiredDiskCount: map[string]resource.Quantity{
+				"sset-101": resource.MustParse("2"),
+			},
+			expectStorageSetUIDToObservedNodeName: map[string]string{
+				"sset-101": "node-101",
+			},
+			isErr: false,
+		},
+		"multiple ObservedStorageSet": {
+			ObservedStorageSets: []*unstructured.Unstructured{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"uid": "sset-101",
+						},
+						"spec": map[string]interface{}{
+							"node": map[string]interface{}{
+								"name": "node-101",
+							},
+							"disk": map[string]interface{}{
+								"count": "2",
+							},
+						},
+					},
+				},
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"uid": "sset-201",
+						},
+						"spec": map[string]interface{}{
+							"node": map[string]interface{}{
+								"name": "node-201",
+							},
+							"disk": map[string]interface{}{
+								"count": "4",
+							},
+						},
+					},
+				},
+			},
+			expectMapCount: 2,
+			expectStorageSetUIDToDesiredDiskCount: map[string]resource.Quantity{
+				"sset-101": resource.MustParse("2"),
+				"sset-201": resource.MustParse("4"),
+			},
+			expectStorageSetUIDToObservedNodeName: map[string]string{
+				"sset-101": "node-101",
+				"sset-201": "node-201",
+			},
+			isErr: false,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			p := &Planner{
+				ObservedStorageSets: mock.ObservedStorageSets,
+			}
+			err := p.initStorageSetMappings()
+			if mock.isErr && err == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got [%+v]", err)
+			}
+			if mock.isErr {
+				return
+			}
+			if mock.expectMapCount != len(p.storageSetUIDToDesiredDiskCount) {
+				t.Fatalf(
+					"Expected map count %d got %d",
+					mock.expectMapCount, len(p.storageSetUIDToDesiredDiskCount),
+				)
+			}
+			for sset, gotDiskCount := range p.storageSetUIDToDesiredDiskCount {
+				expectDiskCount := mock.expectStorageSetUIDToDesiredDiskCount[sset]
+				if expectDiskCount != gotDiskCount {
+					t.Fatalf(
+						"Expected disk count %s got %s for sset %s",
+						expectDiskCount.String(), gotDiskCount.String(), sset,
+					)
+				}
+				expectNodeName := mock.expectStorageSetUIDToObservedNodeName[sset]
+				gotNodeName := p.storageSetUIDToObservedNodeName[sset]
+				if expectNodeName != gotNodeName {
+					t.Fatalf(
+						"Expected node name %s got %s for sset %s",
+						expectNodeName, gotNodeName, sset,
+					)
+				}
+			}
+		})
+	}
+}
+
 func TestPlannerGetDesiredCStorPoolCluster(t *testing.T) {
 	var tests = map[string]struct {
 		observedCStorClusterPlan        *types.CStorClusterPlan
@@ -1387,7 +1602,7 @@ func TestPlannerIsReadyByNodeDiskCount(t *testing.T) {
 	}{
 		"desired disk count == observed disk count": {
 			planner: &Planner{
-				storageSetToDesiredDiskCount: map[string]resource.Quantity{
+				storageSetUIDToDesiredDiskCount: map[string]resource.Quantity{
 					"101": resource.MustParse("1"),
 				},
 				storageSetToObservedBlockDevices: map[string][]string{
@@ -1401,7 +1616,7 @@ func TestPlannerIsReadyByNodeDiskCount(t *testing.T) {
 				// TODO (@amitkumardas):
 				// 	Use log as a field in Planner
 				ObservedCStorClusterPlan: mockloginfo,
-				storageSetToDesiredDiskCount: map[string]resource.Quantity{
+				storageSetUIDToDesiredDiskCount: map[string]resource.Quantity{
 					"101": resource.MustParse("2"),
 				},
 				storageSetToObservedBlockDevices: map[string][]string{
@@ -1412,7 +1627,7 @@ func TestPlannerIsReadyByNodeDiskCount(t *testing.T) {
 		},
 		"desired disk count < observed disk count": {
 			planner: &Planner{
-				storageSetToDesiredDiskCount: map[string]resource.Quantity{
+				storageSetUIDToDesiredDiskCount: map[string]resource.Quantity{
 					"101": resource.MustParse("2"),
 				},
 				storageSetToObservedBlockDevices: map[string][]string{
