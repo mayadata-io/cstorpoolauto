@@ -23,8 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
-	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/types"
+	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/util/metac"
 )
 
@@ -45,7 +45,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	)
 
 	conds, mergeErr :=
-	unstruct.MergeStatusConditions(
+		unstruct.MergeStatusConditions(
 			h.clusterPlan,
 			types.MakeCStorClusterPlanReconcileErrCond(err),
 		)
@@ -402,7 +402,7 @@ func (p *StorageSetListPlanner) sync() ([]*unstructured.Unstructured, error) {
 
 		storageSets = append(
 			storageSets,
-			p.getStorageSetDesiredState(
+			p.getDesiredStorageSet(
 				p.ObservedStorageSetObjs[uid].GetName(), uid,
 			),
 		)
@@ -433,7 +433,7 @@ func (p *StorageSetListPlanner) create() []*unstructured.Unstructured {
 		// creation of only one instance of CStorClusterStorageSet
 		storageSetName := p.ClusterPlan.GetName() + "-" + nodeUID
 		storageSets = append(
-			storageSets, p.getStorageSetDesiredState(storageSetName, nodeUID),
+			storageSets, p.getDesiredStorageSet(storageSetName, nodeUID),
 		)
 	}
 	return storageSets
@@ -476,19 +476,19 @@ func (p *StorageSetListPlanner) updateNode() ([]*unstructured.Unstructured, erro
 
 		updatedStorageSets = append(
 			updatedStorageSets,
-			p.getStorageSetDesiredState(storageSet.GetName(), newNodeUID),
+			p.getDesiredStorageSet(storageSet.GetName(), newNodeUID),
 		)
 	}
 	return updatedStorageSets, nil
 }
 
-// getStorageSetDesiredState returns the desired state of StorageSet
+// getDesiredStorageSet returns the desired state of StorageSet
 // based on the given node UID.
 //
 // NOTE:
 //	The returned instance is idempotent and hence can be used during
 // create & update operations
-func (p *StorageSetListPlanner) getStorageSetDesiredState(
+func (p *StorageSetListPlanner) getDesiredStorageSet(
 	storageSetName string, nodeUID string,
 ) *unstructured.Unstructured {
 	storageSet := &unstructured.Unstructured{}
@@ -506,9 +506,9 @@ func (p *StorageSetListPlanner) getStorageSetDesiredState(
 				"capacity": p.ClusterConfig.Spec.DiskConfig.MinCapacity,
 				"count":    p.ClusterConfig.Spec.DiskConfig.MinCount,
 			},
-			"externalProvisioner": map[string]interface{}{
-				"csiAttacherName":  p.ClusterConfig.Spec.DiskConfig.ExternalProvisioner.CSIAttacherName,
-				"storageClassName": p.ClusterConfig.Spec.DiskConfig.ExternalProvisioner.StorageClassName,
+			"externalDiskConfig": map[string]interface{}{
+				"csiAttacherName":  p.ClusterConfig.Spec.DiskConfig.ExternalDiskConfig.CSIAttacherName,
+				"storageClassName": p.ClusterConfig.Spec.DiskConfig.ExternalDiskConfig.StorageClassName,
 			},
 		},
 	})

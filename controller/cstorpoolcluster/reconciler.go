@@ -529,8 +529,8 @@ func (p *Planner) initNodeToObservedCSPCDevices() error {
 	)
 }
 
-// initNodeToDesiredCSPCDevices maps node name to desired
-// BlockDevice(s)
+// initNodeToDesiredCSPCDevices manages reconciling the observed
+// BlockDevice(s) to desired CSPC device(s)
 func (p *Planner) initNodeToDesiredCSPCDevices() error {
 	p.nodeNameToDesiredCSPCDevices = map[string][]string{}
 	for sSetUID, observedBlockDevices := range p.storageSetToObservedBlockDevices {

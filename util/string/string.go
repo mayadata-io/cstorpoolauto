@@ -93,6 +93,11 @@ func (e Equality) Diff() (noops Map, additions []string, removals []string) {
 // need to be replaced as replaced from new destination
 // items. It appends new used items to the end of the resulting
 // list.
+//
+// TODO (@amitkumardas):
+//	This doesnot handle cases of
+//	1/ removal in groups
+//	2/ replacement in groups
 func (e Equality) Merge() []string {
 	var new []string
 	var used = map[string]bool{}

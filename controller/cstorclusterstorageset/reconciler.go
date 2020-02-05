@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
-	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/types"
+	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/util/metac"
 )
 
@@ -49,7 +49,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	)
 
 	conds, mergeErr :=
-	unstruct.MergeStatusConditions(
+		unstruct.MergeStatusConditions(
 			h.storageSet,
 			types.MakeCStorClusterStorageSetReconcileErrCond(err),
 		)
@@ -238,8 +238,8 @@ func NewStoragePlanner(storageSet *types.CStorClusterStorageSet) *StoragePlanner
 		DesiredCapacity:         storageSet.Spec.Disk.Capacity,
 		DesiredNodeName:         storageSet.Spec.Node.Name,
 		DesiredNamespace:        storageSet.GetNamespace(),
-		DesiredCSIAttacherName:  storageSet.Spec.ExternalProvisioner.CSIAttacherName,
-		DesiredStorageClassName: storageSet.Spec.ExternalProvisioner.StorageClassName,
+		DesiredCSIAttacherName:  storageSet.Spec.ExternalDiskConfig.CSIAttacherName,
+		DesiredStorageClassName: storageSet.Spec.ExternalDiskConfig.StorageClassName,
 	}
 }
 
@@ -262,16 +262,16 @@ func (p *StoragePlanner) plan(count int64) []*unstructured.Unstructured {
 			"Will sync Storage %d for CStorClusterStorageSet UID %q", i, p.StorageSetUID,
 		)
 		storageName := p.StorageSetName + "-" + strconv.FormatInt(i, 10)
-		desiredStorages = append(desiredStorages, p.getStorageDesiredState(storageName))
+		desiredStorages = append(desiredStorages, p.getDesiredStorage(storageName))
 	}
 	return desiredStorages
 }
 
-// getStorageDesiredState returns the desired state of the
+// getDesiredStorage returns the desired state of the
 // Storage resource. This returned structure is idempotent
 // and hence can be used during create &/ update based
 // reconciliations.
-func (p *StoragePlanner) getStorageDesiredState(storageName string) *unstructured.Unstructured {
+func (p *StoragePlanner) getDesiredStorage(storageName string) *unstructured.Unstructured {
 	storage := &unstructured.Unstructured{}
 	storage.SetUnstructuredContent(map[string]interface{}{
 		"metadata": map[string]interface{}{
