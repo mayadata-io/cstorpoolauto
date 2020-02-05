@@ -25,7 +25,10 @@ import (
 // resource that represents configuration input or requirement
 // to create or scale one CStor pool.
 type CStorPoolClusterRecommendationRequest struct {
-	metav1.TypeMeta   `json:",inline"`
+	// Commented it out for now as we - don't introduce a variable
+	// if you are planing to use it in future
+	// Will bring it back when we will create CR(s)
+	// metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
 	Spec CStorPoolClusterRecommendationRequestSpec `json:"spec"`
@@ -43,7 +46,9 @@ type CStorPoolClusterRecommendationRequestSpec struct {
 	WriteCacheConfig *RaidGroupConfig `json:"writeCacheConfig"`
 	// ReadCacheConfig represents raid configuration for read cache devices.
 	// If this field is nil then read cache is disabled.
-	ReadCacheConfig *RaidGroupConfig `json:"readCacheConfig"`
+	// Commented it out for now as we - don't introduce a variable
+	// if you are planing to use it in future
+	// ReadCacheConfig *RaidGroupConfig `json:"readCacheConfig"`
 }
 
 // RaidGroupConfig contains raid type and device(s)

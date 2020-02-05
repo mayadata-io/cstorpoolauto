@@ -25,7 +25,10 @@ import (
 // resource that represents recommended configurations
 // for one given input/requirement.
 type CStorPoolClusterRecommendation struct {
-	metav1.TypeMeta   `json:",inline"`
+	// Commented it out for now as we - don't introduce a variable
+	// if you are planing to use it in future
+	// Will bring it back when we will create CR(s)
+	// metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
 	RequestSpec CStorPoolClusterRecommendationRequestSpec `json:"requestSpec"`
@@ -57,9 +60,11 @@ type BlockDeviceTopology struct {
 	// with the node which will be used for data device.
 	DataDevices []Reference `json:"dataDevices"`
 	// DataDevices contains list of block devices associated
-	// with the node which will be used for read cache.
-	ReadCacheDevices []Reference `json:"readCacheDevices"`
-	// DataDevices contains list of block devices associated
 	// with the node which will be used for write cache.
 	WriteCacheDevices []Reference `json:"writeCacheDevices"`
+	// Commented it out for now as we - don't introduce a variable
+	// if you are planing to use it in future
+	// DataDevices contains list of block devices associated
+	// with the node which will be used for read cache.
+	// ReadCacheDevices []Reference `json:"readCacheDevices"`
 }
