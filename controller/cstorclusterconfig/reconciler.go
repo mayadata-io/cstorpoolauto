@@ -24,8 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"openebs.io/metac/controller/generic"
 
-	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/types"
+	"mayadata.io/cstorpoolauto/unstruct"
 	"mayadata.io/cstorpoolauto/util/metac"
 )
 
@@ -95,7 +95,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	// resource as well as the resource under watch.
 	if request.Attachments == nil || request.Attachments.IsEmpty() {
 		glog.V(3).Infof(
-			"Skip reconciling CStorClusterConfig %s %s: Nil attachments",
+			"Will skip reconciliation: Nil attachments: CStorClusterConfig %q / %q",
 			request.Watch.GetNamespace(), request.Watch.GetName(),
 		)
 		response.SkipReconcile = true
@@ -103,7 +103,7 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 	}
 
 	glog.V(3).Infof(
-		"Will reconcile CStorClusterConfig %s %s:",
+		"Will reconcile CStorClusterConfig %q / %q:",
 		request.Watch.GetNamespace(), request.Watch.GetName(),
 	)
 
@@ -163,6 +163,15 @@ func Sync(request *generic.SyncHookRequest, response *generic.SyncHookResponse) 
 		errHandler.handle(err)
 		return nil
 	}
+	if op.SkipReconcile {
+		// skip reconciliation at metac
+		response.SkipReconcile = true
+		glog.V(3).Infof(
+			"Will skip reconciliation: %s: CStorClusterConfig %q / %q",
+			op.SkipReason, request.Watch.GetNamespace(), request.Watch.GetName(),
+		)
+		return nil
+	}
 
 	// add updated CStorClusterConfig & CStorClusterConfigPlan to response
 	response.Attachments = append(response.Attachments, op.CStorClusterConfig)
@@ -200,6 +209,8 @@ type Reconciler struct {
 type ReconcileResponse struct {
 	CStorClusterConfig *unstructured.Unstructured
 	CStorClusterPlan   *unstructured.Unstructured
+	SkipReconcile      bool
+	SkipReason         string
 }
 
 // NewReconciler returns a new instance of Reconciler
@@ -245,6 +256,13 @@ func NewReconciler(
 // NOTE:
 //	Due care has been taken to let this logic be idempotent
 func (r *Reconciler) Reconcile() (ReconcileResponse, error) {
+	if !r.isExternalDiskConfig() {
+		// this controller is meant for external disk config only
+		return ReconcileResponse{
+			SkipReconcile: true,
+			SkipReason:    "External disk config not found",
+		}, nil
+	}
 	syncFns := []func() error{
 		r.syncClusterConfig,
 		r.syncClusterPlan,
@@ -333,12 +351,16 @@ func (r *Reconciler) syncClusterConfig() error {
 	// NOTE:
 	// 	Ensure this ordering is **not** changed
 	setDefaultFns := []func() error{
-		r.validateDiskExternalProvisioner,
+		// pre checks
+		r.validateDiskConfig,
+		r.validateExternalDiskConfig,
+		// set to defaults if not set
 		r.setMinPoolCountIfNotSet,
 		r.setMaxPoolCountIfNotSet,
 		r.setRAIDTypeIfNotSet,
 		r.setMinDiskCountIfNotSet,
 		r.setMinDiskCapacityIfNotSet,
+		// post checks
 		r.validateRAIDType,
 		r.validateMinDiskCount,
 	}
@@ -439,11 +461,14 @@ func (r *Reconciler) setMinPoolCountIfNotSet() error {
 func (r *Reconciler) setMaxPoolCountIfNotSet() error {
 	var maxPoolCount int64
 	var minPoolCount int64
+	// it is expected to have minPoolCount field to be
+	// already set before invoking this method
 	minPoolCount = r.minPoolCount
 	maxPoolCount = r.ClusterConfig.Spec.MaxPoolCount.Value()
 	if maxPoolCount == 0 {
 		// max pool count is not set, so set it as min + 2
-		maxPoolCount = minPoolCount + 2
+		// & return
+		r.maxPoolCount = minPoolCount + 2
 		return nil
 	}
 	// check further if min is greater than max which is an error
@@ -545,11 +570,38 @@ func (r *Reconciler) validateMinDiskCount() error {
 	return nil
 }
 
-func (r *Reconciler) validateDiskExternalProvisioner() error {
-	if r.ClusterConfig.Spec.DiskConfig.ExternalProvisioner.CSIAttacherName == "" ||
-		r.ClusterConfig.Spec.DiskConfig.ExternalProvisioner.StorageClassName == "" {
+// isExternalDiskConfig returns true if this CStorClusterConfig
+// needs to make use of external disk config
+//
+// NOTE:
+// 	This returns true if both local as well as external disk configs
+// are not set.
+func (r *Reconciler) isExternalDiskConfig() bool {
+	if r.ClusterConfig.Spec.DiskConfig.ExternalDiskConfig != nil {
+		return true
+	}
+	// defaults to external disk config if local disk config is not set
+	return r.ClusterConfig.Spec.DiskConfig.LocalDiskConfig == nil
+}
+
+func (r *Reconciler) validateDiskConfig() error {
+	if r.ClusterConfig.Spec.DiskConfig.ExternalDiskConfig != nil &&
+		r.ClusterConfig.Spec.DiskConfig.LocalDiskConfig != nil {
 		return errors.Errorf(
-			"Invalid disk ExternalProvisioner: Both csi attacher & storageclass are required",
+			"Invalid disk config: Either external or local config needed, not both",
+		)
+	}
+	return nil
+}
+
+func (r *Reconciler) validateExternalDiskConfig() error {
+	if r.ClusterConfig.Spec.DiskConfig.ExternalDiskConfig == nil {
+		return errors.Errorf("Nil external disk config")
+	}
+	if r.ClusterConfig.Spec.DiskConfig.ExternalDiskConfig.CSIAttacherName == "" ||
+		r.ClusterConfig.Spec.DiskConfig.ExternalDiskConfig.StorageClassName == "" {
+		return errors.Errorf(
+			"Invalid external disk config: Both csi attacher & storageclass are required",
 		)
 	}
 	return nil

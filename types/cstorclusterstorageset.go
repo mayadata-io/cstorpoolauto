@@ -34,9 +34,9 @@ type CStorClusterStorageSet struct {
 // CStorClusterStorageSetSpec has the storage details required
 // to form CStorPoolCluster's pool capacity
 type CStorClusterStorageSetSpec struct {
-	Node                CStorClusterPlanNode       `json:"node"`
-	Disk                CStorClusterStorageSetDisk `json:"disk"`
-	ExternalProvisioner ExternalProvisioner        `json:"externalProvisioner"`
+	Node               CStorClusterPlanNode       `json:"node"`
+	Disk               CStorClusterStorageSetDisk `json:"disk"`
+	ExternalDiskConfig ExternalDiskConfig         `json:"externalDiskConfig"`
 }
 
 // CStorClusterStorageSetDisk represents storage disk properties

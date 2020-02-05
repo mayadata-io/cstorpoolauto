@@ -63,16 +63,25 @@ type CStorClusterConfigSpec struct {
 // DiskConfig has disk information related to
 // one cstor pool instance
 type DiskConfig struct {
-	MinCount            resource.Quantity   `json:"minCount"`
-	MinCapacity         resource.Quantity   `json:"minCapacity"`
-	ExternalProvisioner ExternalProvisioner `json:"externalProvisioner"`
+	MinCount           resource.Quantity   `json:"minCount"`
+	MinCapacity        resource.Quantity   `json:"minCapacity"`
+	ExternalDiskConfig *ExternalDiskConfig `json:"external"`
+	LocalDiskConfig    *LocalDiskConfig    `json:"local"`
 }
 
-// ExternalProvisioner has the details required to provision
-// a disk
-type ExternalProvisioner struct {
+// ExternalDiskConfig has the details required to provision
+// a disk. This makes use of CSI based volume provisioning
+// to realise a disk & subsequent disk attachment.
+type ExternalDiskConfig struct {
 	CSIAttacherName  string `json:"csiAttacherName"`
 	StorageClassName string `json:"storageClassName"`
+}
+
+// LocalDiskConfig refers to local disks details that should be
+// available & is eligible to participate in building cstor
+// pool instace.
+type LocalDiskConfig struct {
+	BlockDeviceSelector metac.ResourceSelector `json:"blockDeviceSelector"`
 }
 
 // PoolConfig defines various options to configure a

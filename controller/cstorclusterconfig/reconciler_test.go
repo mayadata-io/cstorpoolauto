@@ -17,8 +17,9 @@ limitations under the License.
 package cstorclusterconfig
 
 import (
-	"mayadata.io/cstorpoolauto/types"
 	"testing"
+
+	"mayadata.io/cstorpoolauto/types"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -658,20 +659,20 @@ func TestReconcilerValidateMinDiskCount(t *testing.T) {
 	}
 }
 
-func TestReconcilerValidateDiskExternalProvisioner(t *testing.T) {
+func TestReconcilerValidateExternalDiskConfig(t *testing.T) {
 	var tests = map[string]struct {
 		CStorClusterConfig *types.CStorClusterConfig
 		isErr              bool
 	}{
-		"ExternalProvisioner = nil": {
+		"ExternalDiskConfig = nil": {
 			CStorClusterConfig: &types.CStorClusterConfig{},
 			isErr:              true,
 		},
-		"ExternalProvisioner is empty": {
+		"ExternalDiskConfig is empty": {
 			CStorClusterConfig: &types.CStorClusterConfig{
 				Spec: types.CStorClusterConfigSpec{
 					DiskConfig: types.DiskConfig{
-						ExternalProvisioner: types.ExternalProvisioner{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
 							CSIAttacherName:  "",
 							StorageClassName: "",
 						},
@@ -684,7 +685,7 @@ func TestReconcilerValidateDiskExternalProvisioner(t *testing.T) {
 			CStorClusterConfig: &types.CStorClusterConfig{
 				Spec: types.CStorClusterConfigSpec{
 					DiskConfig: types.DiskConfig{
-						ExternalProvisioner: types.ExternalProvisioner{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
 							CSIAttacherName:  "",
 							StorageClassName: "default",
 						},
@@ -697,7 +698,7 @@ func TestReconcilerValidateDiskExternalProvisioner(t *testing.T) {
 			CStorClusterConfig: &types.CStorClusterConfig{
 				Spec: types.CStorClusterConfigSpec{
 					DiskConfig: types.DiskConfig{
-						ExternalProvisioner: types.ExternalProvisioner{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
 							CSIAttacherName:  "some-csi-driver",
 							StorageClassName: "",
 						},
@@ -714,7 +715,7 @@ func TestReconcilerValidateDiskExternalProvisioner(t *testing.T) {
 			r := &Reconciler{
 				ClusterConfig: mock.CStorClusterConfig,
 			}
-			got := r.validateDiskExternalProvisioner()
+			got := r.validateExternalDiskConfig()
 			if mock.isErr && got == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -727,19 +728,24 @@ func TestReconcilerValidateDiskExternalProvisioner(t *testing.T) {
 
 func TestReconcilerSyncClusterConfig(t *testing.T) {
 	var tests = map[string]struct {
-		CStorClusterConfig *types.CStorClusterConfig
-		NodePlanner        *NodePlanner
-		isErr              bool
+		CStorClusterConfig    *types.CStorClusterConfig
+		NodePlanner           *NodePlanner
+		expectMinPoolCount    int64
+		expectMaxPoolCount    int64
+		expectPoolRAIDType    types.PoolRAIDType
+		expectMinDiskCount    int64
+		expectMinDiskCapacity resource.Quantity
+		isErr                 bool
 	}{
-		"external provisioner = nil": {
+		"ExternalDiskConfig = nil": {
 			CStorClusterConfig: &types.CStorClusterConfig{},
 			isErr:              true,
 		},
-		"external provisioner = empty": {
+		"ExternalDiskConfig = empty": {
 			CStorClusterConfig: &types.CStorClusterConfig{
 				Spec: types.CStorClusterConfigSpec{
 					DiskConfig: types.DiskConfig{
-						ExternalProvisioner: types.ExternalProvisioner{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
 							CSIAttacherName:  "",
 							StorageClassName: "",
 						},
@@ -748,11 +754,11 @@ func TestReconcilerSyncClusterConfig(t *testing.T) {
 			},
 			isErr: true,
 		},
-		"external provisioner is set && nodes = 1 && elgible nodes = 1": {
+		"ExternalDiskConfig is set && nodes = 1 && elgible nodes = 1": {
 			CStorClusterConfig: &types.CStorClusterConfig{
 				Spec: types.CStorClusterConfigSpec{
 					DiskConfig: types.DiskConfig{
-						ExternalProvisioner: types.ExternalProvisioner{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
 							CSIAttacherName:  "abc-driver",
 							StorageClassName: "default",
 						},
@@ -767,13 +773,268 @@ func TestReconcilerSyncClusterConfig(t *testing.T) {
 					return 1, nil
 				},
 			},
-			isErr: false,
+			expectMinPoolCount:    1,
+			expectMaxPoolCount:    3,
+			expectPoolRAIDType:    types.PoolRAIDTypeMirror,
+			expectMinDiskCount:    2,
+			expectMinDiskCapacity: DefaultMinDiskCapacity,
+			isErr:                 false,
 		},
-		"external provisioner is set && nodes = 2 && elgible nodes = 0": {
+		"ExternalDiskConfig is set && nodes = 2 && elgible nodes = 1": {
 			CStorClusterConfig: &types.CStorClusterConfig{
 				Spec: types.CStorClusterConfigSpec{
 					DiskConfig: types.DiskConfig{
-						ExternalProvisioner: types.ExternalProvisioner{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
+							CSIAttacherName:  "abc-driver",
+							StorageClassName: "default",
+						},
+					},
+				},
+			},
+			NodePlanner: &NodePlanner{
+				getAllNodeCountFn: func() int64 {
+					return 2
+				},
+				getAllowedNodeCountFn: func() (int64, error) {
+					return 1, nil
+				},
+			},
+			expectMinPoolCount:    1,
+			expectMaxPoolCount:    3,
+			expectPoolRAIDType:    types.PoolRAIDTypeMirror,
+			expectMinDiskCount:    2,
+			expectMinDiskCapacity: DefaultMinDiskCapacity,
+			isErr:                 false,
+		},
+		"ExternalDiskConfig is set && nodes = 2 && elgible nodes = 2": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
+							CSIAttacherName:  "abc-driver",
+							StorageClassName: "default",
+						},
+					},
+				},
+			},
+			NodePlanner: &NodePlanner{
+				getAllNodeCountFn: func() int64 {
+					return 2
+				},
+				getAllowedNodeCountFn: func() (int64, error) {
+					return 2, nil
+				},
+			},
+			expectMinPoolCount:    2,
+			expectMaxPoolCount:    4,
+			expectPoolRAIDType:    types.PoolRAIDTypeMirror,
+			expectMinDiskCount:    2,
+			expectMinDiskCapacity: DefaultMinDiskCapacity,
+			isErr:                 false,
+		},
+		"ExternalDiskConfig is set && raid type = mirror && eligible nodes = 1": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
+							CSIAttacherName:  "abc-driver",
+							StorageClassName: "default",
+						},
+					},
+					PoolConfig: types.PoolConfig{
+						RAIDType: types.PoolRAIDTypeMirror,
+					},
+				},
+			},
+			NodePlanner: &NodePlanner{
+				getAllNodeCountFn: func() int64 {
+					return 1
+				},
+				getAllowedNodeCountFn: func() (int64, error) {
+					return 1, nil
+				},
+			},
+			expectMinPoolCount:    1,
+			expectMaxPoolCount:    3,
+			expectPoolRAIDType:    types.PoolRAIDTypeMirror,
+			expectMinDiskCount:    2,
+			expectMinDiskCapacity: DefaultMinDiskCapacity,
+			isErr:                 false,
+		},
+		"ExternalDiskConfig is set && raid type = stripe && eligible nodes = 1": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
+							CSIAttacherName:  "abc-driver",
+							StorageClassName: "default",
+						},
+					},
+					PoolConfig: types.PoolConfig{
+						RAIDType: types.PoolRAIDTypeStripe,
+					},
+				},
+			},
+			NodePlanner: &NodePlanner{
+				getAllNodeCountFn: func() int64 {
+					return 1
+				},
+				getAllowedNodeCountFn: func() (int64, error) {
+					return 1, nil
+				},
+			},
+			expectMinPoolCount:    1,
+			expectMaxPoolCount:    3,
+			expectPoolRAIDType:    types.PoolRAIDTypeStripe,
+			expectMinDiskCount:    1,
+			expectMinDiskCapacity: DefaultMinDiskCapacity,
+			isErr:                 false,
+		},
+		"ExternalDiskConfig is set && raid type = stripe && eligible nodes = 1 && disk = 3": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						MinCount: resource.MustParse("3"),
+						ExternalDiskConfig: &types.ExternalDiskConfig{
+							CSIAttacherName:  "abc-driver",
+							StorageClassName: "default",
+						},
+					},
+					PoolConfig: types.PoolConfig{
+						RAIDType: types.PoolRAIDTypeStripe,
+					},
+				},
+			},
+			NodePlanner: &NodePlanner{
+				getAllNodeCountFn: func() int64 {
+					return 1
+				},
+				getAllowedNodeCountFn: func() (int64, error) {
+					return 1, nil
+				},
+			},
+			expectMinPoolCount:    1,
+			expectMaxPoolCount:    3,
+			expectPoolRAIDType:    types.PoolRAIDTypeStripe,
+			expectMinDiskCount:    3,
+			expectMinDiskCapacity: DefaultMinDiskCapacity,
+			isErr:                 false,
+		},
+		"ExternalDiskConfig is set && raid type = raidz && eligible nodes = 1 && disk = 3": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						MinCount: resource.MustParse("3"),
+						ExternalDiskConfig: &types.ExternalDiskConfig{
+							CSIAttacherName:  "abc-driver",
+							StorageClassName: "default",
+						},
+					},
+					PoolConfig: types.PoolConfig{
+						RAIDType: types.PoolRAIDTypeRAIDZ,
+					},
+				},
+			},
+			NodePlanner: &NodePlanner{
+				getAllNodeCountFn: func() int64 {
+					return 1
+				},
+				getAllowedNodeCountFn: func() (int64, error) {
+					return 1, nil
+				},
+			},
+			expectMinPoolCount:    1,
+			expectMaxPoolCount:    3,
+			expectPoolRAIDType:    types.PoolRAIDTypeRAIDZ,
+			expectMinDiskCount:    3,
+			expectMinDiskCapacity: DefaultMinDiskCapacity,
+			isErr:                 false,
+		},
+		"ExternalDiskConfig is set && raid type = raidz2 && eligible nodes = 1 && disk = 6": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						MinCount: resource.MustParse("6"),
+						ExternalDiskConfig: &types.ExternalDiskConfig{
+							CSIAttacherName:  "abc-driver",
+							StorageClassName: "default",
+						},
+					},
+					PoolConfig: types.PoolConfig{
+						RAIDType: types.PoolRAIDTypeRAIDZ2,
+					},
+				},
+			},
+			NodePlanner: &NodePlanner{
+				getAllNodeCountFn: func() int64 {
+					return 1
+				},
+				getAllowedNodeCountFn: func() (int64, error) {
+					return 1, nil
+				},
+			},
+			expectMinPoolCount:    1,
+			expectMaxPoolCount:    3,
+			expectPoolRAIDType:    types.PoolRAIDTypeRAIDZ2,
+			expectMinDiskCount:    6,
+			expectMinDiskCapacity: DefaultMinDiskCapacity,
+			isErr:                 false,
+		},
+		"ExternalDiskConfig is set && raid type = raidz && eligible nodes = 1 && disk = 5": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						MinCount: resource.MustParse("5"),
+						ExternalDiskConfig: &types.ExternalDiskConfig{
+							CSIAttacherName:  "abc-driver",
+							StorageClassName: "default",
+						},
+					},
+					PoolConfig: types.PoolConfig{
+						RAIDType: types.PoolRAIDTypeRAIDZ,
+					},
+				},
+			},
+			NodePlanner: &NodePlanner{
+				getAllNodeCountFn: func() int64 {
+					return 1
+				},
+				getAllowedNodeCountFn: func() (int64, error) {
+					return 1, nil
+				},
+			},
+			isErr: true,
+		},
+		"ExternalDiskConfig is set && raid type = raidz2 && eligible nodes = 1 && disk = 5": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						MinCount: resource.MustParse("5"),
+						ExternalDiskConfig: &types.ExternalDiskConfig{
+							CSIAttacherName:  "abc-driver",
+							StorageClassName: "default",
+						},
+					},
+					PoolConfig: types.PoolConfig{
+						RAIDType: types.PoolRAIDTypeRAIDZ2,
+					},
+				},
+			},
+			NodePlanner: &NodePlanner{
+				getAllNodeCountFn: func() int64 {
+					return 1
+				},
+				getAllowedNodeCountFn: func() (int64, error) {
+					return 1, nil
+				},
+			},
+			isErr: true,
+		},
+		"ExternalDiskConfig is set && nodes = 2 && elgible nodes = 0": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
 							CSIAttacherName:  "abc-driver",
 							StorageClassName: "default",
 						},
@@ -790,11 +1051,11 @@ func TestReconcilerSyncClusterConfig(t *testing.T) {
 			},
 			isErr: true,
 		},
-		"external provisioner is set && nodes = 0 && elgible nodes = 0": {
+		"ExternalDiskConfig is set && nodes = 0 && elgible nodes = 0": {
 			CStorClusterConfig: &types.CStorClusterConfig{
 				Spec: types.CStorClusterConfigSpec{
 					DiskConfig: types.DiskConfig{
-						ExternalProvisioner: types.ExternalProvisioner{
+						ExternalDiskConfig: &types.ExternalDiskConfig{
 							CSIAttacherName:  "abc-driver",
 							StorageClassName: "default",
 						},
@@ -826,6 +1087,35 @@ func TestReconcilerSyncClusterConfig(t *testing.T) {
 			}
 			if !mock.isErr && got != nil {
 				t.Fatalf("Expected no error got [%+v]", got)
+			}
+			if mock.isErr {
+				return
+			}
+			if mock.expectMinPoolCount != r.minPoolCount {
+				t.Fatalf(
+					"Expected min pool count %d got %d",
+					mock.expectMinPoolCount, r.minPoolCount,
+				)
+			}
+			if mock.expectMaxPoolCount != r.maxPoolCount {
+				t.Fatalf("Expected max pool count %d got %d",
+					mock.expectMaxPoolCount, r.maxPoolCount,
+				)
+			}
+			if mock.expectPoolRAIDType != r.poolRAIDType {
+				t.Fatalf("Expected pool raid type %s got %s",
+					mock.expectPoolRAIDType, r.poolRAIDType,
+				)
+			}
+			if mock.expectMinDiskCount != r.minDiskCount {
+				t.Fatalf("Expected min disk count %d got %d",
+					mock.expectMinDiskCount, r.minDiskCount,
+				)
+			}
+			if mock.expectMinDiskCapacity.Value() != r.minDiskCapacity {
+				t.Fatalf("Expected min disk capacity %d got %d",
+					mock.expectMinDiskCapacity.Value(), r.minDiskCapacity,
+				)
 			}
 		})
 	}
@@ -1045,6 +1335,117 @@ func TestReconcilerGetDesiredClusterPlan(t *testing.T) {
 					"Expected Namespace %s got %s",
 					got.GetNamespace(), mock.expectPlan.GetNamespace(),
 				)
+			}
+		})
+	}
+}
+
+func TestValidateDiskConfig(t *testing.T) {
+	var tests = map[string]struct {
+		CStorClusterConfig *types.CStorClusterConfig
+		isErr              bool
+	}{
+		"valid cstor cluster config - external disk config": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: &types.ExternalDiskConfig{},
+						LocalDiskConfig:    nil,
+					},
+				},
+			},
+			isErr: false,
+		},
+		"valid cstor cluster config - local disk config": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: nil,
+						LocalDiskConfig:    &types.LocalDiskConfig{},
+					},
+				},
+			},
+			isErr: false,
+		},
+		"invalid cstor cluster config - both local & external disk config": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: &types.ExternalDiskConfig{},
+						LocalDiskConfig:    &types.LocalDiskConfig{},
+					},
+				},
+			},
+			isErr: true,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			r := &Reconciler{
+				ClusterConfig: mock.CStorClusterConfig,
+			}
+			err := r.validateDiskConfig()
+			if mock.isErr && err == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got [%+v]", err)
+			}
+		})
+	}
+}
+
+func TestIsExternalDiskConfig(t *testing.T) {
+	var tests = map[string]struct {
+		CStorClusterConfig *types.CStorClusterConfig
+		expectExternal     bool
+	}{
+		"both local & external as non nil": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: &types.ExternalDiskConfig{},
+						LocalDiskConfig:    &types.LocalDiskConfig{},
+					},
+				},
+			},
+			expectExternal: true,
+		},
+		"local = non nil & external = nil": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: nil,
+						LocalDiskConfig:    &types.LocalDiskConfig{},
+					},
+				},
+			},
+			expectExternal: false,
+		},
+		"local = nil & external = non nil": {
+			CStorClusterConfig: &types.CStorClusterConfig{
+				Spec: types.CStorClusterConfigSpec{
+					DiskConfig: types.DiskConfig{
+						ExternalDiskConfig: &types.ExternalDiskConfig{},
+						LocalDiskConfig:    nil,
+					},
+				},
+			},
+			expectExternal: true,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			r := &Reconciler{
+				ClusterConfig: mock.CStorClusterConfig,
+			}
+			got := r.isExternalDiskConfig()
+			if got != mock.expectExternal {
+				t.Fatalf("Expected external %t got %t", mock.expectExternal, got)
 			}
 		})
 	}
