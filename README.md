@@ -10,7 +10,7 @@ metadata:
     namespace: openebs
 spec:
     diskConfig:
-        externalProvisioner:
+        external:
             csiAttacherName: pd.csi.storage.gke.io
             storageClassName: csi-gce-pd
     poolConfig:
