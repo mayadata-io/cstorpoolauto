@@ -3,8 +3,8 @@ cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.38.0/go.mod h1:990N+gfupTy94rShfmMCWGDn0LpTmnzTp2qbd1dvSRU=
 contrib.go.opencensus.io/exporter/prometheus v0.1.0 h1:SByaIoWwNgMdPSgl5sMqM2KDE5H/ukPWBRo314xiDvg=
 contrib.go.opencensus.io/exporter/prometheus v0.1.0/go.mod h1:cGFniUXGZlKRjzOyuZJ6mgB+PgBcCIa79kEKR8YCW+A=
-github.com/AmitKumarDas/metac v0.1.1-0.20200122022231-6cec7468b84a h1:h/i/tRtikgKrcvu8VQoH+4ngP/HJe6fbhlOWLjHlpDk=
-github.com/AmitKumarDas/metac v0.1.1-0.20200122022231-6cec7468b84a/go.mod h1:STMXa98wIYVlmc8GSmPhOjbRJar0gdYxpdyso1vE71g=
+github.com/AmitKumarDas/metac v0.1.1-0.20200207112147-5bfc4b3f4af9 h1:gXauBusTv5CUyEEGtphAIAhFhsXrFo9YWd0ZEJs0Glw=
+github.com/AmitKumarDas/metac v0.1.1-0.20200207112147-5bfc4b3f4af9/go.mod h1:STMXa98wIYVlmc8GSmPhOjbRJar0gdYxpdyso1vE71g=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78/go.mod h1:LmzpDX56iTiv29bbRTIsUNlaFfuhWRQBWjQdVyAevI8=
 github.com/Azure/go-autorest/autorest v0.9.0/go.mod h1:xyHB1BMZT0cuDHU7I0+g046+BFDTQ8rEZB0s4Yfa6bI=
 github.com/Azure/go-autorest/autorest/adal v0.5.0/go.mod h1:8Z9fGy2MpX0PvDjB1pEgQTmVqjGhiHBW7RJJEciWzS0=
