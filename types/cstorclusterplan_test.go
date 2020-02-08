@@ -64,7 +64,7 @@ func TestMakeNodeSlice(t *testing.T) {
 	}
 	for name, mock := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := MakeNodeSlice(mock.nodes)
+			got := MakeListMapOfPlanNodes(mock.nodes)
 			if len(got) != mock.expectCount {
 				t.Fatalf(
 					"Expected count %d got %d", mock.expectCount, len(got),

@@ -110,13 +110,13 @@ func TestSelectUnstructAPIVersionANDLabels(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "apiversion-&-labels"
 			// initialize & run
-			ul := Unstruct(mock.obj)
+			ul := AsList(mock.obj)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyCondition().
 					IsAPIVersion(mock.apiVersion).
 					HasLabels(mock.labels),
-			).Eval()
+			).EvalAllConditions()
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -125,7 +125,7 @@ func TestSelectUnstructAPIVersionANDLabels(t *testing.T) {
 			}
 			// try finding
 			if err == nil {
-				got, found, err := eval.ListForCondition(conditionName)
+				got, found, err := eval.ListObjsForCondition(conditionName)
 				if mock.isErr && err == nil {
 					t.Fatalf("Expected error got none")
 				}
@@ -212,13 +212,13 @@ func TestSelectUnstructAPIVersionORKind(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "kind-or-apiversion"
 			// initialize & run
-			ul := Unstruct(mock.obj)
+			ul := AsList(mock.obj)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyORCondition().
 					IsKind(mock.kind).
 					IsAPIVersion(mock.apiVersion),
-			).Eval()
+			).EvalAllConditions()
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -227,7 +227,7 @@ func TestSelectUnstructAPIVersionORKind(t *testing.T) {
 			}
 			// try finding
 			if err == nil {
-				got, found, err := eval.ListForCondition(conditionName)
+				got, found, err := eval.ListObjsForCondition(conditionName)
 				if mock.isErr && err == nil {
 					t.Fatalf("Expected error got none")
 				}
@@ -296,11 +296,11 @@ func TestSelectUnstructKindCondition(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "my-selection-kind"
 			// initialize & run
-			ul := Unstruct(mock.obj)
+			ul := AsList(mock.obj)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyCondition().IsKind(mock.kind),
-			).Eval()
+			).EvalAllConditions()
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -309,7 +309,7 @@ func TestSelectUnstructKindCondition(t *testing.T) {
 			}
 			// try finding
 			if err == nil {
-				got, found, err := eval.ListForCondition(conditionName)
+				got, found, err := eval.ListObjsForCondition(conditionName)
 				if mock.isErr && err == nil {
 					t.Fatalf("Expected error got none")
 				}
@@ -443,9 +443,11 @@ func TestSelectRunIsKind(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "my-selection-kind"
 			// initialize & run
-			ul := UnstructList(mock.objs)
+			ul := FromList(mock.objs)
 			eval, err :=
-				ul.WithCondition(conditionName, NewLazyCondition().IsKind(mock.kind)).Eval()
+				ul.WithCondition(
+					conditionName, NewLazyCondition().IsKind(mock.kind),
+				).EvalAllConditions()
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -454,7 +456,7 @@ func TestSelectRunIsKind(t *testing.T) {
 			}
 			// try finding
 			if err == nil {
-				got, found, err := eval.ListForCondition(conditionName)
+				got, found, err := eval.ListObjsForCondition(conditionName)
 				if mock.isErr && err == nil {
 					t.Fatalf("Expected error got none")
 				}
@@ -601,13 +603,13 @@ func TestSelectRunIsKindAndLbl(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "my-selection"
 			// initialize & run
-			ul := UnstructList(mock.objs)
+			ul := FromList(mock.objs)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyCondition().
 					IsKind(mock.kind).
 					HasLabel(mock.lblKey, mock.lblValue),
-			).Eval()
+			).EvalAllConditions()
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -616,7 +618,7 @@ func TestSelectRunIsKindAndLbl(t *testing.T) {
 			}
 			// try finding
 			if err == nil {
-				got, found, err := eval.ListForCondition(conditionName)
+				got, found, err := eval.ListObjsForCondition(conditionName)
 				if mock.isErr && err == nil {
 					t.Fatalf("Expected error got none")
 				}
@@ -629,12 +631,12 @@ func TestSelectRunIsKindAndLbl(t *testing.T) {
 				if !mock.isErr && mock.isFound != found {
 					t.Fatalf("Expected found %t got %t", mock.isFound, found)
 				}
-				if !mock.isErr && mock.failCount != len(eval.Rejects()) {
-					failMsgs, _ := eval.FailureReasons()
+				if !mock.isErr && mock.failCount != len(eval.ListAllConditionRejects()) {
+					failMsgs, _ := eval.ListAllConditionFailures()
 					t.Fatalf(
 						"Expected rejects %d got %d: Rejects [%#v]",
 						mock.failCount,
-						len(eval.Rejects()),
+						len(eval.ListAllConditionRejects()),
 						failMsgs,
 					)
 				}
@@ -761,13 +763,13 @@ func TestSelectRunIsAPIVersionAndAnn(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "my-selection"
 			// initialize & run
-			ul := UnstructList(mock.objs)
+			ul := FromList(mock.objs)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyCondition().
 					IsAPIVersion(mock.apiVersion).
 					HasAnn(mock.annKey, mock.annValue),
-			).Eval()
+			).EvalAllConditions()
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -776,7 +778,7 @@ func TestSelectRunIsAPIVersionAndAnn(t *testing.T) {
 			}
 			// try finding
 			if err == nil {
-				got, found, err := eval.ListForCondition(conditionName)
+				got, found, err := eval.ListObjsForCondition(conditionName)
 				if mock.isErr && err == nil {
 					t.Fatalf("Expected error got none")
 				}
@@ -789,12 +791,12 @@ func TestSelectRunIsAPIVersionAndAnn(t *testing.T) {
 				if !mock.isErr && mock.isFound != found {
 					t.Fatalf("Expected found %t got %t", mock.isFound, found)
 				}
-				if !mock.isErr && mock.failCount != len(eval.Rejects()) {
-					failMsgs, _ := eval.FailureReasons()
+				if !mock.isErr && mock.failCount != len(eval.ListAllConditionRejects()) {
+					failMsgs, _ := eval.ListAllConditionFailures()
 					t.Fatalf(
 						"Expected rejects %d got %d: Rejects [%#v]",
 						mock.failCount,
-						len(eval.Rejects()),
+						len(eval.ListAllConditionRejects()),
 						failMsgs,
 					)
 				}
@@ -899,10 +901,10 @@ func TestSelectRunCategorizeIsKindAndAPIVersion(t *testing.T) {
 			conditionOne := "apiversion-cond"
 			conditionTwo := "kind-cond"
 			// initialize & run
-			ul := UnstructList(mock.objs)
+			ul := FromList(mock.objs)
 			ul.WithCondition(conditionOne, NewLazyCondition().IsAPIVersion(mock.apiVersion))
 			ul.WithCondition(conditionTwo, NewLazyCondition().IsKind(mock.kind))
-			eval, err := ul.Eval()
+			eval, err := ul.EvalAllConditions()
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -912,7 +914,7 @@ func TestSelectRunCategorizeIsKindAndAPIVersion(t *testing.T) {
 			// try finding
 			if err == nil {
 				// first condition
-				got, found, err := eval.ListForCondition(conditionOne)
+				got, found, err := eval.ListObjsForCondition(conditionOne)
 				if mock.isErr && err == nil {
 					t.Fatalf("Cond-1: Expected error got none")
 				}
@@ -929,7 +931,7 @@ func TestSelectRunCategorizeIsKindAndAPIVersion(t *testing.T) {
 				}
 
 				// second condition
-				got, found, err = eval.ListForCondition(conditionTwo)
+				got, found, err = eval.ListObjsForCondition(conditionTwo)
 				if mock.isErr && err == nil {
 					t.Fatalf("Cond-2: Expected error got none")
 				}
@@ -1034,7 +1036,7 @@ func TestSelectRunConditionalOR(t *testing.T) {
 			andCondition := "and-cond"
 			orCondition := "or-cond"
 			// initialize & run
-			ul := UnstructList(mock.objs)
+			ul := FromList(mock.objs)
 			ul.WithCondition(
 				andCondition,
 				NewLazyCondition().
@@ -1047,7 +1049,7 @@ func TestSelectRunConditionalOR(t *testing.T) {
 					HasAnns(mock.anns).
 					HasLabels(mock.lbls),
 			)
-			eval, err := ul.Eval()
+			eval, err := ul.EvalAllConditions()
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -1057,7 +1059,7 @@ func TestSelectRunConditionalOR(t *testing.T) {
 			// try finding
 			if err == nil {
 				// first condition
-				got, found, err := eval.ListForCondition(andCondition)
+				got, found, err := eval.ListObjsForCondition(andCondition)
 				if mock.isErr && err == nil {
 					t.Fatalf("Cond-1: Expected error got none")
 				}
@@ -1074,7 +1076,7 @@ func TestSelectRunConditionalOR(t *testing.T) {
 				}
 
 				// second condition
-				got, found, err = eval.ListForCondition(orCondition)
+				got, found, err = eval.ListObjsForCondition(orCondition)
 				if mock.isErr && err == nil {
 					t.Fatalf("Cond-2: Expected error got none")
 				}

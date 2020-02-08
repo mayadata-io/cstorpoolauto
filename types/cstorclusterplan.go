@@ -80,17 +80,58 @@ type CStorClusterPlanStatusCondition struct {
 	LastObservedTime string         `json:"lastObservedTime"`
 }
 
-// MakeNodeSlice returns a slice of unstructured maps from
+// MakeListMapOfPlanNodes returns a slice of maps from
 // the given slice of CStorClusterPlanNode
-func MakeNodeSlice(given []CStorClusterPlanNode) []map[string]interface{} {
-	var nodeSlice []map[string]interface{}
+func MakeListMapOfPlanNodes(given []CStorClusterPlanNode) []map[string]interface{} {
+	var listMap []map[string]interface{}
 	for _, node := range given {
-		nodeSlice = append(nodeSlice,
+		listMap = append(listMap,
 			map[string]interface{}{
 				"name": node.Name,
 				"uid":  node.UID,
 			},
 		)
 	}
-	return nodeSlice
+	return listMap
+}
+
+// CStorClusterPlanNodeList is a typed representation of a list
+// of CStorClusterPlanNode(s)
+type CStorClusterPlanNodeList []CStorClusterPlanNode
+
+// CStorClusterPlanNodeNil represents a nil CStorClusterPlanNode
+var CStorClusterPlanNodeNil = CStorClusterPlanNode{}
+
+// FindByNameAndUID returns the node instance based on the
+// given name & uid
+func (l CStorClusterPlanNodeList) FindByNameAndUID(name string, uid types.UID) CStorClusterPlanNode {
+	for _, node := range l {
+		if node.Name == name && node.UID == uid {
+			return node
+		}
+	}
+	return CStorClusterPlanNodeNil
+}
+
+// Contains returns true if the given node name & uid
+// is available in this list
+func (l CStorClusterPlanNodeList) Contains(name string, uid types.UID) bool {
+	return l.FindByNameAndUID(name, uid) != CStorClusterPlanNodeNil
+}
+
+// ContainsAll returns true if the given CStorClusterPlanNode
+// list is available in this list
+func (l CStorClusterPlanNodeList) ContainsAll(given []CStorClusterPlanNode) bool {
+	if len(l) == 0 && len(l) == len(given) {
+		return true
+	}
+	if len(l) != len(given) {
+		return false
+	}
+	for _, planNode := range given {
+		if !l.Contains(planNode.Name, planNode.UID) {
+			return false
+		}
+	}
+	return true
 }
