@@ -32,9 +32,9 @@ func UniqueName(obj *unstructured.Unstructured) string {
 	return gvk + "/" + obj.GetNamespace() + "/" + obj.GetName()
 }
 
-// UnstructListing manages operations on one or more unstructured
+// List manages operations on one or more unstructured
 // instances
-type UnstructListing struct {
+type List struct {
 	objs []*unstructured.Unstructured
 
 	// conditionNames is the registry to hold evaluation
@@ -64,16 +64,17 @@ type UnstructListing struct {
 	err error
 }
 
-// Unstruct returns a new instance of UnstructListing
-func Unstruct(obj *unstructured.Unstructured) *UnstructListing {
-	return UnstructList(
+// AsList returns a new instance of UnstructListing
+func AsList(obj *unstructured.Unstructured) *List {
+	return FromList(
 		[]*unstructured.Unstructured{obj},
 	)
 }
 
-// UnstructList returns a new instance of UnstructListing
-func UnstructList(list []*unstructured.Unstructured) *UnstructListing {
-	s := &UnstructListing{
+// FromList returns a new instance of UnstructListing from the
+// list of provided unstructured instances
+func FromList(list []*unstructured.Unstructured) *List {
+	s := &List{
 		// init the maps
 		conditionNames:      map[string]bool{},
 		conditions:          map[string]*LazyCondition{},
@@ -95,17 +96,52 @@ func UnstructList(list []*unstructured.Unstructured) *UnstructListing {
 	return s
 }
 
+// Contains returns true if provided name && uid is
+// is available in this List.
+func (s *List) Contains(target *unstructured.Unstructured) bool {
+	if target == nil || s.err != nil {
+		return false
+	}
+	for _, available := range s.objs {
+		if available.GetName() == target.GetName() &&
+			available.GetUID() == target.GetUID() &&
+			available.GetNamespace() == target.GetNamespace() &&
+			available.GetAPIVersion() == target.GetAPIVersion() {
+			return true
+		}
+	}
+	return false
+}
+
+// ContainsAll returns true if each item in the provided targets
+// is available in this List.
+func (s *List) ContainsAll(targets []*unstructured.Unstructured) bool {
+	if s.err != nil || len(s.objs) != len(targets) {
+		return false
+	}
+	if len(targets) == 0 && len(s.objs) == len(targets) {
+		return true
+	}
+	for _, t := range targets {
+		if !s.Contains(t) {
+			// return false if any item does not match
+			return false
+		}
+	}
+	return true
+}
+
 // WithCondition adds a lazy condition
-func (s *UnstructListing) WithCondition(name string, condition *LazyCondition) *UnstructListing {
+func (s *List) WithCondition(name string, condition *LazyCondition) *List {
 	// store this condition against its name
 	s.conditionNames[name] = true
 	s.conditions[name] = condition
 	return s
 }
 
-// Eval evaluates all the conditions against each of
-// its objects
-func (s *UnstructListing) Eval() (*UnstructListing, error) {
+// EvalAllConditions evaluates all the conditions against each of
+// UnstructListing items
+func (s *List) EvalAllConditions() (*List, error) {
 	if s.err != nil {
 		// return as there were runtime errors
 		return nil, s.err
@@ -130,12 +166,12 @@ func (s *UnstructListing) Eval() (*UnstructListing, error) {
 	return s, nil
 }
 
-// GetForCondition returns the instances that have passed the named
+// GetObjForCondition returns the instances that have passed the named
 // evaluation
 //
 // NOTE:
 //	This should be invoked after invoking Eval
-func (s *UnstructListing) GetForCondition(condName string) (*unstructured.Unstructured, bool, error) {
+func (s *List) GetObjForCondition(condName string) (*unstructured.Unstructured, bool, error) {
 	if !s.isRun {
 		return nil,
 			false,
@@ -151,12 +187,12 @@ func (s *UnstructListing) GetForCondition(condName string) (*unstructured.Unstru
 	return matches[0], true, nil
 }
 
-// ListForCondition returns all the instances that have passed the
+// ListObjsForCondition returns all the instances that have passed the
 // named evaluation
 //
 // NOTE:
 //	This should be invoked after invoking Eval
-func (s *UnstructListing) ListForCondition(condName string) ([]*unstructured.Unstructured, bool, error) {
+func (s *List) ListObjsForCondition(condName string) ([]*unstructured.Unstructured, bool, error) {
 	if !s.isRun {
 		return nil,
 			false,
@@ -172,16 +208,16 @@ func (s *UnstructListing) ListForCondition(condName string) ([]*unstructured.Uns
 	return matches, true, nil
 }
 
-// FailureReasonsForObj return the reasons of evaluation failure if
-// any against the provided instance
+// ListConditionFailuresFor return the reasons of evaluation failure if
+// any w.r.t the provided instance
 //
 // NOTE:
-//	This should be invoked after invoking Run
-func (s *UnstructListing) FailureReasonsForObj(obj *unstructured.Unstructured) ([]error, bool, error) {
+//	This should be invoked after invoking Eval
+func (s *List) ListConditionFailuresFor(obj *unstructured.Unstructured) ([]error, bool, error) {
 	if !s.isRun {
 		return nil,
 			false,
-			errors.Errorf("Invalid failures call: Run must be invoked before this")
+			errors.Errorf("Invalid failures call: Eval must be invoked before this")
 	}
 	failures := s.failureReasons[UniqueName(obj)]
 	if len(failures) == 0 {
@@ -190,15 +226,15 @@ func (s *UnstructListing) FailureReasonsForObj(obj *unstructured.Unstructured) (
 	return failures, true, nil
 }
 
-// FailureReasons return the reasons of evaluation failure if
-// any against the provided instance
+// ListAllConditionFailures return the reasons of evaluation failure if
+// any
 //
 // NOTE:
-//	This should be invoked after invoking Run
-func (s *UnstructListing) FailureReasons() ([]error, error) {
+//	This should be invoked after invoking Eval
+func (s *List) ListAllConditionFailures() ([]error, error) {
 	if !s.isRun {
 		return nil,
-			errors.Errorf("Invalid failures call: Run must be invoked before this")
+			errors.Errorf("Invalid failures call: Eval must be invoked before this")
 	}
 	var allFailures []error
 	for _, failMsgs := range s.failureReasons {
@@ -207,9 +243,9 @@ func (s *UnstructListing) FailureReasons() ([]error, error) {
 	return allFailures, nil
 }
 
-// Rejects list all the instances that did not pass
+// ListAllConditionRejects list all the instances that did not pass
 // any of the conditions
-func (s *UnstructListing) Rejects() []*unstructured.Unstructured {
+func (s *List) ListAllConditionRejects() []*unstructured.Unstructured {
 	var rejects []*unstructured.Unstructured
 	for _, obj := range s.objs {
 		if !s.successfulInstances[UniqueName(obj)] {

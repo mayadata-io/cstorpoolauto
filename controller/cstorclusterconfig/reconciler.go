@@ -324,11 +324,10 @@ func (r *Reconciler) getDesiredClusterPlan(
 	plan.SetUnstructuredContent(
 		map[string]interface{}{
 			"spec": map[string]interface{}{
-				"nodes": types.MakeNodeSlice(desiredNodes),
+				"nodes": types.MakeListMapOfPlanNodes(desiredNodes),
 			},
 		},
 	)
-
 	plan.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   types.GroupDAOMayaDataIO,
 		Version: types.VersionV1Alpha1,
@@ -427,7 +426,7 @@ func (r *Reconciler) setMinPoolCountIfNotSet() error {
 	// to differentiate between a value that is not set vs.
 	// value set to 0
 	availableNodeCount := r.NodePlanner.GetAllNodeCount()
-	eligibleNodeCount, err := r.NodePlanner.GetAllowedNodeCount()
+	eligibleNodeCount, err := r.NodePlanner.GetAllowedNodeCountOrCached()
 	if err != nil {
 		return err
 	}

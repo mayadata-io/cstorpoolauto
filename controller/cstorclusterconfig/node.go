@@ -107,26 +107,39 @@ func (l NodeList) FindByNameAndUID(name string, uid k8stypes.UID) *unstructured.
 	return nil
 }
 
+// Contains returns true if the given node name & uid
+// is available in this list
+func (l NodeList) Contains(name string, uid k8stypes.UID) bool {
+	return l.FindByNameAndUID(name, uid) != nil
+}
+
 // RemoveRecentByCountFromPlannedNodes removes the newly created
 // nodes based on the given count from the given list
+//
+// NOTE:
+//	This logic returns older nodes by removing the recently created
+// nodes. The number of nodes that are removed is based on the
+// given count
 func (l NodeList) RemoveRecentByCountFromPlannedNodes(
-	count int64, given []types.CStorClusterPlanNode,
+	removeCount int64, given []types.CStorClusterPlanNode,
 ) ([]types.CStorClusterPlanNode, error) {
 	var plannedNodes []*unstructured.Unstructured
+	// convert the given nodes to list of unstructured instances
 	for _, node := range given {
 		uNode := l.FindByNameAndUID(node.Name, node.UID)
 		if uNode == nil {
 			return nil, errors.Errorf(
-				"Can't remove node %s %s: Node not found", node.Name, node.UID,
+				"Can't remove node %q: Node not found: UID %q", node.Name, node.UID,
 			)
 		}
 		plannedNodes = append(plannedNodes, uNode)
 	}
+	actualCount := int64(len(plannedNodes))
 	sort.Sort(ByCreationTime(plannedNodes))
-	// remove the recently created ones
-	// remove based on the given count
+	// remove the recently created ones i.e newest nodes based on the
+	// removal count
 	var updatedList []*unstructured.Unstructured
-	newList := NodeList(append(updatedList, plannedNodes[count:]...))
+	newList := NodeList(append(updatedList, plannedNodes[:actualCount-removeCount]...))
 	return newList.AsCStorClusterPlanNodes(), nil
 }
 
@@ -134,31 +147,34 @@ func (l NodeList) RemoveRecentByCountFromPlannedNodes(
 // as per the given count & are not part of the provided
 // nodes
 func (l NodeList) PickByCountAndNotInPlannedNodes(
-	count int64, exclude []types.CStorClusterPlanNode,
+	desiredCount int64, exclude []types.CStorClusterPlanNode,
 ) ([]types.CStorClusterPlanNode, error) {
 	var result []types.CStorClusterPlanNode
 	var fillCount int64
-	for _, excludeNode := range exclude {
-		for _, availableNode := range l {
-			if excludeNode.Name != availableNode.GetName() ||
-				excludeNode.UID != availableNode.GetUID() {
-				// no match implies this node is eligible to be included
-				result = append(result,
-					types.CStorClusterPlanNode{
-						Name: availableNode.GetName(),
-						UID:  availableNode.GetUID(),
-					},
-				)
-				fillCount++
-				if fillCount == count {
-					// can return here since we have required
-					// number of nodes
-					return result, nil
-				}
-			}
+	if desiredCount == 0 {
+		return result, nil
+	}
+	excludeList := types.CStorClusterPlanNodeList(exclude)
+	for _, availableNode := range l {
+		if excludeList.Contains(availableNode.GetName(), availableNode.GetUID()) {
+			// do not include this node
+			continue
+		}
+		// no match implies this node is eligible to be included
+		result = append(result,
+			types.CStorClusterPlanNode{
+				Name: availableNode.GetName(),
+				UID:  availableNode.GetUID(),
+			},
+		)
+		fillCount++
+		if fillCount == desiredCount {
+			// can return here since we have required number of nodes
+			return result, nil
 		}
 	}
-	return nil, errors.Errorf("Can't find eligible nodes: Want %d Got %d", count, fillCount)
+	return nil,
+		errors.Errorf("Can't find eligible nodes: Want %d Got %d", desiredCount, fillCount)
 }
 
 // PickByCountAndIncludeAllPlannedNodes returns a list of nodes
@@ -196,17 +212,6 @@ func (l NodeList) PickByCountAndIncludeAllPlannedNodes(
 		return nil, err
 	}
 	return append(finalNodes, otherNodes...), nil
-}
-
-// HasNameAndUID returns true if this node list has the given
-// name as well as uid
-func (l NodeList) HasNameAndUID(name string, uid k8stypes.UID) bool {
-	for _, node := range l {
-		if node.GetName() == name && node.GetUID() == uid {
-			return true
-		}
-	}
-	return false
 }
 
 // AsCStorClusterPlanNodes tranforms itself as a list of
@@ -250,9 +255,12 @@ type NodePlannerConfig struct {
 // GetAllNodes returns the nodes from the list of resources
 func (s *NodePlanner) GetAllNodes() []*unstructured.Unstructured {
 	var nodes []*unstructured.Unstructured
-	for _, attachment := range s.Resources {
-		if attachment.GetKind() == string(types.KindNode) {
-			nodes = append(nodes, attachment)
+	for _, res := range s.Resources {
+		if res == nil {
+			continue
+		}
+		if res.GetKind() == string(types.KindNode) {
+			nodes = append(nodes, res)
 		}
 	}
 	return nodes
@@ -309,9 +317,9 @@ func (s *NodePlanner) GetAllowedNodesOrCached() ([]*unstructured.Unstructured, e
 	return s.GetAllowedNodes()
 }
 
-// GetAllowedNodeCount gets the allowed nodes based on
-// node selector terms
-func (s *NodePlanner) GetAllowedNodeCount() (int64, error) {
+// GetAllowedNodeCountOrCached gets the allowed node count
+// based on node selector terms
+func (s *NodePlanner) GetAllowedNodeCountOrCached() (int64, error) {
 	if s.getAllowedNodeCountFn != nil {
 		return s.getAllowedNodeCountFn()
 	}
@@ -332,7 +340,8 @@ func (s *NodePlanner) Plan(conf NodePlannerConfig) ([]types.CStorClusterPlanNode
 }
 
 // plan runs through node planner config to determine
-// the latest desired nodes that should form the CStorPoolCluster
+// the latest desired nodes that should form the
+// CStorPoolCluster
 func (s *NodePlanner) plan(conf NodePlannerConfig) ([]types.CStorClusterPlanNode, error) {
 	allowedNodes, err := s.GetAllowedNodesOrCached()
 	if err != nil {
@@ -350,7 +359,7 @@ func (s *NodePlanner) plan(conf NodePlannerConfig) ([]types.CStorClusterPlanNode
 	var includes []types.CStorClusterPlanNode
 	var includeCount int64
 	for _, observedNode := range conf.ObservedNodes {
-		if allowedNodeList.HasNameAndUID(observedNode.Name, observedNode.UID) {
+		if allowedNodeList.Contains(observedNode.Name, observedNode.UID) {
 			// observed node is still eligible
 			// include this once again to make the cluster re-building
 			// less disruptive; its best to avoid cluster rebuild if its
@@ -379,10 +388,10 @@ func (s *NodePlanner) plan(conf NodePlannerConfig) ([]types.CStorClusterPlanNode
 			includes,
 		)
 	}
-	// At this point, we need more nodes that what we
-	// have. We shall include all the previous nodes (due to
-	// previous reconciliations) and add new nodes to satisfy
-	// the current desired plan
+	// At this point, we need more nodes than what we have. We
+	// shall include all the observed nodes (i.e. those that
+	// were considered during previous reconciliations) and add
+	// new nodes to satisfy the current desired plan.
 	//
 	// NOTE:
 	//	This logic ensures the total desired nodes is exactly
