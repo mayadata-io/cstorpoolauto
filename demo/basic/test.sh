@@ -40,7 +40,7 @@ echo -e "\n++ Installing cstorpoolauto operator"
 kubectl apply -f ../../deploy/namespace.yaml
 kubectl apply -f ../../deploy/crd.yaml
 kubectl apply -f ../../deploy/rbac.yaml
-kubectl apply configmap config-test -n openebs --from-file=../../deploy/config.yaml
+kubectl create configmap config-test -n openebs --from-file="../../deploy/config.yaml"
 kubectl apply -f ../../deploy/operator.yaml
 echo -e "\n++ Installed cstorpoolauto operator successfully"
 
