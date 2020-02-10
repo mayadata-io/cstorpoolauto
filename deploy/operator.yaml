@@ -26,7 +26,14 @@ spec:
         args:
         - --logtostderr
         - --run-as-local
-        - -v=4
+        - -v=5
         - --discovery-interval=40s
         - --cache-flush-interval=240s
+        volumeMounts:
+        - name: config
+          mountPath: /etc/config/metac
+      volumes:
+      - name: config
+        configMap:
+          name: config-test
 ---

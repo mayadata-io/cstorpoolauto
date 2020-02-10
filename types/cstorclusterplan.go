@@ -82,13 +82,13 @@ type CStorClusterPlanStatusCondition struct {
 
 // MakeListMapOfPlanNodes returns a slice of maps from
 // the given slice of CStorClusterPlanNode
-func MakeListMapOfPlanNodes(given []CStorClusterPlanNode) []map[string]interface{} {
-	var listMap []map[string]interface{}
+func MakeListMapOfPlanNodes(given []CStorClusterPlanNode) []interface{} {
+	var listMap []interface{}
 	for _, node := range given {
 		listMap = append(listMap,
 			map[string]interface{}{
 				"name": node.Name,
-				"uid":  node.UID,
+				"uid":  string(node.UID),
 			},
 		)
 	}
