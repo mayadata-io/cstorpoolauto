@@ -329,8 +329,8 @@ func (r *Reconciler) getDesiredClusterPlan(
 		},
 	)
 	plan.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   types.GroupDAOMayaDataIO,
-		Version: types.VersionV1Alpha1,
+		Group:   string(types.GroupDAOMayaDataIO),
+		Version: string(types.VersionV1Alpha1),
 		Kind:    string(types.KindCStorClusterPlan),
 	})
 	// name & namespace are same as CStorClusterConfig
@@ -384,14 +384,14 @@ func (r *Reconciler) getDesiredClusterConfig() *unstructured.Unstructured {
 					"minCount":    r.minDiskCount,
 				},
 				"poolConfig": map[string]interface{}{
-					"raidType": r.poolRAIDType,
+					"raidType": string(r.poolRAIDType),
 				},
 			},
 		},
 	)
 	config.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   types.GroupDAOMayaDataIO,
-		Version: types.VersionV1Alpha1,
+		Group:   string(types.GroupDAOMayaDataIO),
+		Version: string(types.VersionV1Alpha1),
 		Kind:    string(types.KindCStorClusterConfig),
 	})
 	// name & namespace are same as CStorClusterConfig

@@ -17,13 +17,18 @@ limitations under the License.
 package cstorclusterconfig
 
 import (
+	"reflect"
 	"testing"
 
 	"mayadata.io/cstorpoolauto/types"
 
+	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/json"
+	"openebs.io/metac/controller/common"
+	"openebs.io/metac/dynamic/apply"
 )
 
 func TestReconcilerSetMinPoolCountIfNotSet(t *testing.T) {
@@ -1293,6 +1298,55 @@ func TestReconcilerTestSyncClusterPlan(t *testing.T) {
 		})
 	}
 }
+func TestReconcilerGetDesiredClusterConfig(t *testing.T) {
+	var tests = map[string]struct {
+		clusterConfig *types.CStorClusterConfig
+		expectConfig  *unstructured.Unstructured
+	}{
+		"simple cluster config": {
+			clusterConfig: &types.CStorClusterConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test",
+				},
+			},
+			expectConfig: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind":       string(types.KindCStorClusterConfig),
+					"apiVersion": string(types.APIVersionDAOMayaDataV1Alpha1),
+					"metadata": map[string]interface{}{
+						"name":      "test",
+						"namespace": "default",
+					},
+					"spec": map[string]interface{}{
+						"minPoolCount": int64(0),
+						"maxPoolCount": int64(0),
+						"diskConfig": map[string]interface{}{
+							"minCapacity": int64(0),
+							"minCount":    int64(0),
+						},
+						"poolConfig": map[string]interface{}{
+							"raidType": "",
+						},
+					},
+				},
+			},
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			r := &Reconciler{
+				ClusterConfig: mock.clusterConfig,
+			}
+			got := r.getDesiredClusterConfig()
+			if !reflect.DeepEqual(got, mock.expectConfig) {
+				t.Fatalf("Expected no diff got \n%s", cmp.Diff(got, mock.expectConfig))
+			}
+		})
+	}
+}
 
 func TestReconcilerGetDesiredClusterPlan(t *testing.T) {
 	var tests = map[string]struct {
@@ -1304,13 +1358,59 @@ func TestReconcilerGetDesiredClusterPlan(t *testing.T) {
 			ClusterConfig: &types.CStorClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
+					Name:      "test",
+					UID:       "test-101",
 				},
 			},
 			expectPlan: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"apiVersion": "dao.mayadata.io/v1alpha1",
+					"kind":       string(types.KindCStorClusterPlan),
 					"metadata": map[string]interface{}{
 						"namespace": "default",
+						"name":      "test",
+						"annotations": map[string]interface{}{
+							string(types.AnnKeyCStorClusterConfigUID): "test-101",
+						},
+					},
+					"spec": map[string]interface{}{
+						"nodes": []interface{}(nil),
+					},
+				},
+			},
+		},
+		"desired node count = 1": {
+			ClusterConfig: &types.CStorClusterConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test",
+					UID:       "test-101",
+				},
+			},
+			desiredNodes: []types.CStorClusterPlanNode{
+				types.CStorClusterPlanNode{
+					Name: "node-101",
+					UID:  "node-101",
+				},
+			},
+			expectPlan: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "dao.mayadata.io/v1alpha1",
+					"kind":       string(types.KindCStorClusterPlan),
+					"metadata": map[string]interface{}{
+						"namespace": "default",
+						"name":      "test",
+						"annotations": map[string]interface{}{
+							string(types.AnnKeyCStorClusterConfigUID): "test-101",
+						},
+					},
+					"spec": map[string]interface{}{
+						"nodes": []interface{}{
+							map[string]interface{}{
+								"name": "node-101",
+								"uid":  "node-101",
+							},
+						},
 					},
 				},
 			},
@@ -1324,17 +1424,8 @@ func TestReconcilerGetDesiredClusterPlan(t *testing.T) {
 				ClusterConfig: mock.ClusterConfig,
 			}
 			got := r.getDesiredClusterPlan(mock.desiredNodes)
-			if got.GetAPIVersion() != mock.expectPlan.GetAPIVersion() {
-				t.Fatalf(
-					"Expected APIVersion %s got %s",
-					got.GetAPIVersion(), mock.expectPlan.GetAPIVersion(),
-				)
-			}
-			if got.GetNamespace() != mock.expectPlan.GetNamespace() {
-				t.Fatalf(
-					"Expected Namespace %s got %s",
-					got.GetNamespace(), mock.expectPlan.GetNamespace(),
-				)
+			if !reflect.DeepEqual(got, mock.expectPlan) {
+				t.Fatalf("Expected no diff got \n%s", cmp.Diff(got, mock.expectPlan))
 			}
 		})
 	}
@@ -1446,6 +1537,279 @@ func TestIsExternalDiskConfig(t *testing.T) {
 			got := r.isExternalDiskConfig()
 			if got != mock.expectExternal {
 				t.Fatalf("Expected external %t got %t", mock.expectExternal, got)
+			}
+		})
+	}
+}
+
+// TestMetacMergeCStorClusterPlan is a unit test that takes in real world
+// inputs & verifies if that works or not
+func TestMetacMergeCStorClusterPlan(t *testing.T) {
+	var tests = map[string]struct {
+		observed    string
+		lastApplied string
+		desired     string
+		want        string
+	}{
+		"cstorclusterplan whose observed == lastapplied == desired": {
+			observed: `{
+				"apiVersion": "dao.mayadata.io/v1alpha1",
+				"kind": "CStorClusterPlan",
+				"metadata": {
+				  "annotations": {
+					"d28cba04-4bc0-11ea-a70d-42010a800115/gctl-last-applied": "{\"apiVersion\":\"dao.mayadata.io/v1alpha1\",\"kind\":\"CStorClusterPlan\",\"metadata\":{\"annotations\":{\"dao.mayadata.io/cstorclusterconfig-uid\":\"d28cba04-4bc0-11ea-a70d-42010a800115\"},\"name\":\"my-cstor-cluster\",\"namespace\":\"openebs\"},\"spec\":{\"nodes\":[{\"name\":\"gke-amitd-dao-d-default-pool-fcc50975-wt3x\",\"uid\":\"bb3318c7-1b11-11ea-a90b-42010a800016\"},{\"name\":\"gke-amitd-dao-d-default-pool-fcc50975-blz8\",\"uid\":\"bb3c94a2-1b11-11ea-a90b-42010a800016\"},{\"name\":\"gke-amitd-dao-d-default-pool-fcc50975-fvsb\",\"uid\":\"ba217ce0-1b11-11ea-a90b-42010a800016\"}]}}",
+					"dao.mayadata.io/cstorclusterconfig-uid": "d28cba04-4bc0-11ea-a70d-42010a800115",
+					"metac.openebs.io/created-due-to-watch": "d28cba04-4bc0-11ea-a70d-42010a800115"
+				  },
+				  "creationTimestamp": "2020-02-10T04:50:12Z",
+				  "generation": 1,
+				  "name": "my-cstor-cluster",
+				  "namespace": "openebs",
+				  "resourceVersion": "26400255",
+				  "selfLink": "/apis/dao.mayadata.io/v1alpha1/namespaces/openebs/cstorclusterplans/my-cstor-cluster",
+				  "uid": "d28f9d03-4bc0-11ea-a70d-42010a800115"
+				},
+				"spec": {
+				  "nodes": [
+					{
+					  "name": "gke-amitd-dao-d-default-pool-fcc50975-wt3x",
+					  "uid": "bb3318c7-1b11-11ea-a90b-42010a800016"
+					},
+					{
+					  "name": "gke-amitd-dao-d-default-pool-fcc50975-blz8",
+					  "uid": "bb3c94a2-1b11-11ea-a90b-42010a800016"
+					},
+					{
+					  "name": "gke-amitd-dao-d-default-pool-fcc50975-fvsb",
+					  "uid": "ba217ce0-1b11-11ea-a90b-42010a800016"
+					}
+				  ]
+				}
+			  }`,
+			lastApplied: `{
+				"apiVersion":"dao.mayadata.io/v1alpha1",
+				"kind":"CStorClusterPlan",
+				"metadata":{
+					"annotations":{
+						"dao.mayadata.io/cstorclusterconfig-uid":"d28cba04-4bc0-11ea-a70d-42010a800115"
+					},
+					"name":"my-cstor-cluster",
+					"namespace":"openebs"
+				},
+				"spec":{
+					"nodes":[{
+						"name":"gke-amitd-dao-d-default-pool-fcc50975-wt3x",
+						"uid":"bb3318c7-1b11-11ea-a90b-42010a800016"
+					},
+					{
+						"name":"gke-amitd-dao-d-default-pool-fcc50975-blz8",
+						"uid":"bb3c94a2-1b11-11ea-a90b-42010a800016"
+					},
+					{
+						"name":"gke-amitd-dao-d-default-pool-fcc50975-fvsb",
+						"uid":"ba217ce0-1b11-11ea-a90b-42010a800016"
+					}]
+				}
+			}`,
+			desired: `{
+				"apiVersion":"dao.mayadata.io/v1alpha1",
+				"kind":"CStorClusterPlan",
+				"metadata":{
+					"annotations":{
+						"dao.mayadata.io/cstorclusterconfig-uid":"d28cba04-4bc0-11ea-a70d-42010a800115"
+					},
+					"name":"my-cstor-cluster",
+					"namespace":"openebs"
+				},
+				"spec":{
+					"nodes":[{
+						"name":"gke-amitd-dao-d-default-pool-fcc50975-wt3x",
+						"uid":"bb3318c7-1b11-11ea-a90b-42010a800016"
+					},
+					{
+						"name":"gke-amitd-dao-d-default-pool-fcc50975-blz8",
+						"uid":"bb3c94a2-1b11-11ea-a90b-42010a800016"
+					},
+					{
+						"name":"gke-amitd-dao-d-default-pool-fcc50975-fvsb",
+						"uid":"ba217ce0-1b11-11ea-a90b-42010a800016"
+					}]
+				}
+			}`,
+			want: `{
+				"apiVersion": "dao.mayadata.io/v1alpha1",
+				"kind": "CStorClusterPlan",
+				"metadata": {
+				  "annotations": {
+					"d28cba04-4bc0-11ea-a70d-42010a800115/gctl-last-applied": "{\"apiVersion\":\"dao.mayadata.io/v1alpha1\",\"kind\":\"CStorClusterPlan\",\"metadata\":{\"annotations\":{\"dao.mayadata.io/cstorclusterconfig-uid\":\"d28cba04-4bc0-11ea-a70d-42010a800115\"},\"name\":\"my-cstor-cluster\",\"namespace\":\"openebs\"},\"spec\":{\"nodes\":[{\"name\":\"gke-amitd-dao-d-default-pool-fcc50975-wt3x\",\"uid\":\"bb3318c7-1b11-11ea-a90b-42010a800016\"},{\"name\":\"gke-amitd-dao-d-default-pool-fcc50975-blz8\",\"uid\":\"bb3c94a2-1b11-11ea-a90b-42010a800016\"},{\"name\":\"gke-amitd-dao-d-default-pool-fcc50975-fvsb\",\"uid\":\"ba217ce0-1b11-11ea-a90b-42010a800016\"}]}}",
+					"dao.mayadata.io/cstorclusterconfig-uid": "d28cba04-4bc0-11ea-a70d-42010a800115",
+					"metac.openebs.io/created-due-to-watch": "d28cba04-4bc0-11ea-a70d-42010a800115"
+				  },
+				  "creationTimestamp": "2020-02-10T04:50:12Z",
+				  "generation": 1,
+				  "name": "my-cstor-cluster",
+				  "namespace": "openebs",
+				  "resourceVersion": "26400255",
+				  "selfLink": "/apis/dao.mayadata.io/v1alpha1/namespaces/openebs/cstorclusterplans/my-cstor-cluster",
+				  "uid": "d28f9d03-4bc0-11ea-a70d-42010a800115"
+				},
+				"spec": {
+				  "nodes": [
+					{
+					  "name": "gke-amitd-dao-d-default-pool-fcc50975-wt3x",
+					  "uid": "bb3318c7-1b11-11ea-a90b-42010a800016"
+					},
+					{
+					  "name": "gke-amitd-dao-d-default-pool-fcc50975-blz8",
+					  "uid": "bb3c94a2-1b11-11ea-a90b-42010a800016"
+					},
+					{
+					  "name": "gke-amitd-dao-d-default-pool-fcc50975-fvsb",
+					  "uid": "ba217ce0-1b11-11ea-a90b-42010a800016"
+					}
+				  ]
+				}
+			  }`,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			observed := make(map[string]interface{})
+			if err := json.Unmarshal([]byte(mock.observed), &observed); err != nil {
+				t.Fatalf("Can't unmarshal observed: %v", err)
+			}
+			lastApplied := make(map[string]interface{})
+			if err := json.Unmarshal([]byte(mock.lastApplied), &lastApplied); err != nil {
+				t.Fatalf("Can't unmarshal tc.lastApplied: %v", err)
+			}
+			desired := make(map[string]interface{})
+			if err := json.Unmarshal([]byte(mock.desired), &desired); err != nil {
+				t.Fatalf("Can't unmarshal desired: %v", err)
+			}
+			want := make(map[string]interface{})
+			if err := json.Unmarshal([]byte(mock.want), &want); err != nil {
+				t.Fatalf("Can't unmarshal want: %v", err)
+			}
+			got, err := apply.Merge(observed, lastApplied, desired)
+			if err != nil {
+				t.Fatalf("Merge error: %v", err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("Got: %v\nWant: %v\nDiff: %s",
+					got, want, cmp.Diff(got, want),
+				)
+			}
+		})
+	}
+}
+
+// TestMetacApplyCStorClusterPlan is a unit test that takes in real world
+// inputs & verifies if that works or not
+func TestMetacApplyCStorClusterPlan(t *testing.T) {
+	var tests = map[string]struct {
+		observed       *unstructured.Unstructured
+		lastAppliedKey string
+		desired        *unstructured.Unstructured
+		isDiff         bool
+	}{
+		"cstorclusterplan whose observed == lastapplied == desired": {
+			observed: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "dao.mayadata.io/v1alpha1",
+					"kind":       "CStorClusterPlan",
+					"metadata": map[string]interface{}{
+						"annotations": map[string]interface{}{
+							"d28cba04-4bc0-11ea-a70d-42010a800115/gctl-last-applied": "{\"apiVersion\":\"dao.mayadata.io/v1alpha1\",\"kind\":\"CStorClusterPlan\",\"metadata\":{\"annotations\":{\"dao.mayadata.io/cstorclusterconfig-uid\":\"d28cba04-4bc0-11ea-a70d-42010a800115\"},\"name\":\"my-cstor-cluster\",\"namespace\":\"openebs\"},\"spec\":{\"nodes\":[{\"name\":\"gke-amitd-dao-d-default-pool-fcc50975-wt3x\",\"uid\":\"bb3318c7-1b11-11ea-a90b-42010a800016\"},{\"name\":\"gke-amitd-dao-d-default-pool-fcc50975-blz8\",\"uid\":\"bb3c94a2-1b11-11ea-a90b-42010a800016\"},{\"name\":\"gke-amitd-dao-d-default-pool-fcc50975-fvsb\",\"uid\":\"ba217ce0-1b11-11ea-a90b-42010a800016\"}]}}",
+							"dao.mayadata.io/cstorclusterconfig-uid":                 "d28cba04-4bc0-11ea-a70d-42010a800115",
+							"metac.openebs.io/created-due-to-watch":                  "d28cba04-4bc0-11ea-a70d-42010a800115",
+						},
+						"creationTimestamp": "2020-02-10T04:50:12Z",
+						"generation":        "1",
+						"name":              "my-cstor-cluster",
+						"namespace":         "openebs",
+						"resourceVersion":   "26400255",
+						"selfLink":          "/apis/dao.mayadata.io/v1alpha1/namespaces/openebs/cstorclusterplans/my-cstor-cluster",
+						"uid":               "d28f9d03-4bc0-11ea-a70d-42010a800115",
+					},
+					"spec": map[string]interface{}{
+						"nodes": []interface{}{
+							map[string]interface{}{
+								"name": "gke-amitd-dao-d-default-pool-fcc50975-wt3x",
+								"uid":  "bb3318c7-1b11-11ea-a90b-42010a800016",
+							},
+							map[string]interface{}{
+								"name": "gke-amitd-dao-d-default-pool-fcc50975-blz8",
+								"uid":  "bb3c94a2-1b11-11ea-a90b-42010a800016",
+							},
+							map[string]interface{}{
+								"name": "gke-amitd-dao-d-default-pool-fcc50975-fvsb",
+								"uid":  "ba217ce0-1b11-11ea-a90b-42010a800016",
+							},
+						},
+					},
+				},
+			},
+			lastAppliedKey: "d28cba04-4bc0-11ea-a70d-42010a800115/gctl-last-applied",
+			desired: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "dao.mayadata.io/v1alpha1",
+					"kind":       "CStorClusterPlan",
+					"metadata": map[string]interface{}{
+						"annotations": map[string]interface{}{
+							"dao.mayadata.io/cstorclusterconfig-uid": "d28cba04-4bc0-11ea-a70d-42010a800115",
+						},
+						"name":      "my-cstor-cluster",
+						"namespace": "openebs",
+					},
+					"spec": map[string]interface{}{
+						"nodes": []interface{}{
+							map[string]interface{}{
+								"name": "gke-amitd-dao-d-default-pool-fcc50975-wt3x",
+								"uid":  "bb3318c7-1b11-11ea-a90b-42010a800016",
+							},
+							map[string]interface{}{
+								"name": "gke-amitd-dao-d-default-pool-fcc50975-blz8",
+								"uid":  "bb3c94a2-1b11-11ea-a90b-42010a800016",
+							},
+							map[string]interface{}{
+								"name": "gke-amitd-dao-d-default-pool-fcc50975-fvsb",
+								"uid":  "ba217ce0-1b11-11ea-a90b-42010a800016",
+							},
+						},
+					},
+				},
+			},
+			isDiff: false,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			// check if unstructured instance are proper
+			_, err := mock.desired.MarshalJSON()
+			if err != nil {
+				t.Fatalf("Can't marshal desired: %+v", err)
+			}
+			_, err = mock.observed.MarshalJSON()
+			if err != nil {
+				t.Fatalf("Can't marshal observed: %+v", err)
+			}
+
+			// actual test starts
+			a := common.NewApplyFromAnnKey(mock.lastAppliedKey)
+			merged, err := a.Merge(mock.observed, mock.desired)
+			if err != nil {
+				t.Fatalf("Can't merge: %+v", err)
+			}
+			isDiff, err := a.HasMergeDiff()
+			if err != nil {
+				t.Fatalf("Failed to check diff: %+v", err)
+			}
+			if isDiff {
+				t.Fatalf("Diff: %s", cmp.Diff(mock.observed, merged))
 			}
 		})
 	}
