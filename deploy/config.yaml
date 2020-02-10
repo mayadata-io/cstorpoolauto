@@ -1,8 +1,8 @@
 apiVersion: metac.openebs.io/v1alpha1
 kind: GenericController
 metadata:
-  name: sync-cstorclusterconfig
-  namespace: cstorpoolauto
+  name: sync-config
+  namespace: cspauto
 spec:
   updateAny: true
   watch:
@@ -23,3 +23,93 @@ spec:
     sync:
       inline:
         funcName: sync/cstorclusterconfig
+---
+apiVersion: metac.openebs.io/v1alpha1
+kind: GenericController
+metadata:
+  name: sync-plan
+  namespace: cspauto
+spec:
+  watch:
+    apiVersion: dao.mayadata.io/v1alpha1
+    resource: cstorclusterplans
+  attachments:
+  - apiVersion: dao.mayadata.io/v1alpha1
+    resource: cstorclusterstoragesets
+    updateStrategy:
+      method: InPlace
+  - apiVersion: dao.mayadata.io/v1alpha1
+    resource: cstorclusterconfigs
+  hooks:
+    sync:
+      inline:
+        funcName: sync/cstorclusterplan
+---
+apiVersion: metac.openebs.io/v1alpha1
+kind: GenericController
+metadata:
+  name: sync-storageset
+  namespace: cspauto
+spec:
+  watch:
+    apiVersion: dao.mayadata.io/v1alpha1
+    resource: cstorclusterstoragesets
+  attachments:
+  - apiVersion: dao.mayadata.io/v1alpha1
+    resource: storages
+    updateStrategy:
+      method: InPlace
+  hooks:
+    sync:
+      inline:
+        funcName: sync/cstorclusterstorageset
+---
+apiVersion: metac.openebs.io/v1alpha1
+kind: GenericController
+metadata:
+  name: sync-blockdevice
+  namespace: cspauto
+spec:
+  updateAny: true
+  watch:
+    apiVersion: dao.mayadata.io/v1alpha1
+    resource: storages
+  attachments:
+  - apiVersion: dao.mayadata.io/v1alpha1
+    resource: cstorclusterstoragesets
+  - apiVersion: openebs.io/v1alpha1
+    resource: blockdevices
+    updateStrategy:
+      method: InPlace
+  - apiVersion: v1
+    resource: persistentvolumeclaims
+  hooks:
+    sync:
+      inline:
+        funcName: sync/blockdevice
+---
+apiVersion: metac.openebs.io/v1alpha1
+kind: GenericController
+metadata:
+  name: sync-cspc
+  namespace: cspauto
+spec:
+  watch:
+    apiVersion: dao.mayadata.io/v1alpha1
+    resource: cstorclusterplans
+  attachments:
+  - apiVersion: openebs.io/v1alpha1
+    resource: cstorpoolclusters
+    updateStrategy:
+      method: InPlace
+  - apiVersion: openebs.io/v1alpha1
+    resource: blockdevices
+  - apiVersion: dao.mayadata.io/v1alpha1
+    resource: cstorclusterstoragesets
+  - apiVersion: dao.mayadata.io/v1alpha1
+    resource: cstorclusterconfigs
+  hooks:
+    sync:
+      inline:
+        funcName: sync/cstorpoolcluster
+---
