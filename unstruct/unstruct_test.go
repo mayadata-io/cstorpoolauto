@@ -110,7 +110,7 @@ func TestSelectUnstructAPIVersionANDLabels(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "apiversion-&-labels"
 			// initialize & run
-			ul := AsList(mock.obj)
+			ul := AsListing(mock.obj)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyCondition().
@@ -212,7 +212,7 @@ func TestSelectUnstructAPIVersionORKind(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "kind-or-apiversion"
 			// initialize & run
-			ul := AsList(mock.obj)
+			ul := AsListing(mock.obj)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyORCondition().
@@ -296,7 +296,7 @@ func TestSelectUnstructKindCondition(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "my-selection-kind"
 			// initialize & run
-			ul := AsList(mock.obj)
+			ul := AsListing(mock.obj)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyCondition().IsKind(mock.kind),
@@ -443,7 +443,7 @@ func TestSelectRunIsKind(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "my-selection-kind"
 			// initialize & run
-			ul := FromList(mock.objs)
+			ul := NewListing(mock.objs)
 			eval, err :=
 				ul.WithCondition(
 					conditionName, NewLazyCondition().IsKind(mock.kind),
@@ -603,7 +603,7 @@ func TestSelectRunIsKindAndLbl(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "my-selection"
 			// initialize & run
-			ul := FromList(mock.objs)
+			ul := NewListing(mock.objs)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyCondition().
@@ -763,7 +763,7 @@ func TestSelectRunIsAPIVersionAndAnn(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conditionName := "my-selection"
 			// initialize & run
-			ul := FromList(mock.objs)
+			ul := NewListing(mock.objs)
 			eval, err := ul.WithCondition(
 				conditionName,
 				NewLazyCondition().
@@ -901,7 +901,7 @@ func TestSelectRunCategorizeIsKindAndAPIVersion(t *testing.T) {
 			conditionOne := "apiversion-cond"
 			conditionTwo := "kind-cond"
 			// initialize & run
-			ul := FromList(mock.objs)
+			ul := NewListing(mock.objs)
 			ul.WithCondition(conditionOne, NewLazyCondition().IsAPIVersion(mock.apiVersion))
 			ul.WithCondition(conditionTwo, NewLazyCondition().IsKind(mock.kind))
 			eval, err := ul.EvalAllConditions()
@@ -1036,7 +1036,7 @@ func TestSelectRunConditionalOR(t *testing.T) {
 			andCondition := "and-cond"
 			orCondition := "or-cond"
 			// initialize & run
-			ul := FromList(mock.objs)
+			ul := NewListing(mock.objs)
 			ul.WithCondition(
 				andCondition,
 				NewLazyCondition().

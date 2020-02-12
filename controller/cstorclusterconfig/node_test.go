@@ -1761,7 +1761,7 @@ func TestNodePlannerGetAllNodes(t *testing.T) {
 			if len(got) != len(mock.want) {
 				t.Fatalf("Expected count %d got %d", len(mock.want), len(got))
 			}
-			if !unstruct.FromList(got).ContainsAll(mock.want) {
+			if !unstruct.NewListing(got).ContainsAll(mock.want) {
 				t.Fatalf(
 					"Expected no diff got \n%s", cmp.Diff(got, mock.want),
 				)
@@ -2308,7 +2308,7 @@ func TestNodePlannerGetAllowedNodes(t *testing.T) {
 			if mock.isErr {
 				return
 			}
-			if !unstruct.FromList(got).ContainsAll(mock.expect) {
+			if !unstruct.NewListing(got).ContainsAll(mock.expect) {
 				t.Fatalf("Expected no diff got \n%s", cmp.Diff(got, mock.expect))
 			}
 		})
@@ -2388,7 +2388,7 @@ func TestNodePlannerGetAllowedNodesOrCached(t *testing.T) {
 			if mock.isErr {
 				return
 			}
-			if !unstruct.FromList(got).ContainsAll(mock.expect) {
+			if !unstruct.NewListing(got).ContainsAll(mock.expect) {
 				t.Fatalf("Expected no diff got:\n%s", cmp.Diff(got, mock.expect))
 			}
 		})
