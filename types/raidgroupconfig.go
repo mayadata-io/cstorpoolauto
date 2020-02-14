@@ -70,8 +70,8 @@ func (rgc *RaidGroupConfig) Validate() error {
 	case PoolRAIDTypeMirror:
 		{
 			if rgc.GroupDeviceCount != 2 {
-				return errors.Errorf("Invalid device count. Got raid type: %s device count: %d. Expected device count is 2.",
-					rgc.Type, rgc.GroupDeviceCount)
+				return errors.Errorf("Invalid device count %d .for RAID type %q, expected 2",
+					rgc.GroupDeviceCount, rgc.Type)
 			}
 		}
 	// For stripe pool device count in one vdev is n. Where n > 0
@@ -86,8 +86,8 @@ func (rgc *RaidGroupConfig) Validate() error {
 			for count != 1 {
 				r := count % 2
 				if r != 0 {
-					return errors.Errorf("Invalid device count. Got raid type: %s device count: %d. Expected device count is 2^n + 1.",
-						rgc.Type, rgc.GroupDeviceCount)
+					return errors.Errorf("Invalid device count %d .for RAID type %q, expected 2^n + 1.",
+						rgc.GroupDeviceCount, rgc.Type)
 				}
 				count = count / 2
 			}
@@ -99,15 +99,16 @@ func (rgc *RaidGroupConfig) Validate() error {
 			for count != 1 {
 				r := count % 2
 				if r != 0 {
-					return errors.Errorf("Invalid device count. Got raid type: %s device count: %d. Expected device count is 2^n +2.",
-						rgc.Type, rgc.GroupDeviceCount)
+					return errors.Errorf("Invalid device count %d .for RAID type %q, expected 2^n + 2.",
+						rgc.GroupDeviceCount, rgc.Type)
 				}
 				count = count / 2
 			}
 		}
 	default:
 		{
-			return errors.Errorf("Invalid RAID type got %s. Supported RAID types: stripe, mirror, raidz and raidz2", rgc.Type)
+			return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q",
+				rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
 		}
 	}
 	return nil
