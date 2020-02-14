@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The MayaData Authors.
+Copyright 2020 The MayaData Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,13 +20,24 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"mayadata.io/cstorpoolauto/types"
 )
 
-func TestGetCapacity(t *testing.T) {
+func TestGetCapacityOrError(t *testing.T) {
 	var tests = map[string]struct {
 		src   unstructured.Unstructured
 		isErr bool
 	}{
+		"nil object": {
+			src: unstructured.Unstructured{
+				Object: nil,
+			},
+			isErr: true,
+		},
+		"empty object": {
+			src:   unstructured.Unstructured{},
+			isErr: true,
+		},
 		"kind mismatch error": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -38,7 +49,7 @@ func TestGetCapacity(t *testing.T) {
 		"not found error": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"kind": Kind,
+					"kind": string(types.KindBlockDevice),
 				},
 			},
 			isErr: true,
@@ -46,7 +57,7 @@ func TestGetCapacity(t *testing.T) {
 		"empty value error": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"kind": Kind,
+					"kind": string(types.KindBlockDevice),
 					"spec": map[string]interface{}{
 						"capacity": map[string]interface{}{
 							"storage": "",
@@ -59,7 +70,7 @@ func TestGetCapacity(t *testing.T) {
 		"type mismatch error": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"kind": Kind,
+					"kind": string(types.KindBlockDevice),
 					"spec": map[string]interface{}{
 						"capacity": map[string]interface{}{
 							"storage": 0,
@@ -72,7 +83,7 @@ func TestGetCapacity(t *testing.T) {
 		"invalid capacity error": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"kind": Kind,
+					"kind": string(types.KindBlockDevice),
 					"spec": map[string]interface{}{
 						"capacity": map[string]interface{}{
 							"storage": "10000A",
@@ -82,13 +93,26 @@ func TestGetCapacity(t *testing.T) {
 			},
 			isErr: true,
 		},
-		"valid object": {
+		"valid object-1": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"kind": Kind,
+					"kind": string(types.KindBlockDevice),
 					"spec": map[string]interface{}{
 						"capacity": map[string]interface{}{
 							"storage": "1000G",
+						},
+					},
+				},
+			},
+			isErr: false,
+		},
+		"valid object-2": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"capacity": map[string]interface{}{
+							"storage": "1000Gi",
 						},
 					},
 				},
@@ -100,12 +124,13 @@ func TestGetCapacity(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			_, err := GetCapacity(mock.src)
-			if err == nil && mock.isErr {
-				t.Fatal("Expected  error got nil")
+			_, err := GetCapacityOrError(mock.src)
+			if mock.isErr && err == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got [%+v]", err)
 			}
 		})
 	}
 }
-
-// TODO @shovan add testcase  for all functions in util once review is done
