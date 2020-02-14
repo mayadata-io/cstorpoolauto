@@ -51,7 +51,7 @@ func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCount() error {
 	}
 	dc, ok := RAIDTypeToDefaultMinDiskCount[rgc.Type]
 	if !ok {
-		return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q",
+		return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q.",
 			rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
 	}
 	rgc.GroupDeviceCount = dc
@@ -62,7 +62,7 @@ func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCount() error {
 func (rgc *RaidGroupConfig) Validate() error {
 	// If we got any -ve number or 0 then it an invalid device count.
 	if rgc.GroupDeviceCount <= 0 {
-		return errors.Errorf("Invalid device count %d for RAID type %q",
+		return errors.Errorf("Invalid device count %d for RAID type %q.",
 			rgc.GroupDeviceCount, rgc.Type)
 	}
 	switch rgc.Type {
@@ -70,7 +70,7 @@ func (rgc *RaidGroupConfig) Validate() error {
 	case PoolRAIDTypeMirror:
 		{
 			if rgc.GroupDeviceCount != 2 {
-				return errors.Errorf("Invalid device count %d .for RAID type %q, expected 2",
+				return errors.Errorf("Invalid device count %d for RAID type %q: Want 2.",
 					rgc.GroupDeviceCount, rgc.Type)
 			}
 		}
@@ -86,7 +86,7 @@ func (rgc *RaidGroupConfig) Validate() error {
 			for count != 1 {
 				r := count % 2
 				if r != 0 {
-					return errors.Errorf("Invalid device count %d .for RAID type %q, expected 2^n + 1.",
+					return errors.Errorf("Invalid device count %d for RAID type %q: Want 2^n + 1.",
 						rgc.GroupDeviceCount, rgc.Type)
 				}
 				count = count / 2
@@ -99,7 +99,7 @@ func (rgc *RaidGroupConfig) Validate() error {
 			for count != 1 {
 				r := count % 2
 				if r != 0 {
-					return errors.Errorf("Invalid device count %d .for RAID type %q, expected 2^n + 2.",
+					return errors.Errorf("Invalid device count %d for RAID type %q: Want 2^n + 2.",
 						rgc.GroupDeviceCount, rgc.Type)
 				}
 				count = count / 2
@@ -107,7 +107,7 @@ func (rgc *RaidGroupConfig) Validate() error {
 		}
 	default:
 		{
-			return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q",
+			return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q.",
 				rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
 		}
 	}
