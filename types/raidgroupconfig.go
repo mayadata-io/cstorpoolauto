@@ -51,7 +51,8 @@ func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCount() error {
 	}
 	dc, ok := RAIDTypeToDefaultMinDiskCount[rgc.Type]
 	if !ok {
-		return errors.Errorf("Invalid RAID type got %s. Supported RAID types: stripe, mirror, raidz and raidz2", rgc.Type)
+		return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q",
+			rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
 	}
 	rgc.GroupDeviceCount = dc
 	return nil
@@ -61,7 +62,8 @@ func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCount() error {
 func (rgc *RaidGroupConfig) Validate() error {
 	// If we got any -ve number or 0 then it an invalid device count.
 	if rgc.GroupDeviceCount <= 0 {
-		return errors.Errorf("Invalid device count. Got raid type: %s device count: %d", rgc.Type, rgc.GroupDeviceCount)
+		return errors.Errorf("Invalid device count %d for RAID type %q",
+			rgc.GroupDeviceCount, rgc.Type)
 	}
 	switch rgc.Type {
 	// For mirror pool device count in one vdev is 2
