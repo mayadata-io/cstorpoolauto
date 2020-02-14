@@ -50,17 +50,3 @@ type CStorPoolClusterRecommendationRequestSpec struct {
 	// if you are planing to use it in future
 	// ReadCacheConfig *RaidGroupConfig `json:"readCacheConfig"`
 }
-
-// RaidGroupConfig contains raid type and device(s)
-// count for a raid group
-type RaidGroupConfig struct {
-	// Type is the raid group type
-	// Supported values are : stripe, mirror, raidz and raidz2
-	Type string `json:"type"`
-	// GroupDeviceCount contains device count in a raid group
-	// -- for stripe DeviceCount = 1
-	// -- for mirror DeviceCount = 2
-	// -- for raidz DeviceCount = (2^n + 1) default is (2 + 1)
-	// -- for raidz2 DeviceCount = (2^n + 2) default is (4 + 2)
-	GroupDeviceCount int64 `json:"groupDeviceCount"`
-}
