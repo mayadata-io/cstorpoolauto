@@ -1,0 +1,14 @@
+name: Build image
+on: [push]
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-18.04
+    steps:
+
+    - name: Check out mayadata-io/cstorpoolauto repo
+      uses: actions/checkout@v2
+
+    - name: Build docker image
+      run: make image
