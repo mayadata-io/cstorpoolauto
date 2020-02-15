@@ -24,6 +24,62 @@ import (
 	"mayadata.io/cstorpoolauto/unstruct"
 )
 
+/*
+Find sample bd is here -
+
+```yaml
+apiVersion: openebs.io/v1alpha1
+kind: BlockDevice
+metadata:
+  creationTimestamp: "2019-06-21T16:08:03Z"
+  generation: 1
+  labels:
+    kubernetes.io/hostname: gke-maya-staging-clu-maya-default-sta-5eed5be5-8vtt
+    ndm.io/blockdevice-type: blockdevice
+    ndm.io/managed: "true"
+  name: blockdevice-06589a357bcab6605efcb6d8846872d6
+  namespace: openebs
+  resourceVersion: "263110765"
+  selfLink: /apis/openebs.io/v1alpha1/namespaces/openebs/blockdevices/blockdevice-06589a357bcab6605efcb6d8846872d6
+  uid: bf836c53-943e-11e9-8d30-42010a8000ec
+spec:
+  capacity:
+    logicalSectorSize: 512
+    physicalSectorSize: 0
+    storage: 107374182400
+  claimRef:
+    apiVersion: openebs.io/v1alpha1
+    kind: BlockDeviceClaim
+    name: bdc-1aa4462b-911c-11e9-8d30-42010a8000ec
+    namespace: openebs
+    resourceVersion: "114455755"
+    uid: 81922f58-9381-11e9-8d30-42010a8000ec
+  details:
+    compliance: SPC-4
+    deviceType: ""
+    firmwareRevision: ""
+    model: PersistentDisk
+    serial: mysql-pool1
+    vendor: Google
+  devlinks:
+  - kind: by-id
+    links:
+    - /dev/disk/by-id/scsi-0Google_PersistentDisk_mysql-pool1
+    - /dev/disk/by-id/google-mysql-pool1
+  - kind: by-path
+    links:
+    - /dev/disk/by-path/pci-0000:00:03.0-scsi-0:0:4:0
+  filesystem: {}
+  nodeAttributes:
+    nodeName: gke-maya-staging-clu-maya-default-sta-5eed5be5-8vtt
+  partitioned: "No"
+  path: /dev/sdc
+status:
+  claimState: Claimed
+  state: Active
+```
+*/
+
 // GetCapacityOrError returns capacity of a block device in resource.Quantity format
 // If value if not found or for an invalid capacity then it returns an error
 func GetCapacityOrError(obj unstructured.Unstructured) (resource.Quantity, error) {
