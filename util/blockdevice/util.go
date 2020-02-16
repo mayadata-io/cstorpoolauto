@@ -91,6 +91,30 @@ func GetCapacityOrError(obj unstructured.Unstructured) (resource.Quantity, error
 	return unstruct.GetInt64AsQuantityOrError(&obj, "spec", "capacity", "storage")
 }
 
+// GetLogicalSectorSizeOrError returns LogicalSectorSize of a block device in
+// resource.Quantity format If value if not found or for an invalid capacity
+// then it returns an error
+func GetLogicalSectorSizeOrError(obj unstructured.Unstructured) (resource.Quantity, error) {
+	if obj.GetKind() != string(types.KindBlockDevice) {
+		return resource.Quantity{},
+			errors.Errorf("Can not get capacity: Expected kind %q got %q",
+				types.KindBlockDevice, obj.GetKind())
+	}
+	return unstruct.GetInt64AsQuantityOrError(&obj, "spec", "capacity", "logicalSectorSize")
+}
+
+// GetPhysicalSectorSizeOrError returns PhysicalSectorSize of a block device
+// in resource.Quantity format If value if not found or for an invalid capacity
+// then it returns an error
+func GetPhysicalSectorSizeOrError(obj unstructured.Unstructured) (resource.Quantity, error) {
+	if obj.GetKind() != string(types.KindBlockDevice) {
+		return resource.Quantity{},
+			errors.Errorf("Can not get capacity: Expected kind %q got %q",
+				types.KindBlockDevice, obj.GetKind())
+	}
+	return unstruct.GetInt64AsQuantityOrError(&obj, "spec", "capacity", "physicalSectorSize")
+}
+
 // GetHostNameOrError returns kubernetes.io/hostname label value of a block device. If value
 // is not found or value is empty it returns an error. Host name is the value of
 // kubernetes.io/hostname label of a node. NOTE - It may not be same with node name.

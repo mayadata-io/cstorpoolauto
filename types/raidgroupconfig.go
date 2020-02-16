@@ -42,10 +42,10 @@ func GetDefaultRaidGroupConfig() *RaidGroupConfig {
 	}
 }
 
-// PopulateDefaultGroupDeviceCount populate default device count for
-// a given raid group. If device count is not set then only it sets
-// device count for a raid group else it will skip.
-func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCount() error {
+// PopulateDefaultGroupDeviceCountIfNotPresent populate default device count for
+// a given raid group if device count is not set then. If device count for a raid
+// group present then it will skip.
+func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCountIfNotPresent() error {
 	if rgc.GroupDeviceCount != 0 {
 		return nil
 	}
@@ -56,6 +56,29 @@ func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCount() error {
 	}
 	rgc.GroupDeviceCount = dc
 	return nil
+}
+
+// GetDataDeviceCount returns data device count for one raid group configuration
+// This is helpfull to calculate pool capacity.
+func (rgc *RaidGroupConfig) GetDataDeviceCount() int64 {
+	switch rgc.Type {
+	case PoolRAIDTypeMirror:
+		return rgc.GroupDeviceCount / 2
+	// For stripe pool data device count in is n.
+	// where n block devices present in raid group config
+	case PoolRAIDTypeStripe:
+		return rgc.GroupDeviceCount
+	// For stripe pool data device count in is x - 1.
+	// where x = 2^n + 1 block devices present in raid group config
+	case PoolRAIDTypeRAIDZ:
+		return rgc.GroupDeviceCount - 1
+	// For stripe pool data device count in is x - 2.
+	// where x = 2^n + 2 block devices present in raid group config
+	case PoolRAIDTypeRAIDZ2:
+		return rgc.GroupDeviceCount - 2
+	default:
+		return 0
+	}
 }
 
 // Validate validates RaidGroupConfig
