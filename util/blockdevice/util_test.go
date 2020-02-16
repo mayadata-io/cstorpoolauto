@@ -699,3 +699,86 @@ func TestHasFileSystemOrError(t *testing.T) {
 		})
 	}
 }
+
+func TestGetDeviceTypeOrError(t *testing.T) {
+	var tests = map[string]struct {
+		src    unstructured.Unstructured
+		result string
+		isErr  bool
+	}{
+		"nil object": {
+			src: unstructured.Unstructured{
+				Object: nil,
+			},
+			isErr: true,
+		},
+		"empty object": {
+			src:   unstructured.Unstructured{},
+			isErr: true,
+		},
+		"kind mismatch error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "test",
+				},
+			},
+			isErr: true,
+		},
+		"type mismatch error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"details": map[string]interface{}{
+							"deviceType": 1,
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		"empty value error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"details": map[string]interface{}{
+							"deviceType": "",
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		"device type present": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"details": map[string]interface{}{
+							"deviceType": "HDD",
+						},
+					},
+				},
+			},
+			result: "HDD",
+			isErr:  false,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			result, err := GetDeviceTypeOrError(mock.src)
+			if mock.isErr && err == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got [%+v]", err)
+			}
+			if !mock.isErr && result != mock.result {
+				t.Fatalf("Expected file system check status %v got %v", mock.result, result)
+			}
+		})
+	}
+}

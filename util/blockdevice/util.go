@@ -195,3 +195,14 @@ func HasFileSystemOrError(obj unstructured.Unstructured) (bool, error) {
 	}
 	return true, nil
 }
+
+// GetDeviceTypeOrError return device type HDD or SSD. If not present
+// it returns an error.
+func GetDeviceTypeOrError(obj unstructured.Unstructured) (string, error) {
+	if obj.GetKind() != string(types.KindBlockDevice) {
+		return "",
+			errors.Errorf("Can not check file system: Expected kind %q got %q",
+				types.KindBlockDevice, obj.GetKind())
+	}
+	return unstruct.GetStringOrError(&obj, "spec", "details", "deviceType")
+}
