@@ -88,7 +88,7 @@ func GetCapacityOrError(obj unstructured.Unstructured) (resource.Quantity, error
 			errors.Errorf("Can not get capacity: Expected kind %q got %q",
 				types.KindBlockDevice, obj.GetKind())
 	}
-	return unstruct.GetQuantityOrError(&obj, "spec", "capacity", "storage")
+	return unstruct.GetInt64AsQuantityOrError(&obj, "spec", "capacity", "storage")
 }
 
 // GetHostNameOrError returns kubernetes.io/hostname label value of a block device. If value
@@ -154,9 +154,9 @@ func IsUnclaimedOrError(obj unstructured.Unstructured) (bool, error) {
 	return false, nil
 }
 
-// HasSystemPresentOrError checks if any file system is present in the block device or not.
+// HasFileSystemOrError checks if any file system is present in the block device or not.
 // If file system is not present then it returns true.
-func HasSystemPresentOrError(obj unstructured.Unstructured) (bool, error) {
+func HasFileSystemOrError(obj unstructured.Unstructured) (bool, error) {
 	if obj.GetKind() != string(types.KindBlockDevice) {
 		return false,
 			errors.Errorf("Can not check file system: Expected kind %q got %q",

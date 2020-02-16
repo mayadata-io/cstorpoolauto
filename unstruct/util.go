@@ -26,6 +26,24 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// GetInt64AsQuantityOrError returns resource.Quantity value at given
+// field path of the given object or error if not found
+func GetInt64AsQuantityOrError(obj *unstructured.Unstructured, fields ...string) (resource.Quantity, error) {
+	val, err := GetInt64OrError(obj, fields...)
+	if err != nil {
+		return resource.Quantity{}, err
+	}
+	qty, err := resource.ParseQuantity(fmt.Sprintf("%d", val))
+	if err != nil {
+		return resource.Quantity{}, errors.Wrapf(
+			err,
+			"Failed to parse %s with value %q: Kind %q: Name %q / %q",
+			strings.Join(fields, "."), val, obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+		)
+	}
+	return qty, nil
+}
+
 // GetQuantityOrError returns resource.Quantity value at given
 // field path of the given object or error if not found
 func GetQuantityOrError(obj *unstructured.Unstructured, fields ...string) (resource.Quantity, error) {
@@ -58,6 +76,28 @@ func GetStringOrError(obj *unstructured.Unstructured, fields ...string) (string,
 	}
 	if !found || val == "" {
 		return "",
+			errors.Errorf(
+				"No value found at %s: Kind %q: Name %q / %q",
+				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	return val, nil
+}
+
+// GetInt64OrError returns the int64 value at given
+// field path of the given object or error if not found
+func GetInt64OrError(obj *unstructured.Unstructured, fields ...string) (int64, error) {
+	val, found, err := unstructured.NestedInt64(obj.UnstructuredContent(), fields...)
+	if err != nil {
+		return 0,
+			errors.Wrapf(
+				err,
+				"Failed to get value of %s: Kind %q: Name %q / %q",
+				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	if !found {
+		return 0,
 			errors.Errorf(
 				"No value found at %s: Kind %q: Name %q / %q",
 				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
