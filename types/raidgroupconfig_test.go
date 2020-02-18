@@ -132,7 +132,7 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			err := mock.src.PopulateDefaultGroupDeviceCount()
+			err := mock.src.PopulateDefaultGroupDeviceCountIfNotPresent()
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -142,6 +142,163 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 			if !mock.isErr && mock.src.GroupDeviceCount != mock.expectedGroupDeviceCount {
 				t.Fatalf("expected device count %d but got %d",
 					mock.expectedGroupDeviceCount, mock.src.GroupDeviceCount)
+			}
+		})
+	}
+}
+
+func TestGetDataDeviceCount(t *testing.T) {
+	var tests = map[string]struct {
+		src             *RaidGroupConfig
+		devicecount     []int64
+		datadevicecount []int64
+	}{
+		"stripe pool": {
+			src: &RaidGroupConfig{
+				Type: PoolRAIDTypeStripe,
+			},
+			devicecount:     []int64{1, 2, 3, 4, 5, 6, 7, 8, 9},
+			datadevicecount: []int64{1, 2, 3, 4, 5, 6, 7, 8, 9},
+		},
+		"mirror pool": {
+			src: &RaidGroupConfig{
+				Type: PoolRAIDTypeMirror,
+			},
+			devicecount:     []int64{2, 4, 6, 8, 10, 12, 14, 16, 18},
+			datadevicecount: []int64{1, 2, 3, 4, 5, 6, 7, 8, 9},
+		},
+		"raidz pool": {
+			src: &RaidGroupConfig{
+				Type: PoolRAIDTypeRAIDZ,
+			},
+			devicecount:     []int64{3, 5, 9, 17, 33, 65},
+			datadevicecount: []int64{2, 4, 8, 16, 32, 64},
+		},
+		"raidz2 pool": {
+			src: &RaidGroupConfig{
+				Type: PoolRAIDTypeRAIDZ2,
+			},
+			devicecount:     []int64{4, 6, 10, 18, 34, 66},
+			datadevicecount: []int64{2, 4, 8, 16, 32, 64},
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			for i, c := range mock.devicecount {
+				if i < len(mock.datadevicecount) {
+					rc := mock.src
+					rc.GroupDeviceCount = c
+					if rc.GetDataDeviceCount() != mock.datadevicecount[i] {
+						t.Fatalf("expected data device count %d but got %d",
+							mock.datadevicecount[i], rc.GetDataDeviceCount())
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestValidate(t *testing.T) {
+	var tests = map[string]struct {
+		src   *RaidGroupConfig
+		isErr bool
+	}{
+		"stripe pool and device count is -ve": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeStripe,
+				GroupDeviceCount: -3,
+			},
+			isErr: true,
+		},
+		"mirror pool and device count is -ve": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeMirror,
+				GroupDeviceCount: -3,
+			},
+			isErr: true,
+		},
+		"raidz pool and device count is -ve": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeRAIDZ,
+				GroupDeviceCount: -3,
+			},
+			isErr: true,
+		},
+		"raidz2 pool and device count is -ve": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeRAIDZ2,
+				GroupDeviceCount: -3,
+			},
+			isErr: true,
+		},
+		"stripe pool and valid device count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeStripe,
+				GroupDeviceCount: 2,
+			},
+			isErr: false,
+		},
+		"mirror pool and invalid device count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeMirror,
+				GroupDeviceCount: 3,
+			},
+			isErr: true,
+		},
+		"mirror pool and valid device count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeMirror,
+				GroupDeviceCount: 2,
+			},
+			isErr: false,
+		},
+		"raidz pool and invalid device count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeRAIDZ,
+				GroupDeviceCount: 4,
+			},
+			isErr: true,
+		},
+		"raidz pool and valid device count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeRAIDZ,
+				GroupDeviceCount: 3,
+			},
+			isErr: false,
+		},
+		"raidz2 pool and invalid device count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeRAIDZ2,
+				GroupDeviceCount: 5,
+			},
+			isErr: true,
+		},
+		"raidz2 pool and valid device count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeRAIDZ2,
+				GroupDeviceCount: 6,
+			},
+			isErr: false,
+		},
+		"invalid raid type and device count is not set": {
+			src: &RaidGroupConfig{
+				Type: PoolRAIDType(""),
+			},
+			isErr: true,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			err := mock.src.Validate()
+			if mock.isErr && err == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got [%+v]", err)
 			}
 		})
 	}

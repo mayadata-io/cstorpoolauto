@@ -81,14 +81,38 @@ status:
 */
 
 // GetCapacityOrError returns capacity of a block device in resource.Quantity format
-// If value if not found or for an invalid capacity then it returns an error
+// If value not found or for an invalid capacity then it returns an error.
 func GetCapacityOrError(obj unstructured.Unstructured) (resource.Quantity, error) {
 	if obj.GetKind() != string(types.KindBlockDevice) {
 		return resource.Quantity{},
 			errors.Errorf("Can not get capacity: Expected kind %q got %q",
 				types.KindBlockDevice, obj.GetKind())
 	}
-	return unstruct.GetQuantityOrError(&obj, "spec", "capacity", "storage")
+	return unstruct.GetInt64AsQuantityOrError(&obj, "spec", "capacity", "storage")
+}
+
+// GetLogicalSectorSizeOrError returns Logical Sector Size of a block device in
+// resource.Quantity format. If value not found or for an invalid Logical Sector
+// Size it returns an error.
+func GetLogicalSectorSizeOrError(obj unstructured.Unstructured) (resource.Quantity, error) {
+	if obj.GetKind() != string(types.KindBlockDevice) {
+		return resource.Quantity{},
+			errors.Errorf("Can not get capacity: Expected kind %q got %q",
+				types.KindBlockDevice, obj.GetKind())
+	}
+	return unstruct.GetInt64AsQuantityOrError(&obj, "spec", "capacity", "logicalSectorSize")
+}
+
+// GetPhysicalSectorSizeOrError returns Physical Sector Size of a block device
+// in resource.Quantity format. If value not found or for an invalid Physical
+// Sector Size it returns an error.
+func GetPhysicalSectorSizeOrError(obj unstructured.Unstructured) (resource.Quantity, error) {
+	if obj.GetKind() != string(types.KindBlockDevice) {
+		return resource.Quantity{},
+			errors.Errorf("Can not get capacity: Expected kind %q got %q",
+				types.KindBlockDevice, obj.GetKind())
+	}
+	return unstruct.GetInt64AsQuantityOrError(&obj, "spec", "capacity", "physicalSectorSize")
 }
 
 // GetHostNameOrError returns kubernetes.io/hostname label value of a block device. If value
@@ -154,9 +178,9 @@ func IsUnclaimedOrError(obj unstructured.Unstructured) (bool, error) {
 	return false, nil
 }
 
-// HasSystemPresentOrError checks if any file system is present in the block device or not.
+// HasFileSystemOrError checks if any file system is present in the block device or not.
 // If file system is not present then it returns true.
-func HasSystemPresentOrError(obj unstructured.Unstructured) (bool, error) {
+func HasFileSystemOrError(obj unstructured.Unstructured) (bool, error) {
 	if obj.GetKind() != string(types.KindBlockDevice) {
 		return false,
 			errors.Errorf("Can not check file system: Expected kind %q got %q",
@@ -170,4 +194,15 @@ func HasSystemPresentOrError(obj unstructured.Unstructured) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+// GetDeviceTypeOrError return device type HDD or SSD. If not present
+// it returns an error.
+func GetDeviceTypeOrError(obj unstructured.Unstructured) (string, error) {
+	if obj.GetKind() != string(types.KindBlockDevice) {
+		return "",
+			errors.Errorf("Can not check file system: Expected kind %q got %q",
+				types.KindBlockDevice, obj.GetKind())
+	}
+	return unstruct.GetStringOrError(&obj, "spec", "details", "deviceType")
 }
