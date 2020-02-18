@@ -68,11 +68,11 @@ func (rgc *RaidGroupConfig) GetDataDeviceCount() int64 {
 	// where n block devices present in raid group config
 	case PoolRAIDTypeStripe:
 		return rgc.GroupDeviceCount
-	// For stripe pool data device count in is x - 1.
+	// For raidz pool data device count in is x - 1.
 	// where x = 2^n + 1 block devices present in raid group config
 	case PoolRAIDTypeRAIDZ:
 		return rgc.GroupDeviceCount - 1
-	// For stripe pool data device count in is x - 2.
+	// For raidz2 pool data device count in is x - 2.
 	// where x = 2^n + 2 block devices present in raid group config
 	case PoolRAIDTypeRAIDZ2:
 		return rgc.GroupDeviceCount - 2

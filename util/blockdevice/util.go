@@ -81,7 +81,7 @@ status:
 */
 
 // GetCapacityOrError returns capacity of a block device in resource.Quantity format
-// If value if not found or for an invalid capacity then it returns an error
+// If value not found or for an invalid capacity then it returns an error.
 func GetCapacityOrError(obj unstructured.Unstructured) (resource.Quantity, error) {
 	if obj.GetKind() != string(types.KindBlockDevice) {
 		return resource.Quantity{},
@@ -91,9 +91,9 @@ func GetCapacityOrError(obj unstructured.Unstructured) (resource.Quantity, error
 	return unstruct.GetInt64AsQuantityOrError(&obj, "spec", "capacity", "storage")
 }
 
-// GetLogicalSectorSizeOrError returns LogicalSectorSize of a block device in
-// resource.Quantity format If value if not found or for an invalid capacity
-// then it returns an error
+// GetLogicalSectorSizeOrError returns Logical Sector Size of a block device in
+// resource.Quantity format. If value not found or for an invalid Logical Sector
+// Size it returns an error.
 func GetLogicalSectorSizeOrError(obj unstructured.Unstructured) (resource.Quantity, error) {
 	if obj.GetKind() != string(types.KindBlockDevice) {
 		return resource.Quantity{},
@@ -103,9 +103,9 @@ func GetLogicalSectorSizeOrError(obj unstructured.Unstructured) (resource.Quanti
 	return unstruct.GetInt64AsQuantityOrError(&obj, "spec", "capacity", "logicalSectorSize")
 }
 
-// GetPhysicalSectorSizeOrError returns PhysicalSectorSize of a block device
-// in resource.Quantity format If value if not found or for an invalid capacity
-// then it returns an error
+// GetPhysicalSectorSizeOrError returns Physical Sector Size of a block device
+// in resource.Quantity format. If value not found or for an invalid Physical
+// Sector Size it returns an error.
 func GetPhysicalSectorSizeOrError(obj unstructured.Unstructured) (resource.Quantity, error) {
 	if obj.GetKind() != string(types.KindBlockDevice) {
 		return resource.Quantity{},

@@ -244,9 +244,9 @@ func TestGetPhysicalSectorSizeOrError(t *testing.T) {
 
 func TestGetHostNameOrError(t *testing.T) {
 	var tests = map[string]struct {
-		src    unstructured.Unstructured
-		result string
-		isErr  bool
+		src              unstructured.Unstructured
+		expectedHostName string
+		isErr            bool
 	}{
 		"nil object": {
 			src: unstructured.Unstructured{
@@ -311,23 +311,23 @@ func TestGetHostNameOrError(t *testing.T) {
 					},
 				},
 			},
-			isErr:  false,
-			result: "my-host-1",
+			isErr:            false,
+			expectedHostName: "my-host-1",
 		},
 	}
 	for name, mock := range tests {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			result, err := GetHostNameOrError(mock.src)
+			hostName, err := GetHostNameOrError(mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
-			if !mock.isErr && result != mock.result {
-				t.Fatalf("Expected host name %q got %q", mock.result, result)
+			if !mock.isErr && hostName != mock.expectedHostName {
+				t.Fatalf("Expected host name %q got %q", mock.expectedHostName, hostName)
 			}
 		})
 	}
@@ -335,9 +335,9 @@ func TestGetHostNameOrError(t *testing.T) {
 
 func TestGetNodeNameOrError(t *testing.T) {
 	var tests = map[string]struct {
-		src    unstructured.Unstructured
-		result string
-		isErr  bool
+		src              unstructured.Unstructured
+		expectedNodeName string
+		isErr            bool
 	}{
 		"nil object": {
 			src: unstructured.Unstructured{
@@ -402,23 +402,23 @@ func TestGetNodeNameOrError(t *testing.T) {
 					},
 				},
 			},
-			isErr:  false,
-			result: "my-host-1",
+			isErr:            false,
+			expectedNodeName: "my-host-1",
 		},
 	}
 	for name, mock := range tests {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			result, err := GetNodeNameOrError(mock.src)
+			nodeName, err := GetNodeNameOrError(mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
-			if !mock.isErr && result != mock.result {
-				t.Fatalf("Expected node name %q got %q", mock.result, result)
+			if !mock.isErr && nodeName != mock.expectedNodeName {
+				t.Fatalf("Expected node name %q got %q", mock.expectedNodeName, nodeName)
 			}
 		})
 	}
@@ -426,9 +426,9 @@ func TestGetNodeNameOrError(t *testing.T) {
 
 func TestIsActiveOrError(t *testing.T) {
 	var tests = map[string]struct {
-		src    unstructured.Unstructured
-		result bool
-		isErr  bool
+		src      unstructured.Unstructured
+		isActive bool
+		isErr    bool
 	}{
 		"nil object": {
 			src: unstructured.Unstructured{
@@ -487,8 +487,8 @@ func TestIsActiveOrError(t *testing.T) {
 					},
 				},
 			},
-			isErr:  false,
-			result: false,
+			isErr:    false,
+			isActive: false,
 		},
 		"valid status and active": {
 			src: unstructured.Unstructured{
@@ -499,8 +499,8 @@ func TestIsActiveOrError(t *testing.T) {
 					},
 				},
 			},
-			isErr:  false,
-			result: true,
+			isErr:    false,
+			isActive: true,
 		},
 	}
 	for name, mock := range tests {
@@ -514,8 +514,8 @@ func TestIsActiveOrError(t *testing.T) {
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
-			if !mock.isErr && result != mock.result {
-				t.Fatalf("Expected status %t got %t", mock.result, result)
+			if !mock.isErr && result != mock.isActive {
+				t.Fatalf("Expected status %t got %t", mock.isActive, result)
 			}
 		})
 	}
@@ -523,9 +523,9 @@ func TestIsActiveOrError(t *testing.T) {
 
 func TestIsUnclaimedOrError(t *testing.T) {
 	var tests = map[string]struct {
-		src    unstructured.Unstructured
-		result bool
-		isErr  bool
+		src         unstructured.Unstructured
+		isUnclaimed bool
+		isErr       bool
 	}{
 		"nil object": {
 			src: unstructured.Unstructured{
@@ -584,8 +584,8 @@ func TestIsUnclaimedOrError(t *testing.T) {
 					},
 				},
 			},
-			isErr:  false,
-			result: false,
+			isErr:       false,
+			isUnclaimed: false,
 		},
 		"valid claim status and unclaimed": {
 			src: unstructured.Unstructured{
@@ -596,8 +596,8 @@ func TestIsUnclaimedOrError(t *testing.T) {
 					},
 				},
 			},
-			isErr:  false,
-			result: true,
+			isErr:       false,
+			isUnclaimed: true,
 		},
 	}
 	for name, mock := range tests {
@@ -611,8 +611,8 @@ func TestIsUnclaimedOrError(t *testing.T) {
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
-			if !mock.isErr && result != mock.result {
-				t.Fatalf("Expected claim status %t got %t", mock.result, result)
+			if !mock.isErr && result != mock.isUnclaimed {
+				t.Fatalf("Expected claim status %t got %t", mock.isUnclaimed, result)
 			}
 		})
 	}
@@ -620,9 +620,9 @@ func TestIsUnclaimedOrError(t *testing.T) {
 
 func TestHasFileSystemOrError(t *testing.T) {
 	var tests = map[string]struct {
-		src    unstructured.Unstructured
-		result bool
-		isErr  bool
+		src           unstructured.Unstructured
+		hasFileSystem bool
+		isErr         bool
 	}{
 		"nil object": {
 			src: unstructured.Unstructured{
@@ -666,8 +666,8 @@ func TestHasFileSystemOrError(t *testing.T) {
 					},
 				},
 			},
-			result: true,
-			isErr:  false,
+			hasFileSystem: true,
+			isErr:         false,
 		},
 		"file not system present": {
 			src: unstructured.Unstructured{
@@ -678,8 +678,8 @@ func TestHasFileSystemOrError(t *testing.T) {
 					},
 				},
 			},
-			result: false,
-			isErr:  false,
+			hasFileSystem: false,
+			isErr:         false,
 		},
 	}
 	for name, mock := range tests {
@@ -693,8 +693,8 @@ func TestHasFileSystemOrError(t *testing.T) {
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
-			if !mock.isErr && result != mock.result {
-				t.Fatalf("Expected file system check status %t got %t", mock.result, result)
+			if !mock.isErr && result != mock.hasFileSystem {
+				t.Fatalf("Expected file system check status %t got %t", mock.hasFileSystem, result)
 			}
 		})
 	}
@@ -702,9 +702,9 @@ func TestHasFileSystemOrError(t *testing.T) {
 
 func TestGetDeviceTypeOrError(t *testing.T) {
 	var tests = map[string]struct {
-		src    unstructured.Unstructured
-		result string
-		isErr  bool
+		src                unstructured.Unstructured
+		expectedDeviceType string
+		isErr              bool
 	}{
 		"nil object": {
 			src: unstructured.Unstructured{
@@ -761,8 +761,8 @@ func TestGetDeviceTypeOrError(t *testing.T) {
 					},
 				},
 			},
-			result: "HDD",
-			isErr:  false,
+			expectedDeviceType: "HDD",
+			isErr:              false,
 		},
 	}
 	for name, mock := range tests {
@@ -776,8 +776,8 @@ func TestGetDeviceTypeOrError(t *testing.T) {
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
-			if !mock.isErr && result != mock.result {
-				t.Fatalf("Expected file system check status %v got %v", mock.result, result)
+			if !mock.isErr && result != mock.expectedDeviceType {
+				t.Fatalf("Expected file system check status %v got %v", mock.expectedDeviceType, result)
 			}
 		})
 	}
