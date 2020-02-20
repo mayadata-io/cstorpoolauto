@@ -23,7 +23,7 @@ import (
 	"mayadata.io/cstorpoolauto/types"
 )
 
-func TestGetCapacityOrError(t *testing.T) {
+func TestGetCapacity(t *testing.T) {
 	var tests = map[string]struct {
 		src   unstructured.Unstructured
 		isErr bool
@@ -67,6 +67,19 @@ func TestGetCapacityOrError(t *testing.T) {
 			},
 			isErr: true,
 		},
+		"zero capacity": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"capacity": map[string]interface{}{
+							"storage": int64(0),
+						},
+					},
+				},
+			},
+			isErr: false,
+		},
 		"valid capacity": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -85,7 +98,7 @@ func TestGetCapacityOrError(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			_, err := GetCapacityOrError(mock.src)
+			_, err := GetCapacity(mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -96,7 +109,7 @@ func TestGetCapacityOrError(t *testing.T) {
 	}
 }
 
-func TestGetLogicalSectorSizeOrError(t *testing.T) {
+func TestGetLogicalSectorSize(t *testing.T) {
 	var tests = map[string]struct {
 		src   unstructured.Unstructured
 		isErr bool
@@ -140,6 +153,19 @@ func TestGetLogicalSectorSizeOrError(t *testing.T) {
 			},
 			isErr: true,
 		},
+		"zero logical sector size": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"capacity": map[string]interface{}{
+							"logicalSectorSize": int64(0),
+						},
+					},
+				},
+			},
+			isErr: false,
+		},
 		"valid logical sector size": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -158,7 +184,7 @@ func TestGetLogicalSectorSizeOrError(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			_, err := GetLogicalSectorSizeOrError(mock.src)
+			_, err := GetLogicalSectorSize(mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -169,7 +195,7 @@ func TestGetLogicalSectorSizeOrError(t *testing.T) {
 	}
 }
 
-func TestGetPhysicalSectorSizeOrError(t *testing.T) {
+func TestGetPhysicalSectorSize(t *testing.T) {
 	var tests = map[string]struct {
 		src   unstructured.Unstructured
 		isErr bool
@@ -213,13 +239,26 @@ func TestGetPhysicalSectorSizeOrError(t *testing.T) {
 			},
 			isErr: true,
 		},
+		"zero physical sector size": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"capacity": map[string]interface{}{
+							"physicalSectorSize": int64(0),
+						},
+					},
+				},
+			},
+			isErr: false,
+		},
 		"valid physical sector size": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind": string(types.KindBlockDevice),
 					"spec": map[string]interface{}{
 						"capacity": map[string]interface{}{
-							"physicalSectorSize": int64(1000),
+							"physicalSectorSize": int64(4096),
 						},
 					},
 				},
@@ -231,12 +270,104 @@ func TestGetPhysicalSectorSizeOrError(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			_, err := GetPhysicalSectorSizeOrError(mock.src)
+			_, err := GetPhysicalSectorSize(mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
+			}
+		})
+	}
+}
+
+func TestGetHostName(t *testing.T) {
+	var tests = map[string]struct {
+		src              unstructured.Unstructured
+		expectedHostName string
+		isErr            bool
+	}{
+		"nil object": {
+			src: unstructured.Unstructured{
+				Object: nil,
+			},
+			isErr: true,
+		},
+		"empty object": {
+			src:   unstructured.Unstructured{},
+			isErr: true,
+		},
+		"kind mismatch error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "test",
+				},
+			},
+			isErr: true,
+		},
+		"not found error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+				},
+			},
+			isErr: true,
+		},
+		"type mismatch error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"metadata": map[string]interface{}{
+						"labels": map[string]interface{}{
+							"kubernetes.io/hostname": 1,
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		"empty value": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"metadata": map[string]interface{}{
+						"labels": map[string]interface{}{
+							"kubernetes.io/hostname": "",
+						},
+					},
+				},
+			},
+			isErr:            false,
+			expectedHostName: "",
+		},
+		"valid hostname label": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"metadata": map[string]interface{}{
+						"labels": map[string]interface{}{
+							"kubernetes.io/hostname": "my-host-1",
+						},
+					},
+				},
+			},
+			isErr:            false,
+			expectedHostName: "my-host-1",
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			hostName, err := GetHostName(mock.src)
+			if mock.isErr && err == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got [%+v]", err)
+			}
+			if !mock.isErr && hostName != mock.expectedHostName {
+				t.Fatalf("Expected host name %q got %q", mock.expectedHostName, hostName)
 			}
 		})
 	}
@@ -333,6 +464,98 @@ func TestGetHostNameOrError(t *testing.T) {
 	}
 }
 
+func TestGetNodeName(t *testing.T) {
+	var tests = map[string]struct {
+		src              unstructured.Unstructured
+		expectedNodeName string
+		isErr            bool
+	}{
+		"nil object": {
+			src: unstructured.Unstructured{
+				Object: nil,
+			},
+			isErr: true,
+		},
+		"empty object": {
+			src:   unstructured.Unstructured{},
+			isErr: true,
+		},
+		"kind mismatch error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "test",
+				},
+			},
+			isErr: true,
+		},
+		"not found error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+				},
+			},
+			isErr: true,
+		},
+		"type mismatch error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"nodeAttributes": map[string]interface{}{
+							"nodeName": 1,
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
+		"empty value error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"nodeAttributes": map[string]interface{}{
+							"nodeName": "",
+						},
+					},
+				},
+			},
+			isErr:            false,
+			expectedNodeName: "",
+		},
+		"valid node name": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"nodeAttributes": map[string]interface{}{
+							"nodeName": "my-host-1",
+						},
+					},
+				},
+			},
+			isErr:            false,
+			expectedNodeName: "my-host-1",
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			nodeName, err := GetNodeName(mock.src)
+			if mock.isErr && err == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got [%+v]", err)
+			}
+			if !mock.isErr && nodeName != mock.expectedNodeName {
+				t.Fatalf("Expected node name %q got %q", mock.expectedNodeName, nodeName)
+			}
+		})
+	}
+}
+
 func TestGetNodeNameOrError(t *testing.T) {
 	var tests = map[string]struct {
 		src              unstructured.Unstructured
@@ -424,7 +647,7 @@ func TestGetNodeNameOrError(t *testing.T) {
 	}
 }
 
-func TestIsActiveOrError(t *testing.T) {
+func TestIsActive(t *testing.T) {
 	var tests = map[string]struct {
 		src      unstructured.Unstructured
 		isActive bool
@@ -456,7 +679,7 @@ func TestIsActiveOrError(t *testing.T) {
 			},
 			isErr: true,
 		},
-		"empty value error": {
+		"empty value": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind": string(types.KindBlockDevice),
@@ -465,7 +688,8 @@ func TestIsActiveOrError(t *testing.T) {
 					},
 				},
 			},
-			isErr: true,
+			isErr:    false,
+			isActive: false,
 		},
 		"type mismatch error": {
 			src: unstructured.Unstructured{
@@ -507,7 +731,7 @@ func TestIsActiveOrError(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			result, err := IsActiveOrError(mock.src)
+			result, err := IsActive(mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -521,7 +745,7 @@ func TestIsActiveOrError(t *testing.T) {
 	}
 }
 
-func TestIsUnclaimedOrError(t *testing.T) {
+func TestIsUnclaimed(t *testing.T) {
 	var tests = map[string]struct {
 		src         unstructured.Unstructured
 		isUnclaimed bool
@@ -553,17 +777,6 @@ func TestIsUnclaimedOrError(t *testing.T) {
 			},
 			isErr: true,
 		},
-		"empty value error": {
-			src: unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"kind": string(types.KindBlockDevice),
-					"status": map[string]interface{}{
-						"claimState": "",
-					},
-				},
-			},
-			isErr: true,
-		},
 		"type mismatch error": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -574,6 +787,18 @@ func TestIsUnclaimedOrError(t *testing.T) {
 				},
 			},
 			isErr: true,
+		},
+		"empty value": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"status": map[string]interface{}{
+						"claimState": "",
+					},
+				},
+			},
+			isErr:       false,
+			isUnclaimed: false,
 		},
 		"valid claim status and claimed": {
 			src: unstructured.Unstructured{
@@ -604,7 +829,7 @@ func TestIsUnclaimedOrError(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			result, err := IsUnclaimedOrError(mock.src)
+			result, err := IsUnclaimed(mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -618,7 +843,7 @@ func TestIsUnclaimedOrError(t *testing.T) {
 	}
 }
 
-func TestHasFileSystemOrError(t *testing.T) {
+func TestHasFileSystem(t *testing.T) {
 	var tests = map[string]struct {
 		src           unstructured.Unstructured
 		hasFileSystem bool
@@ -655,6 +880,20 @@ func TestHasFileSystemOrError(t *testing.T) {
 			},
 			isErr: true,
 		},
+		"empty value": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"spec": map[string]interface{}{
+						"filesystem": map[string]interface{}{
+							"fsType": "",
+						},
+					},
+				},
+			},
+			hasFileSystem: true,
+			isErr:         false,
+		},
 		"file system present": {
 			src: unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -686,7 +925,7 @@ func TestHasFileSystemOrError(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			result, err := HasFileSystemOrError(mock.src)
+			result, err := HasFileSystem(mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
@@ -700,7 +939,7 @@ func TestHasFileSystemOrError(t *testing.T) {
 	}
 }
 
-func TestGetDeviceTypeOrError(t *testing.T) {
+func TestGetDeviceType(t *testing.T) {
 	var tests = map[string]struct {
 		src                unstructured.Unstructured
 		expectedDeviceType string
@@ -748,7 +987,8 @@ func TestGetDeviceTypeOrError(t *testing.T) {
 					},
 				},
 			},
-			isErr: true,
+			expectedDeviceType: "",
+			isErr:              false,
 		},
 		"device type present": {
 			src: unstructured.Unstructured{
@@ -769,7 +1009,7 @@ func TestGetDeviceTypeOrError(t *testing.T) {
 		name := name
 		mock := mock
 		t.Run(name, func(t *testing.T) {
-			result, err := GetDeviceTypeOrError(mock.src)
+			result, err := GetDeviceType(mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}

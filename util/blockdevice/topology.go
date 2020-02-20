@@ -101,7 +101,7 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 
 		// If capacity is missing or we got any error during fetching capacity then
 		// we can not use that block device to create topology map.
-		capacity, err := GetCapacityOrError(bd)
+		capacity, err := GetCapacity(bd)
 		if err != nil {
 			// TODO log the error
 			continue
@@ -110,8 +110,12 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 		// Device type represents block device type ie - (HDD, SSD)
 		// If Device type is empty or we got any error during fetching this then
 		// add that block device in unknown group.
-		deviceType, err := GetDeviceTypeOrError(bd)
+		deviceType, err := GetDeviceType(bd)
 		if err != nil {
+			continue
+		}
+		// If deviceType is empty then add it to unknown device type group
+		if deviceType != "" {
 			deviceType = DeviceKindUnKnown
 		}
 
@@ -136,7 +140,7 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 
 		// get the physical block size if error is nil and it is not zero
 		// then add a top level key for it.
-		physicalBlockSize, err := GetPhysicalSectorSizeOrError(bd)
+		physicalBlockSize, err := GetPhysicalSectorSize(bd)
 		if err == nil && !physicalBlockSize.IsZero() {
 			deviceTypeList = append(deviceTypeList, fmt.Sprintf("%s-%s", deviceType, physicalBlockSize.String()))
 		}
