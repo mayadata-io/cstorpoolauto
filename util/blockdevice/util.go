@@ -206,3 +206,49 @@ func GetDeviceTypeOrError(obj unstructured.Unstructured) (string, error) {
 	}
 	return unstruct.GetStringOrError(&obj, "spec", "details", "deviceType")
 }
+
+// IsEligibleForCStorPool checks eligibility criteria to create a cStor pool.
+// Block device should be active and unclaimed and there should be no file
+// system present.
+func IsEligibleForCStorPool(obj unstructured.Unstructured) (bool, error) {
+	if obj.GetKind() != string(types.KindBlockDevice) {
+		return false,
+			errors.Errorf("Can not check eligibility for cStor pool: Expected kind %q got %q",
+				types.KindBlockDevice, obj.GetKind())
+	}
+
+	// If block device is not in active state or we got any error while
+	// fetching block device status then we can not use that block device
+	// to create a cStor pool.
+	isActive, err := IsActiveOrError(obj)
+	if err != nil {
+		return false, errors.Wrap(err, "Can not check eligibility for cStor pool.")
+	}
+	if !isActive {
+		return false, nil
+	}
+
+	// If claim status block device is 'Claimed' or 'Released' or if we got
+	// any error while fetching claim status of block device then we can not
+	// use that block device to create a cStor pool.
+	isUnclaimed, err := IsUnclaimedOrError(obj)
+	if err != nil {
+		return false, errors.Wrap(err, "Can not check eligibility for cStor pool.")
+	}
+	if !isUnclaimed {
+		return false, nil
+	}
+
+	// If file system present in the block device or we got any error while
+	// fetching file system details of the block device then we can not use
+	// that block device to create a cStor pool.
+	hasFileSystem, err := HasFileSystemOrError(obj)
+	if err != nil {
+		return false, errors.Wrap(err, "Can not check eligibility for cStor pool.")
+	}
+	if hasFileSystem {
+		return false, nil
+	}
+
+	return true, nil
+}
