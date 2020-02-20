@@ -26,10 +26,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// GetInt64AsQuantityOrError returns resource.Quantity value at given
-// field path of the given object or error if not found
-func GetInt64AsQuantityOrError(obj *unstructured.Unstructured, fields ...string) (resource.Quantity, error) {
-	val, err := GetInt64OrError(obj, fields...)
+// GetInt64AsQuantity returns resource.Quantity value at given
+// field path of the given object or error if json path not found
+func GetInt64AsQuantity(obj *unstructured.Unstructured, fields ...string) (resource.Quantity, error) {
+	val, err := GetInt64(obj, fields...)
 	if err != nil {
 		return resource.Quantity{}, err
 	}
@@ -63,8 +63,26 @@ func GetQuantityOrError(obj *unstructured.Unstructured, fields ...string) (resou
 }
 
 // GetStringOrError returns the string value at given
-// field path of the given object or error if not found
+// field path of the given object or error if not given
+// path found or empty value
 func GetStringOrError(obj *unstructured.Unstructured, fields ...string) (string, error) {
+	val, err := GetString(obj, fields...)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(val) == "" {
+		return "",
+			errors.Errorf(
+				"Empty value found at %s: Kind %q: Name %q / %q",
+				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
+			)
+	}
+	return val, nil
+}
+
+// GetString returns the string value at given field path of the
+// given object or error if not found the given filed path
+func GetString(obj *unstructured.Unstructured, fields ...string) (string, error) {
 	val, found, err := unstructured.NestedString(obj.UnstructuredContent(), fields...)
 	if err != nil {
 		return "",
@@ -74,7 +92,7 @@ func GetStringOrError(obj *unstructured.Unstructured, fields ...string) (string,
 				strings.Join(fields, "."), obj.GetKind(), obj.GetNamespace(), obj.GetName(),
 			)
 	}
-	if !found || val == "" {
+	if !found {
 		return "",
 			errors.Errorf(
 				"No value found at %s: Kind %q: Name %q / %q",
@@ -84,9 +102,9 @@ func GetStringOrError(obj *unstructured.Unstructured, fields ...string) (string,
 	return val, nil
 }
 
-// GetInt64OrError returns the int64 value at given
-// field path of the given object or error if not found
-func GetInt64OrError(obj *unstructured.Unstructured, fields ...string) (int64, error) {
+// GetInt64 returns the int64 value at given field path of
+// the given object or error if given key path not found
+func GetInt64(obj *unstructured.Unstructured, fields ...string) (int64, error) {
 	val, found, err := unstructured.NestedInt64(obj.UnstructuredContent(), fields...)
 	if err != nil {
 		return 0,
