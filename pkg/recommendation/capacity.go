@@ -67,8 +67,8 @@ func NewCapacityRequest(
 	}, nil
 }
 
-// Get calculate min max and return it as a response.
-func (r *capacityRecommendationRequest) Get() map[string]CapacityRecommendation {
+// GetRecommendation calculate min max recommendation and return it as a response.
+func (r *capacityRecommendationRequest) GetRecommendation() map[string]CapacityRecommendation {
 	resultMap := make(map[string]CapacityRecommendation)
 
 	// If block device list is empty then return empty map
@@ -127,7 +127,7 @@ func (r *capacityRecommendationRequest) Get() map[string]CapacityRecommendation 
 
 			// capacityCountMap contains block device capacity and total count
 			// of that capacity in one node.
-			capacityCountMap := nodeCapacityDeviceCountMap.getOrCreate(nodeName)
+			capacityCountMap := nodeCapacityDeviceCountMap.getOrDefault(nodeName)
 
 			for _, blockDevice := range blockDeviceList {
 				capacity, found := blockDevice.Capacity.AsInt64()
@@ -136,7 +136,7 @@ func (r *capacityRecommendationRequest) Get() map[string]CapacityRecommendation 
 					continue
 				}
 				// get device count for one capacity and increase it by 1
-				count := capacityCountMap.getOrCreate(capacity)
+				count := capacityCountMap.getOrDefault(capacity)
 				capacityCountMap.update(capacity, count+1)
 			}
 
@@ -145,7 +145,10 @@ func (r *capacityRecommendationRequest) Get() map[string]CapacityRecommendation 
 		}
 
 		// put min max result for all the types in a map.
-		resultMap[kind] = nodeCapacityDeviceCountMap.getMinMaxCapacity(r.RaidGroupConfig)
+		cr := nodeCapacityDeviceCountMap.getCapacityRecommendation(r.RaidGroupConfig)
+		if !cr.MaxCapacity.IsZero() && !cr.MinCapacity.IsZero() {
+			resultMap[kind] = cr
+		}
 	}
 	return resultMap
 }
@@ -154,9 +157,9 @@ func (r *capacityRecommendationRequest) Get() map[string]CapacityRecommendation 
 // and count for that capacity
 type capacityCount map[int64]int64
 
-// getOrCreate returns count of a given capacity. If key not
+// getOrDefault returns count of a given capacity. If key not
 // found then it adds that key in map and assign with 0
-func (cc capacityCount) getOrCreate(key int64) int64 {
+func (cc capacityCount) getOrDefault(key int64) int64 {
 	value, found := cc[key]
 	if !found {
 		value = 0
@@ -171,19 +174,21 @@ func (cc capacityCount) update(key, value int64) {
 	cc[key] = value
 }
 
-// getMinMaxCapacityForRaidGroupConfig returns takes raidgroup config as
-// an input and returns min and max capacity in resource.Quantity format
-func (cc capacityCount) getMinMaxCapacityForRaidGroupConfig(
-	raidConfig types.RaidGroupConfig) (min, max resource.Quantity) {
-	max = resource.Quantity{}
-	max = resource.Quantity{}
+// getCapacityRecommendation returns takes raidgroup config as an input and
+// returns min and max capacity in resource.Quantity format
+func (cc capacityCount) getCapacityRecommendation(
+	raidConfig types.RaidGroupConfig) CapacityRecommendation {
+	result := CapacityRecommendation{
+		MinCapacity: resource.Quantity{},
+		MaxCapacity: resource.Quantity{},
+	}
 
 	// Ideally caller will check raid group config is valid not
 	// If invalid raid config passed then it will not return error.
 	// It only logs the error and return empty struct
 	if err := raidConfig.Validate(); err != nil {
 		// TODO log the error.
-		return
+		return result
 	}
 
 	for capacity, count := range cc {
@@ -202,8 +207,8 @@ func (cc capacityCount) getMinMaxCapacityForRaidGroupConfig(
 			// TODO log the error
 			continue
 		}
-		if min.IsZero() || min.Cmp(newMin) > 0 {
-			min = newMin
+		if result.MaxCapacity.IsZero() || result.MinCapacity.Cmp(newMin) > 0 {
+			result.MinCapacity = newMin
 		}
 
 		// noOfRaidGroup raid group count that can be formed.
@@ -220,20 +225,20 @@ func (cc capacityCount) getMinMaxCapacityForRaidGroupConfig(
 			// TODO log the error
 			continue
 		}
-		if max.IsZero() || max.Cmp(newMax) < 0 {
-			max = newMax
+		if result.MaxCapacity.IsZero() || result.MaxCapacity.Cmp(newMax) < 0 {
+			result.MaxCapacity = newMax
 		}
 	}
 
-	return
+	return result
 }
 
 // nodeCapacityCount is a typed map contains node name and capacitycount
 type nodeCapacityCount map[string]capacityCount
 
-// getOrCreate returns capacityCount of a given node. If key not
+// getOrDefault returns capacityCount of a given node. If key not
 // found then it adds that key in map and assign with default value
-func (ncc nodeCapacityCount) getOrCreate(key string) capacityCount {
+func (ncc nodeCapacityCount) getOrDefault(key string) capacityCount {
 	value, found := ncc[key]
 	if !found {
 		value = capacityCount{}
@@ -248,9 +253,9 @@ func (ncc nodeCapacityCount) update(key string, value capacityCount) {
 	ncc[key] = value
 }
 
-// getMinMaxCapacityForRaidGroupConfig returns takes raidgroup config as
+// getCapacityRecommendation returns takes raidgroup config as
 // an input and returns CapacityRecommendation
-func (ncc nodeCapacityCount) getMinMaxCapacity(
+func (ncc nodeCapacityCount) getCapacityRecommendation(
 	raidConfig types.RaidGroupConfig) CapacityRecommendation {
 	result := CapacityRecommendation{
 		MinCapacity: resource.Quantity{},
@@ -267,18 +272,21 @@ func (ncc nodeCapacityCount) getMinMaxCapacity(
 
 	// check min max for all the nodes and calculate final CapacityRecommendation
 	for _, cc := range ncc {
-		newMin, newMax := cc.getMinMaxCapacityForRaidGroupConfig(raidConfig)
+		cr := cc.getCapacityRecommendation(raidConfig)
+		if cr.MaxCapacity.IsZero() || cr.MinCapacity.IsZero() {
+			continue
+		}
 
 		// If min capacity in response 0 or greater than newMin then
 		// update the min to newMin.
-		if result.MinCapacity.IsZero() || result.MinCapacity.Cmp(newMin) > 0 {
-			result.MinCapacity = newMin
+		if result.MinCapacity.IsZero() || result.MinCapacity.Cmp(cr.MinCapacity) > 0 {
+			result.MinCapacity = cr.MinCapacity
 		}
 
 		// If max capacity in response 0 or less than newMax then
 		// update the max to new max.
-		if result.MaxCapacity.IsZero() || result.MaxCapacity.Cmp(newMax) < 0 {
-			result.MaxCapacity = newMax
+		if result.MaxCapacity.IsZero() || result.MaxCapacity.Cmp(cr.MaxCapacity) < 0 {
+			result.MaxCapacity = cr.MaxCapacity
 		}
 	}
 
