@@ -150,6 +150,7 @@ func (r *capacityRecommendationRequest) GetRecommendation() map[string]CapacityR
 			resultMap[kind] = cr
 		}
 	}
+
 	return resultMap
 }
 
@@ -183,8 +184,8 @@ func (cc capacityCount) getCapacityRecommendation(
 		MaxCapacity: resource.Quantity{},
 	}
 
-	// Ideally caller will check raid group config is valid not
-	// If invalid raid config passed then it will not return error.
+	// Ideally caller will check raid group config is valid or not
+	// If invalid raid config is passed then it will not return error.
 	// It only logs the error and return empty struct
 	if err := raidConfig.Validate(); err != nil {
 		// TODO log the error.
@@ -262,7 +263,7 @@ func (ncc nodeCapacityCount) getCapacityRecommendation(
 		MaxCapacity: resource.Quantity{},
 	}
 
-	// Ideally caller will check raid group config is valid not
+	// Ideally caller will check raid group config is valid or not
 	// If invalid raid config passed then it will not return error.
 	// It only logs the error and return empty struct
 	if err := raidConfig.Validate(); err != nil {

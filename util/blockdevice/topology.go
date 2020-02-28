@@ -81,7 +81,7 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 
 	for _, bd := range bdList.Items {
 
-		// Block device should be associated with a node if mode name is missing or
+		// Block device should be associated with a node if node name is missing or
 		// we got any error during fetching node name then we can not use that to
 		// create topology map.
 		nodeName, err := GetNodeNameOrError(bd)
