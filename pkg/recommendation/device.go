@@ -11,8 +11,11 @@ import (
 	bdutil "mayadata.io/cstorpoolauto/util/blockdevice"
 )
 
+// nodeCapacityBlockDevice contains key with node name and value with capacityBlockDevice
 type nodeCapacityBlockDevice map[string]capacityBlockDevices
 
+// capacityBlockDevices contains a key with capacity of block device and
+// value with all the block devices of that capacity.
 type capacityBlockDevices map[int64][]bdutil.MetaInfo
 
 type cStorPoolClusterRecommendationRequest types.CStorPoolClusterRecommendationRequest
@@ -79,8 +82,6 @@ func (r cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]ty
 
 		nodeCapacityBlockDeviceMap := nodeCapacityBlockDevice{}
 
-		// Iterating over nodeBlockDeviceListMap map and populating
-		// nodeCapacityDeviceCountMap
 		for nodeName, blockDeviceList := range nodeBlockDeviceListMap {
 
 			// capacityBlockDevicesMap contains block device capacity and all block devices
