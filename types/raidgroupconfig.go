@@ -38,7 +38,7 @@ type RaidGroupConfig struct {
 func GetDefaultRaidGroupConfig() *RaidGroupConfig {
 	return &RaidGroupConfig{
 		Type:             PoolRAIDTypeDefault,
-		GroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeMirror],
+		GroupDeviceCount: RAIDTypeToDefaultDiskCount[PoolRAIDTypeMirror],
 	}
 }
 
@@ -49,7 +49,7 @@ func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCountIfNotPresent() error 
 	if rgc.GroupDeviceCount != 0 {
 		return nil
 	}
-	dc, ok := RAIDTypeToDefaultMinDiskCount[rgc.Type]
+	dc, ok := RAIDTypeToDefaultDiskCount[rgc.Type]
 	if !ok {
 		return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q.",
 			rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
@@ -88,6 +88,22 @@ func (rgc *RaidGroupConfig) Validate() error {
 		return errors.Errorf("Invalid device count %d for RAID type %q.",
 			rgc.GroupDeviceCount, rgc.Type)
 	}
+
+	minDeviceCount, ok := RAIDTypeToMinimumDiskCount[PoolRAIDType(rgc.Type)]
+	if !ok {
+		return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q.",
+			rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
+	}
+
+	// If device count is less than min device count then that is not a valid
+	// raid group config. ie - For raid-z(2^n + 1) device count 1 is valid if
+	// n=0 but that is not a valid raid group config. For raid-z2(2^n + 2) device
+	// count 2 is valid if n=0 but that is not a valid raid group config.
+	if minDeviceCount > rgc.GroupDeviceCount {
+		return errors.Errorf("Invalid device count %d for RAID type %q",
+			rgc.GroupDeviceCount, rgc.Type)
+	}
+
 	switch rgc.Type {
 	// For mirror pool device count in one vdev is 2
 	case PoolRAIDTypeMirror:
