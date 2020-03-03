@@ -581,7 +581,7 @@ func (p *Planner) buildDesiredRAIDGroupsByNodeName(nodeName string) []interface{
 		var raidGroup []string
 
 		diskCountPerGroup :=
-			int(types.RAIDTypeToDefaultDiskCount[types.PoolRAIDType(p.desiredRAIDType)])
+			int(types.RAIDTypeToDefaultMinDiskCount[types.PoolRAIDType(p.desiredRAIDType)])
 		for idx, deviceName := range deviceNames {
 			raidGroup = append(raidGroup, deviceName)
 			// Following logic takes care of distributing disks based

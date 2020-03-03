@@ -38,7 +38,7 @@ type RaidGroupConfig struct {
 func GetDefaultRaidGroupConfig() *RaidGroupConfig {
 	return &RaidGroupConfig{
 		Type:             PoolRAIDTypeDefault,
-		GroupDeviceCount: RAIDTypeToDefaultDiskCount[PoolRAIDTypeMirror],
+		GroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeMirror],
 	}
 }
 
@@ -49,7 +49,7 @@ func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCountIfNotPresent() error 
 	if rgc.GroupDeviceCount != 0 {
 		return nil
 	}
-	dc, ok := RAIDTypeToDefaultDiskCount[rgc.Type]
+	dc, ok := RAIDTypeToDefaultMinDiskCount[rgc.Type]
 	if !ok {
 		return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q.",
 			rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
@@ -89,7 +89,7 @@ func (rgc *RaidGroupConfig) Validate() error {
 			rgc.GroupDeviceCount, rgc.Type)
 	}
 
-	minDeviceCount, ok := RAIDTypeToMinimumDiskCount[PoolRAIDType(rgc.Type)]
+	minDeviceCount, ok := RAIDTypeToDefaultMinDiskCount[PoolRAIDType(rgc.Type)]
 	if !ok {
 		return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q.",
 			rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)

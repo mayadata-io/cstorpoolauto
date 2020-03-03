@@ -127,22 +127,13 @@ const (
 	PoolRAIDTypeDefault PoolRAIDType = PoolRAIDTypeMirror
 )
 
-// RAIDTypeToDefaultDiskCount maps pool instance's raid type
-// to its default disk count
-var RAIDTypeToDefaultDiskCount = map[PoolRAIDType]int64{
+// RAIDTypeToDefaultMinDiskCount maps pool instance's raid type
+// to its default minimum disk count
+var RAIDTypeToDefaultMinDiskCount = map[PoolRAIDType]int64{
 	PoolRAIDTypeMirror: 2,
 	PoolRAIDTypeStripe: 1,
 	PoolRAIDTypeRAIDZ:  3,
 	PoolRAIDTypeRAIDZ2: 6,
-}
-
-// RAIDTypeToMinimumDiskCount maps pool instance's raid type
-// to its minimum disk count
-var RAIDTypeToMinimumDiskCount = map[PoolRAIDType]int64{
-	PoolRAIDTypeMirror: 2,
-	PoolRAIDTypeStripe: 1,
-	PoolRAIDTypeRAIDZ:  3,
-	PoolRAIDTypeRAIDZ2: 4,
 }
 
 // CStorClusterConfigStatus represents the current state of

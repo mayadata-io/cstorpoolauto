@@ -27,7 +27,7 @@ func TestGetDefaultRaidGroupConfig(t *testing.T) {
 	}{
 		"chheck default raid group config": {
 			expectedType:             PoolRAIDTypeDefault,
-			expectedGroupDeviceCount: RAIDTypeToDefaultDiskCount[PoolRAIDTypeMirror],
+			expectedGroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeMirror],
 		},
 	}
 	for name, mock := range tests {
@@ -57,7 +57,7 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 			src: &RaidGroupConfig{
 				Type: PoolRAIDTypeStripe,
 			},
-			expectedGroupDeviceCount: RAIDTypeToDefaultDiskCount[PoolRAIDTypeStripe],
+			expectedGroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeStripe],
 			isErr:                    false,
 		},
 		"stripe pool and device count set": {
@@ -72,7 +72,7 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 			src: &RaidGroupConfig{
 				Type: PoolRAIDTypeMirror,
 			},
-			expectedGroupDeviceCount: RAIDTypeToDefaultDiskCount[PoolRAIDTypeMirror],
+			expectedGroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeMirror],
 			isErr:                    false,
 		},
 		"mirror pool and device count set": {
@@ -87,7 +87,7 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 			src: &RaidGroupConfig{
 				Type: PoolRAIDTypeRAIDZ,
 			},
-			expectedGroupDeviceCount: RAIDTypeToDefaultDiskCount[PoolRAIDTypeRAIDZ],
+			expectedGroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeRAIDZ],
 			isErr:                    false,
 		},
 		"raidz pool and device count set": {
@@ -102,7 +102,7 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 			src: &RaidGroupConfig{
 				Type: PoolRAIDTypeRAIDZ2,
 			},
-			expectedGroupDeviceCount: RAIDTypeToDefaultDiskCount[PoolRAIDTypeRAIDZ2],
+			expectedGroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeRAIDZ2],
 			isErr:                    false,
 		},
 		"raidz2 pool and device count set": {

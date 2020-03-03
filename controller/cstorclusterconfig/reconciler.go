@@ -512,7 +512,7 @@ func (r *Reconciler) setMinDiskCountIfNotSet() error {
 	// This will help in differentiating a value that was not
 	// set vs. a value that was set to 0.
 	r.minDiskCount =
-		types.RAIDTypeToDefaultDiskCount[r.poolRAIDType]
+		types.RAIDTypeToDefaultMinDiskCount[r.poolRAIDType]
 	return nil
 }
 
@@ -555,7 +555,7 @@ func (r *Reconciler) validateMinDiskCount() error {
 			"Invalid min disk count '0'",
 		)
 	}
-	defaultCount := types.RAIDTypeToDefaultDiskCount[r.poolRAIDType]
+	defaultCount := types.RAIDTypeToDefaultMinDiskCount[r.poolRAIDType]
 	if defaultCount == 0 {
 		return errors.Errorf(
 			"Can't eval default disk count: RAID type %q is not set", r.poolRAIDType,
