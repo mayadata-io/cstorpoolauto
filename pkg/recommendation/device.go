@@ -18,7 +18,11 @@ type nodeCapacityBlockDevice map[string]capacityBlockDevices
 // value with all the block devices of that capacity.
 type capacityBlockDevices map[int64][]bdutil.MetaInfo
 
-type cStorPoolClusterRecommendationRequest types.CStorPoolClusterRecommendationRequest
+// cStorPoolClusterRecommendationRequest is used to request the device
+// recommendation for a given raid type.
+type cStorPoolClusterRecommendationRequest struct {
+	types.CStorPoolClusterRecommendationRequest
+}
 
 // NewDeviceRequest returns a device request object after validation.
 func NewDeviceRequest(
@@ -39,17 +43,20 @@ func NewDeviceRequest(
 		return nil, errors.Wrap(err, "Unable to create capacity recommendation request")
 	}
 
-	return &cStorPoolClusterRecommendationRequest{
-		Spec: types.CStorPoolClusterRecommendationRequestSpec{
-			PoolCapacity:    *poolCapacity,
-			BlockDeviceList: *blockDeviceList,
-			DataConfig:      *raidConfig,
-		},
-	}, nil
+	cspcrrs := types.CStorPoolClusterRecommendationRequestSpec{
+		PoolCapacity:    *poolCapacity,
+		BlockDeviceList: *blockDeviceList,
+		DataConfig:      *raidConfig,
+	}
+
+	cspcrr := cStorPoolClusterRecommendationRequest{}
+	cspcrr.Spec = cspcrrs
+
+	return &cspcrr, nil
 }
 
 // GetRecommendation returns recommended block devices for all nodes and device types.
-func (r cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]types.CStorPoolClusterRecommendation {
+func (r *cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]types.CStorPoolClusterRecommendation {
 
 	cStorPoolClusterRecommendation := make(map[string]types.CStorPoolClusterRecommendation)
 
@@ -164,7 +171,7 @@ func (ncb nodeCapacityBlockDevice) getDeviceRecommendtion(poolCapacity resource.
 				continue
 			}
 
-			// Calculate the no of block devices to return to user.
+			// Calculate the no of block devices to return to client.
 			noOfBlockDevices := (poolCapacityInt / capacity) * raidConfig.GroupDeviceCount
 			if poolCapacityInt < capacity {
 				noOfBlockDevices = raidConfig.GroupDeviceCount
