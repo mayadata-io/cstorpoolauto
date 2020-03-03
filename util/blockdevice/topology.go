@@ -115,7 +115,7 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 			continue
 		}
 		// If deviceType is empty then add it to unknown device type group
-		if deviceType != "" {
+		if deviceType == "" {
 			deviceType = DeviceKindUnKnown
 		}
 

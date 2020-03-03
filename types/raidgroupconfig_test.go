@@ -233,6 +233,13 @@ func TestValidate(t *testing.T) {
 			},
 			isErr: true,
 		},
+		"stripe pool and device count is less than min count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeStripe,
+				GroupDeviceCount: 0,
+			},
+			isErr: true,
+		},
 		"stripe pool and valid device count": {
 			src: &RaidGroupConfig{
 				Type:             PoolRAIDTypeStripe,
@@ -254,10 +261,24 @@ func TestValidate(t *testing.T) {
 			},
 			isErr: false,
 		},
+		"mirror pool and device count is less than min count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeMirror,
+				GroupDeviceCount: 0,
+			},
+			isErr: true,
+		},
 		"raidz pool and invalid device count": {
 			src: &RaidGroupConfig{
 				Type:             PoolRAIDTypeRAIDZ,
 				GroupDeviceCount: 4,
+			},
+			isErr: true,
+		},
+		"raidz pool and device count is less than min count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeRAIDZ,
+				GroupDeviceCount: 1,
 			},
 			isErr: true,
 		},
@@ -281,6 +302,13 @@ func TestValidate(t *testing.T) {
 				GroupDeviceCount: 6,
 			},
 			isErr: false,
+		},
+		"raidz2 pool and device count is less than min count": {
+			src: &RaidGroupConfig{
+				Type:             PoolRAIDTypeRAIDZ2,
+				GroupDeviceCount: 2,
+			},
+			isErr: true,
 		},
 		"invalid raid type and device count is not set": {
 			src: &RaidGroupConfig{
