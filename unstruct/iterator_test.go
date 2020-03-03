@@ -99,8 +99,8 @@ func TestUnstructIterator(t *testing.T) {
 	}
 	tests := map[string]struct {
 		obj                *unstructured.Unstructured
-		getNodeName        UnstructOpsFn
-		getBlockDeviceName UnstructOpsFn
+		getNodeName        OperationFn
+		getBlockDeviceName OperationFn
 		isErr              bool
 	}{
 		"no errors": {

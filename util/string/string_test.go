@@ -145,17 +145,37 @@ func TestEqualityMerge(t *testing.T) {
 		dest   List
 		expect []string
 	}{
+		"src != dest && dest count = 0": {
+			src:    List([]string{"1", "2", "3"}),
+			dest:   List([]string{}),
+			expect: []string{},
+		},
+		"src != dest && dest count < src count": {
+			src:    List([]string{"1", "2", "3"}),
+			dest:   List([]string{"4", "5"}),
+			expect: []string{"4", "5"},
+		},
+		"src != dest && dest count > src count": {
+			src:    List([]string{"1", "2", "3"}),
+			dest:   List([]string{"4", "5", "6", "7"}),
+			expect: []string{"4", "5", "6", "7"},
+		},
+		"src != dest && dest count == src count": {
+			src:    List([]string{"1", "2", "3"}),
+			dest:   List([]string{"4", "5", "6"}),
+			expect: []string{"4", "5", "6"},
+		},
 		"src == dest": {
 			src:    List([]string{"hi", "hello"}),
 			dest:   List([]string{"hi", "hello"}),
 			expect: []string{"hi", "hello"},
 		},
-		"src != dest; extra values in dest": {
+		"dest >> src; extra values in dest": {
 			src:    List([]string{"hi", "hello"}),
 			dest:   List([]string{"hi", "hello", "there", "how are you"}),
 			expect: []string{"hi", "hello", "there", "how are you"},
 		},
-		"src != dest; missing values in dest": {
+		"src >> dest; missing values in dest": {
 			src:    List([]string{"hi", "hello"}),
 			dest:   List([]string{"hello"}),
 			expect: []string{"hello"},
@@ -217,6 +237,117 @@ func TestEqualityMerge(t *testing.T) {
 				if gotItem != mock.expect[idx] {
 					t.Fatalf("Expected %s got %s at index %d", mock.expect[idx], gotItem, idx)
 				}
+			}
+		})
+	}
+}
+
+func TestEqualityIsDiff(t *testing.T) {
+	var tests = map[string]struct {
+		src    List
+		dest   List
+		isDiff bool
+	}{
+		"src != dest && dest count = 0": {
+			src:    List([]string{"1", "2", "3"}),
+			dest:   List([]string{}),
+			isDiff: true,
+		},
+		"src != dest && dest count < src count": {
+			src:    List([]string{"1", "2", "3"}),
+			dest:   List([]string{"4", "5"}),
+			isDiff: true,
+		},
+		"src != dest && dest count > src count": {
+			src:    List([]string{"1", "2", "3"}),
+			dest:   List([]string{"4", "5", "6", "7"}),
+			isDiff: true,
+		},
+		"src != dest && dest count == src count": {
+			src:    List([]string{"1", "2", "3"}),
+			dest:   List([]string{"4", "5", "6"}),
+			isDiff: true,
+		},
+		"src == dest": {
+			src:    List([]string{"hi", "hello"}),
+			dest:   List([]string{"hi", "hello"}),
+			isDiff: false,
+		},
+		"src == dest but different order": {
+			src:    List([]string{"hi", "hello"}),
+			dest:   List([]string{"hello", "hi"}),
+			isDiff: false,
+		},
+		"src != dest with only case mismatch": {
+			src:    List([]string{"hi", "hello"}),
+			dest:   List([]string{"Hello", "Hi"}),
+			isDiff: true,
+		},
+		"dest >> src; extra values in dest": {
+			src:    List([]string{"hi", "hello"}),
+			dest:   List([]string{"hi", "hello", "there", "how are you"}),
+			isDiff: true,
+		},
+		"src >> dest; missing values in dest": {
+			src:    List([]string{"hi", "hello"}),
+			dest:   List([]string{"hello"}),
+			isDiff: true,
+		},
+		"src != dest; missing & new values in dest": {
+			src:    List([]string{"hi", "hello"}),
+			dest:   List([]string{"hello", "how", "are", "you"}),
+			isDiff: true,
+		},
+		"src != dest; multiple missing & multiple new values in dest": {
+			src:    List([]string{"hi", "hello", "app", "cstor", "type", "nice"}),
+			dest:   List([]string{"hello", "nice", "how", "are", "you", "app"}),
+			isDiff: true,
+		},
+		"src != dest; nil src": {
+			src:    List(nil),
+			dest:   List([]string{"hello", "how", "are", "you"}),
+			isDiff: true,
+		},
+		"src != dest; empty src": {
+			src:    List([]string{}),
+			dest:   List([]string{"hello", "how", "are", "you"}),
+			isDiff: true,
+		},
+		"src != dest; nil dest": {
+			src:    List([]string{"hi", "hello"}),
+			dest:   List(nil),
+			isDiff: true,
+		},
+		"src != dest; empty dest": {
+			src:    List([]string{"hi", "hello"}),
+			dest:   List([]string{}),
+			isDiff: true,
+		},
+		"src == dest == nil": {
+			src:    List(nil),
+			dest:   List(nil),
+			isDiff: false,
+		},
+		"src == dest == empty": {
+			src:    List([]string{}),
+			dest:   List([]string{}),
+			isDiff: false,
+		},
+		"src = nil && dest == empty": {
+			src:    List(nil),
+			dest:   List([]string{}),
+			isDiff: false,
+		},
+	}
+	for name, mock := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := &Equality{
+				src:  mock.src,
+				dest: mock.dest,
+			}
+			got := e.IsDiff()
+			if got != mock.isDiff {
+				t.Fatalf("Expected %t got %t", mock.isDiff, got)
 			}
 		})
 	}

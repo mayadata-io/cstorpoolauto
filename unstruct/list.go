@@ -25,13 +25,17 @@ type List []*unstructured.Unstructured
 // Contains returns true if provided name && uid is
 // is available in this List.
 func (s List) Contains(target *unstructured.Unstructured) bool {
-	if target == nil {
+	if target == nil || target.Object == nil {
 		// we don't know how to compare against a nil
 		return false
 	}
 	for _, obj := range s {
+		if obj == nil || obj.Object == nil {
+			continue
+		}
 		if obj.GetName() == target.GetName() &&
 			obj.GetNamespace() == target.GetNamespace() &&
+			obj.GetUID() == target.GetUID() &&
 			obj.GetKind() == target.GetKind() &&
 			obj.GetAPIVersion() == target.GetAPIVersion() {
 			return true

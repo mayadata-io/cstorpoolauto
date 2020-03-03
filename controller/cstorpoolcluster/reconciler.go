@@ -474,6 +474,9 @@ func (p *Planner) initStorageSetToObservedBlockDevices() error {
 
 // initNodeToObservedCSPCDevices maps node name to observed
 // devices in the same order they are observed in CStorPoolCluster
+//
+// TODO:
+//	Make use of util/cstorpoolcluster/helper methods
 func (p *Planner) initNodeToObservedCSPCDevices() error {
 	// currentNodeName holds the current node name of the
 	// CStorPoolCluster nodes that are under iteration
@@ -646,6 +649,8 @@ func (p *Planner) buildDesiredPools() []interface{} {
 	return pools
 }
 
+// TODO (@amitkumardas):
+//  Make use of util/cstorpoolcluster/builder.go methods
 func (p *Planner) getDesiredCStorPoolCluster() *unstructured.Unstructured {
 	cspc := &unstructured.Unstructured{}
 	cspc.SetUnstructuredContent(map[string]interface{}{

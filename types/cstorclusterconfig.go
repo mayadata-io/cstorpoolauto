@@ -65,8 +65,8 @@ type CStorClusterConfigSpec struct {
 type DiskConfig struct {
 	MinCount           resource.Quantity   `json:"minCount"`
 	MinCapacity        resource.Quantity   `json:"minCapacity"`
-	ExternalDiskConfig *ExternalDiskConfig `json:"external"`
-	LocalDiskConfig    *LocalDiskConfig    `json:"local"`
+	ExternalDiskConfig *ExternalDiskConfig `json:"external,omitempty"`
+	LocalDiskConfig    *LocalDiskConfig    `json:"local,omitempty"`
 }
 
 // ExternalDiskConfig has the details required to provision
@@ -111,11 +111,11 @@ type ComputeResources struct {
 type PoolRAIDType string
 
 const (
-	// PoolRAIDTypeMirror represents a mirror pool type
-	PoolRAIDTypeMirror PoolRAIDType = "mirror"
-
 	// PoolRAIDTypeStripe represents a stripe pool type
 	PoolRAIDTypeStripe PoolRAIDType = "stripe"
+
+	// PoolRAIDTypeMirror represents a mirror pool type
+	PoolRAIDTypeMirror PoolRAIDType = "mirror"
 
 	// PoolRAIDTypeRAIDZ represents a raidz pool type
 	PoolRAIDTypeRAIDZ PoolRAIDType = "raidz"
@@ -130,8 +130,8 @@ const (
 // RAIDTypeToDefaultMinDiskCount maps pool instance's raid type
 // to its default minimum disk count
 var RAIDTypeToDefaultMinDiskCount = map[PoolRAIDType]int64{
-	PoolRAIDTypeMirror: 2,
 	PoolRAIDTypeStripe: 1,
+	PoolRAIDTypeMirror: 2,
 	PoolRAIDTypeRAIDZ:  3,
 	PoolRAIDTypeRAIDZ2: 6,
 }
