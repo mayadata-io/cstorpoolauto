@@ -21,36 +21,45 @@ type capacityBlockDevices map[int64][]bdutil.MetaInfo
 // cStorPoolClusterRecommendationRequest is used to request the device
 // recommendation for a given raid type.
 type cStorPoolClusterRecommendationRequest struct {
-	types.CStorPoolClusterRecommendationRequest
+	Spec types.CStorPoolClusterRecommendationRequestSpec
 }
 
-// NewDeviceRequest returns a device request object after validation.
-func NewDeviceRequest(
-	raidConfig *types.RaidGroupConfig, blockDeviceList *unstructured.UnstructuredList, poolCapacity *resource.Quantity) (
+// Data is the input data requested for the specifix recommendation.
+type Data struct {
+	RaidConfig      *types.RaidGroupConfig
+	BlockDeviceList *unstructured.UnstructuredList
+	PoolCapacity    *resource.Quantity
+}
+
+// NewRequestForDevice returns a device request object after validation.
+func NewRequestForDevice(data *Data) (
 	*cStorPoolClusterRecommendationRequest, error) {
 
-	if raidConfig == nil {
+	if data.RaidConfig == nil {
 		return nil, errors.New(
 			"Unable to create device recommendation request: Got nil raid config")
 	}
-	if blockDeviceList == nil {
+	if data.PoolCapacity == nil {
+		return nil, errors.New(
+			"Unable to create device recommendation request: Got nil pool capacity")
+	}
+	if data.BlockDeviceList == nil {
 		return nil, errors.New(
 			"Unable to create device recommendation request: Got nil block device list")
 	}
 
-	err := raidConfig.Validate()
+	err := data.RaidConfig.Validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to create capacity recommendation request")
 	}
 
-	cspcrrs := types.CStorPoolClusterRecommendationRequestSpec{
-		PoolCapacity:    *poolCapacity,
-		BlockDeviceList: *blockDeviceList,
-		DataConfig:      *raidConfig,
+	cspcrr := cStorPoolClusterRecommendationRequest{
+		Spec: types.CStorPoolClusterRecommendationRequestSpec{
+			PoolCapacity:    *data.PoolCapacity,
+			BlockDeviceList: *data.BlockDeviceList,
+			DataConfig:      *data.RaidConfig,
+		},
 	}
-
-	cspcrr := cStorPoolClusterRecommendationRequest{}
-	cspcrr.Spec = cspcrrs
 
 	return &cspcrr, nil
 }
@@ -113,7 +122,6 @@ func (r *cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]t
 
 		cStorPoolClusterRecommendation[kind] = nodeCapacityBlockDeviceMap.getDeviceRecommendtion(r.Spec.PoolCapacity, r.Spec.DataConfig)
 		cStorPoolClusterRecommendationValue := cStorPoolClusterRecommendation[kind]
-		cStorPoolClusterRecommendationValue.ObjectMeta = r.ObjectMeta
 		cStorPoolClusterRecommendationValue.RequestSpec = r.Spec
 		cStorPoolClusterRecommendation[kind] = cStorPoolClusterRecommendationValue
 	}
