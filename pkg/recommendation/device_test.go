@@ -506,7 +506,7 @@ func TestNewRequestForDevice(t *testing.T) {
 
 	for name, mock := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := NewRequestForDevice(mock.src)
+			_, err := NewRequestForDevice(&mock.src)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}
