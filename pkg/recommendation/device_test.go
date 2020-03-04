@@ -362,6 +362,868 @@ func TestGetRecommendation(t *testing.T) {
 				},
 			},
 		},
+		"blockdevices count is less than group device count": {
+			request: cStorPoolClusterRecommendationRequest{
+				Spec: types.CStorPoolClusterRecommendationRequestSpec{
+					PoolCapacity: poolCapacity,
+					BlockDeviceList: unstructured.UnstructuredList{
+						Items: []unstructured.Unstructured{
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-1",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(53687091200),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-2",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(53687091200),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+						},
+					},
+					DataConfig: types.RaidGroupConfig{
+						Type:             types.PoolRAIDTypeRAIDZ,
+						GroupDeviceCount: 3,
+					},
+				},
+			},
+			response: map[string]types.CStorPoolClusterRecommendation{
+				"HDD": {
+					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
+						PoolCapacity: poolCapacity,
+						BlockDeviceList: unstructured.UnstructuredList{
+							Items: []unstructured.Unstructured{
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-1",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(53687091200),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-2",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(53687091200),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+							},
+						},
+						DataConfig: types.RaidGroupConfig{
+							Type:             types.PoolRAIDTypeRAIDZ,
+							GroupDeviceCount: 3,
+						},
+					},
+					Spec: types.CStorPoolClusterRecommendationSpec{
+						PoolInstances: []types.PoolInstanceConfig{
+							{
+								Node: types.Reference{
+									Name: "node-1",
+								},
+								Capacity: poolCapacity,
+								BlockDevices: types.BlockDeviceTopology{
+									DataDevices: []types.Reference{},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"poolCapacity is greater than max capacity in node": {
+			request: cStorPoolClusterRecommendationRequest{
+				Spec: types.CStorPoolClusterRecommendationRequestSpec{
+					PoolCapacity: poolCapacity,
+					BlockDeviceList: unstructured.UnstructuredList{
+						Items: []unstructured.Unstructured{
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-1",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(5368709120),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-2",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(5368709120),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+						},
+					},
+					DataConfig: types.RaidGroupConfig{
+						Type:             types.PoolRAIDTypeMirror,
+						GroupDeviceCount: 2,
+					},
+				},
+			},
+			response: map[string]types.CStorPoolClusterRecommendation{
+				"HDD": {
+					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
+						PoolCapacity: poolCapacity,
+						BlockDeviceList: unstructured.UnstructuredList{
+							Items: []unstructured.Unstructured{
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-1",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(5368709120),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-2",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(5368709120),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+							},
+						},
+						DataConfig: types.RaidGroupConfig{
+							Type:             types.PoolRAIDTypeMirror,
+							GroupDeviceCount: 2,
+						},
+					},
+					Spec: types.CStorPoolClusterRecommendationSpec{
+						PoolInstances: []types.PoolInstanceConfig{
+							{
+								Node: types.Reference{
+									Name: "node-1",
+								},
+								Capacity: poolCapacity,
+								BlockDevices: types.BlockDeviceTopology{
+									DataDevices: []types.Reference{},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"poolCapacity is less than blockdevice capacity": {
+			request: cStorPoolClusterRecommendationRequest{
+				Spec: types.CStorPoolClusterRecommendationRequestSpec{
+					PoolCapacity: poolCapacity,
+					BlockDeviceList: unstructured.UnstructuredList{
+						Items: []unstructured.Unstructured{
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-1",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(107374182400),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-2",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(107374182400),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+						},
+					},
+					DataConfig: types.RaidGroupConfig{
+						Type:             types.PoolRAIDTypeMirror,
+						GroupDeviceCount: 2,
+					},
+				},
+			},
+			response: map[string]types.CStorPoolClusterRecommendation{
+				"HDD": {
+					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
+						PoolCapacity: poolCapacity,
+						BlockDeviceList: unstructured.UnstructuredList{
+							Items: []unstructured.Unstructured{
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-1",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(107374182400),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-2",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(107374182400),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+							},
+						},
+						DataConfig: types.RaidGroupConfig{
+							Type:             types.PoolRAIDTypeMirror,
+							GroupDeviceCount: 2,
+						},
+					},
+					Spec: types.CStorPoolClusterRecommendationSpec{
+						PoolInstances: []types.PoolInstanceConfig{
+							{
+								Node: types.Reference{
+									Name: "node-1",
+								},
+								Capacity: poolCapacity,
+								BlockDevices: types.BlockDeviceTopology{
+									DataDevices: []types.Reference{
+										{
+											Name:       "bd-1",
+											Namespace:  "openebs",
+											Kind:       "BlockDevice",
+											APIVersion: "openebs.io/v1alpha1",
+											UID:        "",
+										},
+										{
+											Name:       "bd-2",
+											Namespace:  "openebs",
+											Kind:       "BlockDevice",
+											APIVersion: "openebs.io/v1alpha1",
+											UID:        "",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"multiple size suitable blockdevices": {
+			request: cStorPoolClusterRecommendationRequest{
+				Spec: types.CStorPoolClusterRecommendationRequestSpec{
+					PoolCapacity: poolCapacity,
+					BlockDeviceList: unstructured.UnstructuredList{
+						Items: []unstructured.Unstructured{
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-1",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(53687091200),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-2",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(53687091200),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-3",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(107374182400),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+							{
+								Object: map[string]interface{}{
+									"apiVersion": "openebs.io/v1alpha1",
+									"kind":       string(types.KindBlockDevice),
+									"metadata": map[string]interface{}{
+										"name":      "bd-4",
+										"namespace": "openebs",
+										"labels": map[string]interface{}{
+											"kubernetes.io/hostname":  "node-1",
+											"ndm.io/managed":          "false",
+											"ndm.io/blockdevice-type": "blockdevice",
+										},
+									},
+									"spec": map[string]interface{}{
+										"capacity": map[string]interface{}{
+											"storage":            int64(107374182400),
+											"physicalSectorSize": int32(512),
+											"logicalSectorSize":  int32(512),
+										},
+										"details": map[string]interface{}{
+											"deviceType": "HDD",
+										},
+										"nodeAttributes": map[string]interface{}{
+											"nodeName": "node-1",
+										},
+										"filesystem": map[string]interface{}{},
+									},
+									"status": map[string]interface{}{
+										"claimState": string("Unclaimed"),
+										"state":      string(types.BlockDeviceActive),
+									},
+								},
+							},
+						},
+					},
+					DataConfig: types.RaidGroupConfig{
+						Type:             types.PoolRAIDTypeMirror,
+						GroupDeviceCount: 2,
+					},
+				},
+			},
+			response: map[string]types.CStorPoolClusterRecommendation{
+				"HDD": {
+					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
+						PoolCapacity: poolCapacity,
+						BlockDeviceList: unstructured.UnstructuredList{
+							Items: []unstructured.Unstructured{
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-1",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(53687091200),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-2",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(53687091200),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-3",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(107374182400),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+								{
+									Object: map[string]interface{}{
+										"apiVersion": "openebs.io/v1alpha1",
+										"kind":       string(types.KindBlockDevice),
+										"metadata": map[string]interface{}{
+											"name":      "bd-4",
+											"namespace": "openebs",
+											"labels": map[string]interface{}{
+												"kubernetes.io/hostname":  "node-1",
+												"ndm.io/managed":          "false",
+												"ndm.io/blockdevice-type": "blockdevice",
+											},
+										},
+										"spec": map[string]interface{}{
+											"capacity": map[string]interface{}{
+												"storage":            int64(107374182400),
+												"physicalSectorSize": int32(512),
+												"logicalSectorSize":  int32(512),
+											},
+											"details": map[string]interface{}{
+												"deviceType": "HDD",
+											},
+											"nodeAttributes": map[string]interface{}{
+												"nodeName": "node-1",
+											},
+											"filesystem": map[string]interface{}{},
+										},
+										"status": map[string]interface{}{
+											"claimState": string("Unclaimed"),
+											"state":      string(types.BlockDeviceActive),
+										},
+									},
+								},
+							},
+						},
+						DataConfig: types.RaidGroupConfig{
+							Type:             types.PoolRAIDTypeMirror,
+							GroupDeviceCount: 2,
+						},
+					},
+					Spec: types.CStorPoolClusterRecommendationSpec{
+						PoolInstances: []types.PoolInstanceConfig{
+							{
+								Node: types.Reference{
+									Name: "node-1",
+								},
+								Capacity: poolCapacity,
+								BlockDevices: types.BlockDeviceTopology{
+									DataDevices: []types.Reference{
+										{
+											Name:       "bd-1",
+											Namespace:  "openebs",
+											Kind:       "BlockDevice",
+											APIVersion: "openebs.io/v1alpha1",
+											UID:        "",
+										},
+										{
+											Name:       "bd-2",
+											Namespace:  "openebs",
+											Kind:       "BlockDevice",
+											APIVersion: "openebs.io/v1alpha1",
+											UID:        "",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, mock := range tests {
