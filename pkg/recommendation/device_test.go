@@ -396,30 +396,7 @@ func TestGetRecommendation(t *testing.T) {
 					},
 				},
 			},
-			response: map[string]types.CStorPoolClusterRecommendation{
-				"HDD": {
-					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
-						PoolCapacity: poolCapacity,
-						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeRAIDZ,
-							GroupDeviceCount: 3,
-						},
-					},
-					Spec: types.CStorPoolClusterRecommendationSpec{
-						PoolInstances: []types.PoolInstanceConfig{
-							{
-								Node: types.Reference{
-									Name: "node-1",
-								},
-								Capacity: poolCapacity,
-								BlockDevices: types.BlockDeviceTopology{
-									DataDevices: []types.Reference{},
-								},
-							},
-						},
-					},
-				},
-			},
+			response: map[string]types.CStorPoolClusterRecommendation{},
 		},
 		"poolCapacity is greater than max capacity in node": {
 			request: cStorPoolClusterRecommendationRequest{
@@ -505,30 +482,7 @@ func TestGetRecommendation(t *testing.T) {
 					},
 				},
 			},
-			response: map[string]types.CStorPoolClusterRecommendation{
-				"HDD": {
-					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
-						PoolCapacity: poolCapacity,
-						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
-							GroupDeviceCount: 2,
-						},
-					},
-					Spec: types.CStorPoolClusterRecommendationSpec{
-						PoolInstances: []types.PoolInstanceConfig{
-							{
-								Node: types.Reference{
-									Name: "node-1",
-								},
-								Capacity: poolCapacity,
-								BlockDevices: types.BlockDeviceTopology{
-									DataDevices: []types.Reference{},
-								},
-							},
-						},
-					},
-				},
-			},
+			response: map[string]types.CStorPoolClusterRecommendation{},
 		},
 		"poolCapacity is less than blockdevice capacity": {
 			request: cStorPoolClusterRecommendationRequest{
@@ -860,21 +814,26 @@ func TestNewRequestForDevice(t *testing.T) {
 	// zeroPoolCapacity, _ := resource.ParseQuantity(fmt.Sprintf("0"))
 	poolCapacity, _ := resource.ParseQuantity(fmt.Sprintf("53687091200"))
 	var tests = map[string]struct {
-		request types.CStorPoolClusterRecommendationRequest
-		data    Data
+		request *types.CStorPoolClusterRecommendationRequest
+		data    *Data
 		isErr   bool
 	}{
+		"nil request": {
+			request: nil,
+			data:    &Data{},
+			isErr:   true,
+		},
 		"nil PoolCapacity": {
-			request: types.CStorPoolClusterRecommendationRequest{
+			request: &types.CStorPoolClusterRecommendationRequest{
 				Spec: types.CStorPoolClusterRecommendationRequestSpec{
 					PoolCapacity: resource.Quantity{},
 				},
 			},
-			data:  Data{},
+			data:  &Data{},
 			isErr: true,
 		},
 		"nil BlockDeviceList": {
-			request: types.CStorPoolClusterRecommendationRequest{
+			request: &types.CStorPoolClusterRecommendationRequest{
 				Spec: types.CStorPoolClusterRecommendationRequestSpec{
 					PoolCapacity: poolCapacity,
 					DataConfig: types.RaidGroupConfig{
@@ -883,13 +842,13 @@ func TestNewRequestForDevice(t *testing.T) {
 					},
 				},
 			},
-			data: Data{
+			data: &Data{
 				BlockDeviceList: nil,
 			},
 			isErr: true,
 		},
 		"invalid RaidConfig": {
-			request: types.CStorPoolClusterRecommendationRequest{
+			request: &types.CStorPoolClusterRecommendationRequest{
 				Spec: types.CStorPoolClusterRecommendationRequestSpec{
 					PoolCapacity: poolCapacity,
 					DataConfig: types.RaidGroupConfig{
@@ -898,7 +857,7 @@ func TestNewRequestForDevice(t *testing.T) {
 					},
 				},
 			},
-			data: Data{
+			data: &Data{
 				BlockDeviceList: &unstructured.UnstructuredList{
 					Items: []unstructured.Unstructured{
 						{
@@ -939,7 +898,7 @@ func TestNewRequestForDevice(t *testing.T) {
 			isErr: true,
 		},
 		"valid case": {
-			request: types.CStorPoolClusterRecommendationRequest{
+			request: &types.CStorPoolClusterRecommendationRequest{
 				Spec: types.CStorPoolClusterRecommendationRequestSpec{
 					PoolCapacity: poolCapacity,
 					DataConfig: types.RaidGroupConfig{
@@ -948,7 +907,7 @@ func TestNewRequestForDevice(t *testing.T) {
 					},
 				},
 			},
-			data: Data{
+			data: &Data{
 				BlockDeviceList: &unstructured.UnstructuredList{
 					Items: []unstructured.Unstructured{
 						{
@@ -992,7 +951,7 @@ func TestNewRequestForDevice(t *testing.T) {
 
 	for name, mock := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := NewRequestForDevice(&mock.request, &mock.data)
+			_, err := NewRequestForDevice(mock.request, mock.data)
 			if mock.isErr && err == nil {
 				t.Fatalf("Expected error got none")
 			}

@@ -1,6 +1,7 @@
 package recommendation
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -27,6 +28,11 @@ type Data struct {
 func NewRequestForDevice(request *types.CStorPoolClusterRecommendationRequest, data *Data) (
 	*cStorPoolClusterRecommendationRequest, error) {
 
+	if request == nil {
+		return nil, errors.New(
+			"Unable to create device recommendation request: Got nil in request")
+	}
+
 	if request.Spec.PoolCapacity.IsZero() {
 		return nil, errors.New(
 			"Unable to create device recommendation request: Got zero pool capacity")
@@ -42,13 +48,8 @@ func NewRequestForDevice(request *types.CStorPoolClusterRecommendationRequest, d
 	}
 
 	cspcrr := cStorPoolClusterRecommendationRequest{
-		Request: types.CStorPoolClusterRecommendationRequest{
-			Spec: types.CStorPoolClusterRecommendationRequestSpec{
-				PoolCapacity: request.Spec.PoolCapacity,
-				DataConfig:   request.Spec.DataConfig,
-			},
-		},
-		Data: *data,
+		Request: *request,
+		Data:    *data,
 	}
 
 	return &cspcrr, nil
@@ -110,9 +111,12 @@ func (r *cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]t
 			nodeCapacityBlockDeviceMap.update(nodeName, capacityBlockDevicesMap)
 		}
 
-		cStorPoolClusterRecommendationValue := nodeCapacityBlockDeviceMap.getDeviceRecommendtion(r.Request.Spec.PoolCapacity, r.Request.Spec.DataConfig)
+		cStorPoolClusterRecommendationValue := nodeCapacityBlockDeviceMap.getDeviceRecommendation(r.Request.Spec.PoolCapacity, r.Request.Spec.DataConfig)
 		cStorPoolClusterRecommendationValue.RequestSpec = r.Request.Spec
-		cStorPoolClusterRecommendation[kind] = cStorPoolClusterRecommendationValue
+
+		if len(cStorPoolClusterRecommendationValue.Spec.PoolInstances) != 0 {
+			cStorPoolClusterRecommendation[kind] = cStorPoolClusterRecommendationValue
+		}
 	}
 
 	return cStorPoolClusterRecommendation
@@ -121,10 +125,10 @@ func (r *cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]t
 // nodeCapacityBlockDevice contains key with node name and value with capacityBlockDevice
 type nodeCapacityBlockDevices map[string]capacityBlockDevices
 
-// getDeviceRecommendtion returns the recommended block devices on a node with the given configuration.
-func (ncb nodeCapacityBlockDevices) getDeviceRecommendtion(poolCapacity resource.Quantity, raidConfig types.RaidGroupConfig) types.CStorPoolClusterRecommendation {
+// getDeviceRecommendation returns the recommended block devices on a node with the given configuration.
+func (ncb nodeCapacityBlockDevices) getDeviceRecommendation(requestedCapacity resource.Quantity, raidConfig types.RaidGroupConfig) types.CStorPoolClusterRecommendation {
 
-	poolCapacityInt, ok := poolCapacity.AsInt64()
+	requestedCapacityInt, ok := requestedCapacity.AsInt64()
 	if !ok {
 		return types.CStorPoolClusterRecommendation{}
 	}
@@ -133,11 +137,12 @@ func (ncb nodeCapacityBlockDevices) getDeviceRecommendtion(poolCapacity resource
 
 	for nodeName, capacityBlockDevices := range ncb {
 
-		poolInstance := capacityBlockDevices.getPoolInstance(poolCapacityInt, raidConfig)
+		poolInstance := capacityBlockDevices.getPoolInstance(requestedCapacityInt, raidConfig)
 		poolInstance.Node.Name = nodeName
-		poolInstance.Capacity = poolCapacity
 
-		poolInstances = append(poolInstances, poolInstance)
+		if len(poolInstance.BlockDevices.DataDevices) != 0 {
+			poolInstances = append(poolInstances, poolInstance)
+		}
 
 	}
 
@@ -154,7 +159,7 @@ func (ncb nodeCapacityBlockDevices) getDeviceRecommendtion(poolCapacity resource
 // value with all the block devices of that capacity.
 type capacityBlockDevices map[int64][]bdutil.MetaInfo
 
-func (cbd capacityBlockDevices) getPoolInstance(poolCapacityInt int64, raidConfig types.RaidGroupConfig) types.PoolInstanceConfig {
+func (cbd capacityBlockDevices) getPoolInstance(requestedCapacity int64, raidConfig types.RaidGroupConfig) types.PoolInstanceConfig {
 	// To sort map storing (ascending order) keys in a seperate data structure.
 	// Note: map cannot be sorted.
 	capacityKeys := make([]int64, 0, len(cbd))
@@ -165,6 +170,7 @@ func (cbd capacityBlockDevices) getPoolInstance(poolCapacityInt int64, raidConfi
 		return capacityKeys[i] < capacityKeys[j]
 	})
 
+	var blockDeviceCapacity int64
 	prevDataDevices := []types.Reference{}
 	for _, capacity := range capacityKeys {
 		dataDevices := []types.Reference{}
@@ -176,21 +182,23 @@ func (cbd capacityBlockDevices) getPoolInstance(poolCapacityInt int64, raidConfi
 			continue
 		}
 
-		noOfRaidGroup := count / raidConfig.GroupDeviceCount
+		raidGroupCount := count / raidConfig.GroupDeviceCount
 
-		maxCapacity := noOfRaidGroup * raidConfig.GetDataDeviceCount() * capacity
+		maxCapacity := raidGroupCount * raidConfig.GetDataDeviceCount() * capacity
 
 		// If required pool capacity is greater than the max capacity of
 		// the current block devices then skip this device.
-		if maxCapacity < poolCapacityInt {
+		if maxCapacity < requestedCapacity {
 			continue
 		}
 
 		// Calculate the no of block devices to return to client.
-		noOfBlockDevices := (poolCapacityInt / capacity) * raidConfig.GroupDeviceCount
-		if poolCapacityInt < capacity {
-			noOfBlockDevices = raidConfig.GroupDeviceCount
+		rem := requestedCapacity % (raidConfig.GetDataDeviceCount() * capacity)
+		noOfRaidGroups := requestedCapacity / (raidConfig.GetDataDeviceCount() * capacity)
+		if rem != 0 {
+			noOfRaidGroups = noOfRaidGroups + 1
 		}
+		noOfBlockDevices := noOfRaidGroups * raidConfig.GroupDeviceCount
 		for i := 0; i < int(noOfBlockDevices); i++ {
 			dataDevices = append(dataDevices, *blockDevices[i].Identity)
 		}
@@ -199,19 +207,29 @@ func (cbd capacityBlockDevices) getPoolInstance(poolCapacityInt int64, raidConfi
 		// contains both 50GB and 100GB of block devices.
 		// This will break the loop once suitable block device is found and return the last block devices.
 		// In this case 100GB.
-		if len(prevDataDevices) != 0 && (poolCapacityInt < capacity) {
+		if len(prevDataDevices) != 0 && (requestedCapacity < capacity) {
 			break
 		}
 
 		// maintaining the prevDataDevices that means previous capacity suitable
 		// block devices for requested pool capacity.
 		prevDataDevices = dataDevices
+
+		blockDeviceCapacity = capacity
+	}
+
+	// Calculate pool instance capacity
+	noOfGroups := int64(len(prevDataDevices)) / raidConfig.GroupDeviceCount
+	instanceCapacity, err := resource.ParseQuantity(fmt.Sprintf("%d", (noOfGroups * raidConfig.GetDataDeviceCount() * blockDeviceCapacity)))
+	if err != nil {
+		return types.PoolInstanceConfig{}
 	}
 
 	poolInstance := types.PoolInstanceConfig{
 		BlockDevices: types.BlockDeviceTopology{
 			DataDevices: prevDataDevices,
 		},
+		Capacity: instanceCapacity,
 	}
 
 	return poolInstance
