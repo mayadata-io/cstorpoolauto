@@ -19,7 +19,6 @@ package types
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // CStorPoolClusterRecommendationRequest is a kubernetes custom
@@ -40,8 +39,6 @@ type CStorPoolClusterRecommendationRequest struct {
 type CStorPoolClusterRecommendationRequestSpec struct {
 	// PoolCapacity represents requested capacity for one pool
 	PoolCapacity resource.Quantity `json:"poolCapacity"`
-	// BlockDeviceList represents list of block devices in all nodes.
-	BlockDeviceList unstructured.UnstructuredList `json:"blockDeviceList"`
 	// DataConfig represents raid configuration for data devices.
 	DataConfig RaidGroupConfig `json:"dataConfig"`
 	// WriteCacheConfig represents raid configuration for write cache devices.
