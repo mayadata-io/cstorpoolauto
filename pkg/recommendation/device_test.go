@@ -11,6 +11,7 @@ import (
 )
 
 func TestGetRecommendation(t *testing.T) {
+	poolCapacity100GB, _ := resource.ParseQuantity(fmt.Sprintf("107374182400"))
 	poolCapacity, _ := resource.ParseQuantity(fmt.Sprintf("53687091200"))
 	var tests = map[string]struct {
 		request  cStorPoolClusterRecommendationRequest
@@ -583,7 +584,7 @@ func TestGetRecommendation(t *testing.T) {
 								Node: types.Reference{
 									Name: "node-1",
 								},
-								Capacity: poolCapacity,
+								Capacity: poolCapacity100GB,
 								BlockDevices: types.BlockDeviceTopology{
 									DataDevices: []types.Reference{
 										{
