@@ -22,25 +22,32 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// UnstructOpsFn is a typed function that abstracts operations
+// OperationFn is a typed function that abstracts an operation
 // against an unstructured instance
-type UnstructOpsFn func(*unstructured.Unstructured) error
+type OperationFn func(*unstructured.Unstructured) error
 
 // SliceIteration provides iteration operations against its
-// list of items
+// list of items. This provides a functional approach to
+// iterate the list & execute callbacks during iteration.
 type SliceIteration struct {
 	Items []interface{}
 }
 
-// AsUnstruct transforms the provided instance into appropriate
+// ItemToUnstruct transforms the provided instance into appropriate
 // unstructured instance
-func (i SliceIteration) AsUnstruct(idx int, given interface{}) *unstructured.Unstructured {
+func (i SliceIteration) ItemToUnstruct(idx int, item interface{}) *unstructured.Unstructured {
 	u := &unstructured.Unstructured{}
 	u.SetUnstructuredContent(
 		map[string]interface{}{
-			"spec": given,
+			//	The given item is mapped against spec field
+			"spec": item,
 		},
 	)
+	// NOTE:
+	//
+	// 	These values are set to avoid getting into any errors
+	// in-case of any internal validation during parsing of
+	// this unstructured instance
 	u.SetKind("SliceItem")
 	u.SetAPIVersion("v1")
 	u.SetName(fmt.Sprintf("elem-%d", idx))
@@ -53,16 +60,18 @@ func SliceIterator(items []interface{}) *SliceIteration {
 	return &SliceIteration{Items: items}
 }
 
-// ForEach loops through this instances list and runs each of the
-// item against the provided functions
-func (i *SliceIteration) ForEach(must UnstructOpsFn, others ...UnstructOpsFn) error {
-	var unFns []UnstructOpsFn
+// ForEach loops through this list and runs each item
+// against the provided function(s) i.e. callback(s)
+func (i *SliceIteration) ForEach(must OperationFn, others ...OperationFn) error {
+	var unFns []OperationFn
 	unFns = append(unFns, must)
 	unFns = append(unFns, others...)
-	for idx, elem := range i.Items {
-		un := i.AsUnstruct(idx, elem)
+	for idx, item := range i.Items {
+		// we must convert this item to an unstructured instance
+		unItem := i.ItemToUnstruct(idx, item)
+		// execute this item against all the callbacks
 		for _, fn := range unFns {
-			err := fn(un)
+			err := fn(unItem)
 			if err != nil {
 				return err
 			}

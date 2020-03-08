@@ -29,9 +29,79 @@ func TestListSelectionMatchContains(t *testing.T) {
 	var tests = map[string]struct {
 		selector metac.ResourceSelector
 		items    []*unstructured.Unstructured
-		target   *unstructured.Unstructured
+		expect   *unstructured.Unstructured
 		isFound  bool
 	}{
+		"passing field selector": {
+			selector: metac.ResourceSelector{
+				SelectorTerms: []*metac.SelectorTerm{
+					&metac.SelectorTerm{
+						MatchFields: map[string]string{
+							"spec.path": "my-path",
+						},
+					},
+				},
+			},
+			items: []*unstructured.Unstructured{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"kind": "Service",
+							"name": "my-service",
+							"uid":  "svc-001",
+						},
+						"spec": map[string]interface{}{
+							"path": "my-path",
+						},
+					},
+				},
+			},
+			expect: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"kind": "Service",
+						"name": "my-service",
+						"uid":  "svc-001",
+					},
+				},
+			},
+			isFound: true,
+		},
+		"passing path based field selector": {
+			selector: metac.ResourceSelector{
+				SelectorTerms: []*metac.SelectorTerm{
+					&metac.SelectorTerm{
+						MatchFields: map[string]string{
+							"spec.path": "/dev/sdb",
+						},
+					},
+				},
+			},
+			items: []*unstructured.Unstructured{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"kind": "Service",
+							"name": "my-service",
+							"uid":  "svc-001",
+						},
+						"spec": map[string]interface{}{
+							"path": "/dev/sdb",
+						},
+					},
+				},
+			},
+			expect: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"kind": "Service",
+						"name": "my-service",
+						"uid":  "svc-001",
+					},
+				},
+			},
+			isFound: false, // bug in metac w.r.t path based field selector
+		},
 		"finalizer selector": {
 			selector: metac.ResourceSelector{
 				SelectorTerms: []*metac.SelectorTerm{
@@ -59,7 +129,7 @@ func TestListSelectionMatchContains(t *testing.T) {
 					},
 				},
 			},
-			target: &unstructured.Unstructured{
+			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"kind": "Service",
@@ -75,7 +145,7 @@ func TestListSelectionMatchContains(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			s := ListSelector(mock.selector, mock.items...)
-			got := s.MatchContains(mock.target)
+			got := s.MatchContains(mock.expect)
 			if got != mock.isFound {
 				t.Fatalf("Expected %t got %t: matches %d", mock.isFound, got, len(s.matches))
 			}

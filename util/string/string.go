@@ -85,7 +85,17 @@ func (e Equality) Diff() (noops Map, additions []string, removals []string) {
 		}
 		additions = append(additions, destination)
 	}
+
 	return
+}
+
+// IsDiff flags if there was any changes between src list & dest list
+func (e Equality) IsDiff() bool {
+	noops, additions, removals := e.Diff()
+	if !(len(noops) == len(e.src) && len(removals) == 0 && len(additions) == 0) {
+		return true
+	}
+	return false
 }
 
 // Merge merges the source items with destination items
@@ -95,36 +105,43 @@ func (e Equality) Diff() (noops Map, additions []string, removals []string) {
 // list.
 //
 // TODO (@amitkumardas):
-//	This doesnot handle cases of
-//	1/ removal in groups
-//	2/ replacement in groups
+//	This logic may not be sufficient for cases when group of items
+// needs to be removed without their replacements. Current logic
+// will just move some or all of the items up i.e. their position
+// index will decrease.
 func (e Equality) Merge() []string {
 	var new []string
 	var used = map[string]bool{}
 	var merge []string
 	for _, destItem := range e.dest {
+		// check if src contains this dest item
 		if e.src.ContainsExact(destItem) {
 			// nothing to be done here
 			continue
 		}
-		// store this is a new item
+		// store this as a new item since src does not have it
 		new = append(new, destItem)
 	}
 	// we want to merge by following the order of source list
 	for _, sourceItem := range e.src {
+		// check if dest contains this src item
 		if e.dest.ContainsExact(sourceItem) {
-			// no change; use this as merge item
+			// continue keeping this src item as merge item
 			merge = append(merge, sourceItem)
 			continue
 		}
 		// donot use this source item
 		// replace source item with a new item if available
-		if len(new) == 0 {
+		if len(new) == 0 || len(new) == len(used) {
+			// NOTE:
+			// 	no replacement from new list
+			// will get replaced by next suitable item from src list
 			continue
 		}
+		// extract the replacement item from new list
 		newItem := new[len(used)]
 		merge = append(merge, newItem)
-		// mark this new item as used
+		// mark this replacement item as used
 		used[newItem] = true
 	}
 	// check for extras
