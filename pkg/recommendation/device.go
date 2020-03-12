@@ -113,7 +113,8 @@ func (r *cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]t
 
 		cStorPoolClusterRecommendationValue := nodeCapacityBlockDeviceMap.getDeviceRecommendation(r.Request.Spec.PoolCapacity, r.Request.Spec.DataConfig)
 		cStorPoolClusterRecommendationValue.RequestSpec = r.Request.Spec
-		cStorPoolClusterRecommendationValue.ObjectMeta = r.Request.ObjectMeta
+		cStorPoolClusterRecommendationValue.ObjectMeta.Name = r.Request.ObjectMeta.Name
+		cStorPoolClusterRecommendationValue.ObjectMeta.Namespace = r.Request.ObjectMeta.Namespace
 
 		if len(cStorPoolClusterRecommendationValue.Spec.PoolInstances) != 0 {
 			cStorPoolClusterRecommendation[kind] = cStorPoolClusterRecommendationValue
