@@ -23,7 +23,7 @@ import "github.com/pkg/errors"
 type RaidGroupConfig struct {
 	// Type is the raid group type
 	// Supported values are : stripe, mirror, raidz and raidz2
-	Type PoolRAIDType `json:"type"`
+	Type PoolRAIDType `json:"raidType"`
 	// GroupDeviceCount contains device count in a raid group
 	// -- for stripe DeviceCount = 1
 	// -- for mirror DeviceCount = 2
