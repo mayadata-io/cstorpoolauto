@@ -23,7 +23,7 @@ import "github.com/pkg/errors"
 type RaidGroupConfig struct {
 	// Type is the raid group type
 	// Supported values are : stripe, mirror, raidz and raidz2
-	Type PoolRAIDType `json:"raidType"`
+	RAIDType PoolRAIDType `json:"raidType"`
 	// GroupDeviceCount contains device count in a raid group
 	// -- for stripe DeviceCount = 1
 	// -- for mirror DeviceCount = 2
@@ -37,7 +37,7 @@ type RaidGroupConfig struct {
 // type: mirror groupDeviceCount: 2
 func GetDefaultRaidGroupConfig() *RaidGroupConfig {
 	return &RaidGroupConfig{
-		Type:             PoolRAIDTypeDefault,
+		RAIDType:         PoolRAIDTypeDefault,
 		GroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeMirror],
 	}
 }
@@ -49,10 +49,10 @@ func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCountIfNotPresent() error 
 	if rgc.GroupDeviceCount != 0 {
 		return nil
 	}
-	dc, ok := RAIDTypeToDefaultMinDiskCount[rgc.Type]
+	dc, ok := RAIDTypeToDefaultMinDiskCount[rgc.RAIDType]
 	if !ok {
 		return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q.",
-			rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
+			rgc.RAIDType, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
 	}
 	rgc.GroupDeviceCount = dc
 	return nil
@@ -61,7 +61,7 @@ func (rgc *RaidGroupConfig) PopulateDefaultGroupDeviceCountIfNotPresent() error 
 // GetDataDeviceCount returns data device count for one raid group configuration
 // This is helpfull to calculate pool capacity.
 func (rgc *RaidGroupConfig) GetDataDeviceCount() int64 {
-	switch rgc.Type {
+	switch rgc.RAIDType {
 	case PoolRAIDTypeMirror:
 		return rgc.GroupDeviceCount / 2
 	// For stripe pool data device count in is n.
@@ -86,13 +86,13 @@ func (rgc *RaidGroupConfig) Validate() error {
 	// If we got any -ve number or 0 then it an invalid device count.
 	if rgc.GroupDeviceCount <= 0 {
 		return errors.Errorf("Invalid device count %d for RAID type %q.",
-			rgc.GroupDeviceCount, rgc.Type)
+			rgc.GroupDeviceCount, rgc.RAIDType)
 	}
 
-	minDeviceCount, ok := RAIDTypeToDefaultMinDiskCount[PoolRAIDType(rgc.Type)]
+	minDeviceCount, ok := RAIDTypeToDefaultMinDiskCount[PoolRAIDType(rgc.RAIDType)]
 	if !ok {
 		return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q.",
-			rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
+			rgc.RAIDType, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
 	}
 
 	// If device count is less than min device count then that is not a valid
@@ -101,16 +101,16 @@ func (rgc *RaidGroupConfig) Validate() error {
 	// count 2 is valid if n=0 but that is not a valid raid group config.
 	if minDeviceCount > rgc.GroupDeviceCount {
 		return errors.Errorf("Invalid device count %d for RAID type %q",
-			rgc.GroupDeviceCount, rgc.Type)
+			rgc.GroupDeviceCount, rgc.RAIDType)
 	}
 
-	switch rgc.Type {
+	switch rgc.RAIDType {
 	// For mirror pool device count in one vdev is 2
 	case PoolRAIDTypeMirror:
 		{
 			if rgc.GroupDeviceCount != 2 {
 				return errors.Errorf("Invalid device count %d for RAID type %q: Want 2.",
-					rgc.GroupDeviceCount, rgc.Type)
+					rgc.GroupDeviceCount, rgc.RAIDType)
 			}
 		}
 	// For stripe pool device count in one vdev is n. Where n > 0
@@ -126,7 +126,7 @@ func (rgc *RaidGroupConfig) Validate() error {
 				r := count % 2
 				if r != 0 {
 					return errors.Errorf("Invalid device count %d for RAID type %q: Want 2^n + 1.",
-						rgc.GroupDeviceCount, rgc.Type)
+						rgc.GroupDeviceCount, rgc.RAIDType)
 				}
 				count = count / 2
 			}
@@ -139,7 +139,7 @@ func (rgc *RaidGroupConfig) Validate() error {
 				r := count % 2
 				if r != 0 {
 					return errors.Errorf("Invalid device count %d for RAID type %q: Want 2^n + 2.",
-						rgc.GroupDeviceCount, rgc.Type)
+						rgc.GroupDeviceCount, rgc.RAIDType)
 				}
 				count = count / 2
 			}
@@ -147,7 +147,7 @@ func (rgc *RaidGroupConfig) Validate() error {
 	default:
 		{
 			return errors.Errorf("Invalid RAID type %q: Supports %q, %q, %q or %q.",
-				rgc.Type, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
+				rgc.RAIDType, PoolRAIDTypeStripe, PoolRAIDTypeMirror, PoolRAIDTypeRAIDZ, PoolRAIDTypeRAIDZ2)
 		}
 	}
 	return nil
