@@ -209,7 +209,7 @@ func (cbd capacityBlockDevices) getPoolInstance(requestedCapacity int64, raidCon
 		// contains both 50GB and 100GB of block devices.
 		// This will break the loop once suitable block device is found and return the last block devices.
 		// In this case 100GB.
-		if len(prevDataDevices) != 0 && (requestedCapacity < capacity) {
+		if len(prevDataDevices) != 0 && (requestedCapacity <= capacity) {
 			break
 		}
 
