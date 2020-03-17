@@ -84,14 +84,19 @@ func (h *Helper) GetLocalBlockDeviceSelector() (metac.ResourceSelector, error) {
 		return nilselector, h.err
 	}
 	var cstorClusterConfigTyped = types.CStorClusterConfig{}
-	err := unstruct.UnstructToTyped(h.ClusterConfig, &cstorClusterConfigTyped)
+	err := unstruct.UnstructToTyped(
+		h.ClusterConfig,
+		&cstorClusterConfigTyped,
+	)
 	if err != nil {
 		return nilselector, err
 	}
 	localDiskConf := cstorClusterConfigTyped.Spec.DiskConfig.LocalDiskConfig
 	if localDiskConf == nil {
 		return nilselector,
-			errors.Errorf("Can't get disk selector: Nil LocalDiskConfig")
+			errors.Errorf(
+				"Can't get disk selector: Nil LocalDiskConfig",
+			)
 	}
 	return localDiskConf.BlockDeviceSelector, nil
 }
@@ -104,7 +109,11 @@ func (h *Helper) IsDiskCountMatchRAIDType(count int64) (bool, error) {
 		return false, h.err
 	}
 	if count <= 0 {
-		return false, errors.Errorf("Can't match: Invalid disk count %d", count)
+		return false,
+			errors.Errorf(
+				"Can't match: Invalid disk count %d",
+				count,
+			)
 	}
 	raid, err := h.GetRAIDTypeOrCached()
 	if err != nil {
@@ -118,14 +127,33 @@ func (h *Helper) IsDiskCountMatchRAIDType(count int64) (bool, error) {
 	return false, nil
 }
 
+func (h *Helper) validateRAIDType(raidType types.PoolRAIDType) error {
+	if !types.SupportedRAIDTypes[raidType] {
+		return errors.Errorf(
+			"Invalid RAID type %q",
+			raidType,
+		)
+	}
+	return nil
+}
+
 // GetRAIDType returns the raid type of this CStorClusterConfig
 // instance
 func (h *Helper) GetRAIDType() (types.PoolRAIDType, error) {
 	if h.err != nil {
 		return "", h.err
 	}
-	raid, err :=
-		unstruct.GetStringOrError(h.ClusterConfig, "spec", "poolConfig", "raidType")
+	raid, err := unstruct.GetStringOrError(
+		h.ClusterConfig,
+		"spec",
+		"poolConfig",
+		"raidType",
+	)
+	if err != nil {
+		return "", err
+	}
+	// validate if configured raid type is valid
+	err = h.validateRAIDType(types.PoolRAIDType(raid))
 	if err != nil {
 		return "", err
 	}

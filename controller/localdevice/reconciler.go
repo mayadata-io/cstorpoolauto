@@ -281,6 +281,12 @@ func (r *Reconciler) selectFromObservedBlockDevices() {
 	if r.err != nil {
 		return
 	}
+	if len(r.deviceSelector.SelectorTerms) == 0 {
+		r.err = errors.Errorf(
+			"Invalid CStorClusterConfig: No block device selector found",
+		)
+		return
+	}
 	l := unstruct.ListSelector(r.deviceSelector, r.ObservedBlockDevices...)
 	r.selectedBlockDevices, _ = l.List()
 	if len(r.selectedBlockDevices) == 0 {
@@ -352,7 +358,8 @@ func (r *Reconciler) buildDesiredCStorPoolCluster() {
 		HostNameToObservedDeviceNames: r.hostNameToObservedCSPCDeviceNames,
 		HostNameToDesiredDeviceNames:  r.hostNameToSelectedBlockDeviceNames,
 		DesiredAnnotations: map[string]string{
-			types.AnnKeyCStorClusterConfigUID: string(r.ObservedCStorClusterConfig.GetUID()),
+			types.AnnKeyCStorClusterConfigUID:       string(r.ObservedCStorClusterConfig.GetUID()),
+			types.AnnKeyCStorClusterConfigLocalDisk: "true",
 		},
 		DesiredRAIDType: r.raidType,
 	}

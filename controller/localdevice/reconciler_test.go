@@ -350,7 +350,9 @@ func TestSyncerSkipIfEmptyAttachments(t *testing.T) {
 								"nsname1": nil,
 							},
 							"gvk3": map[string]*unstructured.Unstructured{
-								"nsname1": &unstructured.Unstructured{},
+								"nsname1": &unstructured.Unstructured{
+									Object: map[string]interface{}{},
+								},
 							},
 						},
 					),
@@ -626,7 +628,15 @@ func TestSyncerReconcile(t *testing.T) {
 							"spec": map[string]interface{}{
 								"diskConfig": map[string]interface{}{
 									"local": map[string]interface{}{
-										"blockDeviceSelector": map[string]interface{}{},
+										"blockDeviceSelector": map[string]interface{}{
+											"selectorTerms": []interface{}{
+												map[string]interface{}{
+													"matchLabels": map[string]interface{}{
+														"kubernetes.io/hostname": "node-001",
+													},
+												},
+											},
+										},
 									},
 								},
 								"poolConfig": map[string]interface{}{
@@ -710,7 +720,15 @@ func TestSyncerReconcile(t *testing.T) {
 							"spec": map[string]interface{}{
 								"diskConfig": map[string]interface{}{
 									"local": map[string]interface{}{
-										"blockDeviceSelector": map[string]interface{}{},
+										"blockDeviceSelector": map[string]interface{}{
+											"selectorTerms": []interface{}{
+												map[string]interface{}{
+													"matchLabels": map[string]interface{}{
+														"kubernetes.io/hostname": "node-001",
+													},
+												},
+											},
+										},
 									},
 								},
 								"poolConfig": map[string]interface{}{
@@ -765,7 +783,20 @@ func TestSyncerReconcile(t *testing.T) {
 							"spec": map[string]interface{}{
 								"diskConfig": map[string]interface{}{
 									"local": map[string]interface{}{
-										"blockDeviceSelector": map[string]interface{}{},
+										"blockDeviceSelector": map[string]interface{}{
+											"selectorTerms": []interface{}{
+												map[string]interface{}{
+													"matchLabels": map[string]interface{}{
+														"kubernetes.io/hostname": "node-001",
+													},
+												},
+												map[string]interface{}{
+													"matchLabels": map[string]interface{}{
+														"kubernetes.io/hostname": "node-002",
+													},
+												},
+											},
+										},
 									},
 								},
 								"poolConfig": map[string]interface{}{
@@ -844,7 +875,20 @@ func TestSyncerReconcile(t *testing.T) {
 							"spec": map[string]interface{}{
 								"diskConfig": map[string]interface{}{
 									"local": map[string]interface{}{
-										"blockDeviceSelector": map[string]interface{}{},
+										"blockDeviceSelector": map[string]interface{}{
+											"selectorTerms": []interface{}{
+												map[string]interface{}{
+													"matchLabels": map[string]interface{}{
+														"kubernetes.io/hostname": "node-001",
+													},
+												},
+												map[string]interface{}{
+													"matchLabels": map[string]interface{}{
+														"kubernetes.io/hostname": "node-001",
+													},
+												},
+											},
+										},
 									},
 								},
 								"poolConfig": map[string]interface{}{
@@ -1577,7 +1621,8 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 						"name":      "test",
 						"namespace": "test",
 						"annotations": map[string]interface{}{
-							string(types.AnnKeyCStorClusterConfigUID): "ccc-101",
+							string(types.AnnKeyCStorClusterConfigLocalDisk): "true",
+							string(types.AnnKeyCStorClusterConfigUID):       "ccc-101",
 						},
 					},
 					"spec": map[string]interface{}{
@@ -1669,7 +1714,8 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 						"name":      "test",
 						"namespace": "test",
 						"annotations": map[string]interface{}{
-							string(types.AnnKeyCStorClusterConfigUID): "ccc-101",
+							string(types.AnnKeyCStorClusterConfigLocalDisk): "true",
+							string(types.AnnKeyCStorClusterConfigUID):       "ccc-101",
 						},
 					},
 					"spec": map[string]interface{}{
@@ -1852,7 +1898,13 @@ func TestReconcilerReconcile(t *testing.T) {
 							"diskConfig": map[string]interface{}{
 								"local": map[string]interface{}{
 									"blockDeviceSelector": map[string]interface{}{
-										"selectorTerms": []interface{}(nil),
+										"selectorTerms": []interface{}{
+											map[string]interface{}{
+												"matchLabels": map[string]interface{}{
+													"kubernetes.io/hostname": "node-001",
+												},
+											},
+										},
 									},
 								},
 							},
@@ -1868,7 +1920,8 @@ func TestReconcilerReconcile(t *testing.T) {
 						"name":      "test",
 						"namespace": "test",
 						"annotations": map[string]interface{}{
-							string(types.AnnKeyCStorClusterConfigUID): "ccc-101",
+							string(types.AnnKeyCStorClusterConfigLocalDisk): "true",
+							string(types.AnnKeyCStorClusterConfigUID):       "ccc-101",
 						},
 					},
 					"spec": map[string]interface{}{
@@ -1965,7 +2018,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 			},
 			isErr: true,
 		},
-		"empty blockdevice selector terms": {
+		"select all blockdevices": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
 					&unstructured.Unstructured{
@@ -2004,7 +2057,18 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 							"diskConfig": map[string]interface{}{
 								"local": map[string]interface{}{
 									"blockDeviceSelector": map[string]interface{}{
-										"selectorTerms": []interface{}(nil),
+										"selectorTerms": []interface{}{
+											map[string]interface{}{
+												"matchFields": map[string]interface{}{
+													"spec.path": "/dev/sdc",
+												},
+											},
+											map[string]interface{}{
+												"matchFields": map[string]interface{}{
+													"spec.path": "/dev/sdb",
+												},
+											},
+										},
 									},
 								},
 							},
@@ -2107,7 +2171,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 					},
 				},
 			},
-			isErr: true, // bug in metac path based field selector
+			isErr: false,
 		},
 		"failing path based blockdevice selector term": {
 			reconciler: &Reconciler{

@@ -100,7 +100,7 @@ func TestListSelectionMatchContains(t *testing.T) {
 					},
 				},
 			},
-			isFound: false, // bug in metac w.r.t path based field selector
+			isFound: true,
 		},
 		"finalizer selector": {
 			selector: metac.ResourceSelector{
@@ -137,7 +137,7 @@ func TestListSelectionMatchContains(t *testing.T) {
 					},
 				},
 			},
-			isFound: false, // fix bug in metac
+			isFound: true,
 		},
 	}
 	for name, mock := range tests {
@@ -478,7 +478,7 @@ func TestListSelectionMatchDesired(t *testing.T) {
 					},
 				},
 			},
-			isDesiredMatch: false, // fix bug in metac
+			isDesiredMatch: true,
 		},
 		"labels selector => merged != observed": {
 			selector: metac.ResourceSelector{
