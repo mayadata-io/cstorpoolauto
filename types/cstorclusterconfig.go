@@ -127,6 +127,14 @@ const (
 	PoolRAIDTypeDefault PoolRAIDType = PoolRAIDTypeMirror
 )
 
+// SupportedRAIDTypes lists the supported raid types
+var SupportedRAIDTypes = map[PoolRAIDType]bool{
+	PoolRAIDTypeStripe: true,
+	PoolRAIDTypeMirror: true,
+	PoolRAIDTypeRAIDZ:  true,
+	PoolRAIDTypeRAIDZ2: true,
+}
+
 // RAIDTypeToDefaultMinDiskCount maps pool instance's raid type
 // to its default minimum disk count
 var RAIDTypeToDefaultMinDiskCount = map[PoolRAIDType]int64{

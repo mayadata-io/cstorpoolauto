@@ -1,6 +1,35 @@
 apiVersion: metac.openebs.io/v1alpha1
 kind: GenericController
 metadata:
+  name: sync-localdevice
+  namespace: cspauto
+spec:
+  updateAny: true
+  watch:
+    apiVersion: dao.mayadata.io/v1alpha1
+    resource: cstorclusterconfigs
+  attachments:
+  - apiVersion: openebs.io/v1alpha1
+    resource: cstorpoolclusters
+    updateStrategy:
+      method: InPlace
+    advancedSelector:
+      selectorTerms:
+      # select CStorPoolCluster resources if its annotation
+      # has both the following
+      - matchAnnotations:
+          dao.mayadata.io/cstorclusterconfig-localdisk: "true"
+        matchReferenceExpressions:
+        - key: metadata.annotations.dao\.mayadata\.io/cstorclusterconfig-uid
+          refKey: metadata.uid # match ann key's value against watch UID
+  hooks:
+    sync:
+      inline:
+        funcName: sync/localdevice
+---
+apiVersion: metac.openebs.io/v1alpha1
+kind: GenericController
+metadata:
   name: sync-config
   namespace: cspauto
 spec:

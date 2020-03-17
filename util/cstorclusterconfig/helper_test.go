@@ -502,6 +502,19 @@ func TestHelperGetRAIDType(t *testing.T) {
 			},
 			isErr: true,
 		},
+		"invalid raid type": {
+			cstorClusterConfig: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindCStorClusterConfig),
+					"spec": map[string]interface{}{
+						"poolConfig": map[string]interface{}{
+							"raidType": "junk",
+						},
+					},
+				},
+			},
+			isErr: true,
+		},
 		"mirror cstor cluster config": {
 			cstorClusterConfig: &unstructured.Unstructured{
 				Object: map[string]interface{}{

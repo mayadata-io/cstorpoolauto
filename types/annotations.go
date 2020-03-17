@@ -28,6 +28,11 @@ const (
 	// CStorClusterConfig UID
 	AnnKeyCStorClusterConfigUID string = AnnotationNamespace + "/cstorclusterconfig-uid"
 
+	// AnnKeyCStorClusterConfigLocalDisk is the annotation that implies
+	// if CStorClusterConfig reconciliation was due to local disks & not
+	// CSI managed disks
+	AnnKeyCStorClusterConfigLocalDisk string = AnnotationNamespace + "/cstorclusterconfig-localdisk"
+
 	// AnnKeyCStorClusterPlanUID is the annotation that refers to
 	// CStorClusterPlan UID
 	AnnKeyCStorClusterPlanUID string = AnnotationNamespace + "/cstorclusterplan-uid"
