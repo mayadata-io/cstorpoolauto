@@ -35,9 +35,9 @@ func TestGetDefaultRaidGroupConfig(t *testing.T) {
 		mock := mock
 		t.Run(name, func(t *testing.T) {
 			got := GetDefaultRaidGroupConfig()
-			if got.Type != mock.expectedType {
+			if got.RAIDType != mock.expectedType {
 				t.Fatalf("expected type %s but got %s",
-					mock.expectedType, got.Type)
+					mock.expectedType, got.RAIDType)
 			}
 			if got.GroupDeviceCount != mock.expectedGroupDeviceCount {
 				t.Fatalf("expected device count %d but got %d",
@@ -55,14 +55,14 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 	}{
 		"stripe pool and device count not set": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDTypeStripe,
+				RAIDType: PoolRAIDTypeStripe,
 			},
 			expectedGroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeStripe],
 			isErr:                    false,
 		},
 		"stripe pool and device count set": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeStripe,
+				RAIDType:         PoolRAIDTypeStripe,
 				GroupDeviceCount: 7,
 			},
 			expectedGroupDeviceCount: 7,
@@ -70,14 +70,14 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 		},
 		"mirror pool and device count not set": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDTypeMirror,
+				RAIDType: PoolRAIDTypeMirror,
 			},
 			expectedGroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeMirror],
 			isErr:                    false,
 		},
 		"mirror pool and device count set": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeMirror,
+				RAIDType:         PoolRAIDTypeMirror,
 				GroupDeviceCount: 7,
 			},
 			expectedGroupDeviceCount: 7,
@@ -85,14 +85,14 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 		},
 		"raidz pool and device count not set": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDTypeRAIDZ,
+				RAIDType: PoolRAIDTypeRAIDZ,
 			},
 			expectedGroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeRAIDZ],
 			isErr:                    false,
 		},
 		"raidz pool and device count set": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ,
+				RAIDType:         PoolRAIDTypeRAIDZ,
 				GroupDeviceCount: 7,
 			},
 			expectedGroupDeviceCount: 7,
@@ -100,14 +100,14 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 		},
 		"raidz2 pool and device count not set": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDTypeRAIDZ2,
+				RAIDType: PoolRAIDTypeRAIDZ2,
 			},
 			expectedGroupDeviceCount: RAIDTypeToDefaultMinDiskCount[PoolRAIDTypeRAIDZ2],
 			isErr:                    false,
 		},
 		"raidz2 pool and device count set": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ2,
+				RAIDType:         PoolRAIDTypeRAIDZ2,
 				GroupDeviceCount: 7,
 			},
 			expectedGroupDeviceCount: 7,
@@ -115,13 +115,13 @@ func TestPopulateDefaultGroupDeviceCount(t *testing.T) {
 		},
 		"invalid raid type and device count is not set": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDType(""),
+				RAIDType: PoolRAIDType(""),
 			},
 			isErr: true,
 		},
 		"invalid raid type and device count is set": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDType(""),
+				RAIDType:         PoolRAIDType(""),
 				GroupDeviceCount: 1,
 			},
 			expectedGroupDeviceCount: 1,
@@ -155,28 +155,28 @@ func TestGetDataDeviceCount(t *testing.T) {
 	}{
 		"stripe pool": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDTypeStripe,
+				RAIDType: PoolRAIDTypeStripe,
 			},
 			devicecount:     []int64{1, 2, 3, 4, 5, 6, 7, 8, 9},
 			datadevicecount: []int64{1, 2, 3, 4, 5, 6, 7, 8, 9},
 		},
 		"mirror pool": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDTypeMirror,
+				RAIDType: PoolRAIDTypeMirror,
 			},
 			devicecount:     []int64{2, 4, 6, 8, 10, 12, 14, 16, 18},
 			datadevicecount: []int64{1, 2, 3, 4, 5, 6, 7, 8, 9},
 		},
 		"raidz pool": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDTypeRAIDZ,
+				RAIDType: PoolRAIDTypeRAIDZ,
 			},
 			devicecount:     []int64{3, 5, 9, 17, 33, 65},
 			datadevicecount: []int64{2, 4, 8, 16, 32, 64},
 		},
 		"raidz2 pool": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDTypeRAIDZ2,
+				RAIDType: PoolRAIDTypeRAIDZ2,
 			},
 			devicecount:     []int64{4, 6, 10, 18, 34, 66},
 			datadevicecount: []int64{2, 4, 8, 16, 32, 64},
@@ -207,112 +207,112 @@ func TestValidate(t *testing.T) {
 	}{
 		"stripe pool and device count is -ve": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeStripe,
+				RAIDType:         PoolRAIDTypeStripe,
 				GroupDeviceCount: -3,
 			},
 			isErr: true,
 		},
 		"mirror pool and device count is -ve": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeMirror,
+				RAIDType:         PoolRAIDTypeMirror,
 				GroupDeviceCount: -3,
 			},
 			isErr: true,
 		},
 		"raidz pool and device count is -ve": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ,
+				RAIDType:         PoolRAIDTypeRAIDZ,
 				GroupDeviceCount: -3,
 			},
 			isErr: true,
 		},
 		"raidz2 pool and device count is -ve": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ2,
+				RAIDType:         PoolRAIDTypeRAIDZ2,
 				GroupDeviceCount: -3,
 			},
 			isErr: true,
 		},
 		"stripe pool and device count is less than min count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeStripe,
+				RAIDType:         PoolRAIDTypeStripe,
 				GroupDeviceCount: 0,
 			},
 			isErr: true,
 		},
 		"stripe pool and valid device count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeStripe,
+				RAIDType:         PoolRAIDTypeStripe,
 				GroupDeviceCount: 2,
 			},
 			isErr: false,
 		},
 		"mirror pool and invalid device count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeMirror,
+				RAIDType:         PoolRAIDTypeMirror,
 				GroupDeviceCount: 3,
 			},
 			isErr: true,
 		},
 		"mirror pool and valid device count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeMirror,
+				RAIDType:         PoolRAIDTypeMirror,
 				GroupDeviceCount: 2,
 			},
 			isErr: false,
 		},
 		"mirror pool and device count is less than min count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeMirror,
+				RAIDType:         PoolRAIDTypeMirror,
 				GroupDeviceCount: 0,
 			},
 			isErr: true,
 		},
 		"raidz pool and invalid device count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ,
+				RAIDType:         PoolRAIDTypeRAIDZ,
 				GroupDeviceCount: 4,
 			},
 			isErr: true,
 		},
 		"raidz pool and device count is less than min count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ,
+				RAIDType:         PoolRAIDTypeRAIDZ,
 				GroupDeviceCount: 1,
 			},
 			isErr: true,
 		},
 		"raidz pool and valid device count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ,
+				RAIDType:         PoolRAIDTypeRAIDZ,
 				GroupDeviceCount: 3,
 			},
 			isErr: false,
 		},
 		"raidz2 pool and invalid device count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ2,
+				RAIDType:         PoolRAIDTypeRAIDZ2,
 				GroupDeviceCount: 5,
 			},
 			isErr: true,
 		},
 		"raidz2 pool and valid device count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ2,
+				RAIDType:         PoolRAIDTypeRAIDZ2,
 				GroupDeviceCount: 6,
 			},
 			isErr: false,
 		},
 		"raidz2 pool and device count is less than min count": {
 			src: &RaidGroupConfig{
-				Type:             PoolRAIDTypeRAIDZ2,
+				RAIDType:         PoolRAIDTypeRAIDZ2,
 				GroupDeviceCount: 2,
 			},
 			isErr: true,
 		},
 		"invalid raid type and device count is not set": {
 			src: &RaidGroupConfig{
-				Type: PoolRAIDType(""),
+				RAIDType: PoolRAIDType(""),
 			},
 			isErr: true,
 		},

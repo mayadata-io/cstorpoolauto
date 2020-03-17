@@ -24,7 +24,7 @@ func TestGetRecommendation(t *testing.T) {
 					Spec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -41,7 +41,7 @@ func TestGetRecommendation(t *testing.T) {
 					Spec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 1,
 						},
 					},
@@ -93,7 +93,7 @@ func TestGetRecommendation(t *testing.T) {
 					Spec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -145,7 +145,7 @@ func TestGetRecommendation(t *testing.T) {
 					Spec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -195,7 +195,7 @@ func TestGetRecommendation(t *testing.T) {
 					Spec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -278,7 +278,7 @@ func TestGetRecommendation(t *testing.T) {
 					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -319,7 +319,7 @@ func TestGetRecommendation(t *testing.T) {
 					Spec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeRAIDZ,
+							RAIDType:         types.PoolRAIDTypeRAIDZ,
 							GroupDeviceCount: 3,
 						},
 					},
@@ -405,7 +405,7 @@ func TestGetRecommendation(t *testing.T) {
 					Spec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -491,7 +491,7 @@ func TestGetRecommendation(t *testing.T) {
 					Spec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -574,7 +574,7 @@ func TestGetRecommendation(t *testing.T) {
 					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -615,7 +615,7 @@ func TestGetRecommendation(t *testing.T) {
 					Spec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -764,7 +764,7 @@ func TestGetRecommendation(t *testing.T) {
 					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
-							Type:             types.PoolRAIDTypeMirror,
+							RAIDType:         types.PoolRAIDTypeMirror,
 							GroupDeviceCount: 2,
 						},
 					},
@@ -838,7 +838,7 @@ func TestNewRequestForDevice(t *testing.T) {
 				Spec: types.CStorPoolClusterRecommendationRequestSpec{
 					PoolCapacity: poolCapacity,
 					DataConfig: types.RaidGroupConfig{
-						Type:             types.PoolRAIDTypeMirror,
+						RAIDType:         types.PoolRAIDTypeMirror,
 						GroupDeviceCount: 2,
 					},
 				},
@@ -853,7 +853,7 @@ func TestNewRequestForDevice(t *testing.T) {
 				Spec: types.CStorPoolClusterRecommendationRequestSpec{
 					PoolCapacity: poolCapacity,
 					DataConfig: types.RaidGroupConfig{
-						Type:             types.PoolRAIDTypeMirror,
+						RAIDType:         types.PoolRAIDTypeMirror,
 						GroupDeviceCount: 0,
 					},
 				},
@@ -903,7 +903,7 @@ func TestNewRequestForDevice(t *testing.T) {
 				Spec: types.CStorPoolClusterRecommendationRequestSpec{
 					PoolCapacity: poolCapacity,
 					DataConfig: types.RaidGroupConfig{
-						Type:             types.PoolRAIDTypeMirror,
+						RAIDType:         types.PoolRAIDTypeMirror,
 						GroupDeviceCount: 2,
 					},
 				},
