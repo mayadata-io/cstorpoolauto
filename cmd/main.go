@@ -49,6 +49,7 @@ func main() {
 	generic.AddToInlineRegistry("sync/blockdevice", blockdevice.Sync)
 	generic.AddToInlineRegistry("sync/cstorpoolcluster", cstorpoolcluster.Sync)
 	generic.AddToInlineRegistry("sync/localdevice", localdevice.Sync)
+	generic.AddToInlineRegistry("finalize/localdevice", localdevice.Finalize)
 
 	start.Start()
 }
