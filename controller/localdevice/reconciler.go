@@ -74,7 +74,7 @@ func (s *syncer) skipIfEmptyAttachments() {
 	// Nothing needs to be done if there are no attachments in request
 	//
 	// NOTE:
-	// 	It is expected to have BlockDevices as attachments
+	// 	It is expected to have at-least BlockDevices as attachments
 	if s.request.Attachments == nil || s.request.Attachments.IsEmpty() {
 		var msg = fmt.Sprintf(
 			"Will skip LocalDevice sync: Nil attachments: Watch %q - %q / %q",
