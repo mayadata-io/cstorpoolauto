@@ -3,6 +3,7 @@ module mayadata.io/cstorpoolauto
 go 1.13
 
 require (
+	github.com/coreos/etcd v3.3.15+incompatible // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/go-cmp v0.3.0
 	github.com/pkg/errors v0.8.1
