@@ -9,9 +9,6 @@ WORKDIR /mayadata.io/cstorpoolauto/
 COPY go.mod go.mod
 COPY go.sum go.sum
 
-# copy build manifests
-COPY Makefile Makefile
-
 # ensure vendoring is up-to-date by running make vendor 
 # in your local setup
 #
@@ -22,8 +19,15 @@ RUN go mod download
 RUN go mod tidy
 RUN go mod vendor
 
-# copy all
-COPY . .
+# copy build manifests
+COPY Makefile Makefile
+
+# copy source files
+COPY cmd/ cmd/
+COPY unstruct/ unstruct/
+COPY types/ types/
+COPY util/ util/
+COPY controller/ controller/
 
 # test cstorpoolauto
 RUN make test
@@ -70,6 +74,7 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 
 COPY config/metac.yaml /etc/config/metac/metac.yaml
+COPY config/localdevice/metac.yaml /etc/config/metac/localdevice/metac.yaml
 COPY --from=builder /mayadata.io/cstorpoolauto/cstorpoolauto /usr/bin/
 
 USER nonroot:nonroot
