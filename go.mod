@@ -9,11 +9,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.17.3 // indirect
-	openebs.io/metac v0.1.1-0.20200316091358-b0ec6968864b
+	openebs.io/metac v0.2.1
 )
 
 replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.3
 	k8s.io/client-go => k8s.io/client-go v0.17.3
-	openebs.io/metac => github.com/AmitKumarDas/metac v0.1.1-0.20200316091358-b0ec6968864b
+	openebs.io/metac => github.com/AmitKumarDas/metac v0.2.1
 )
