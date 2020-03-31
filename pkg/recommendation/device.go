@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -65,6 +66,7 @@ func (r *cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]t
 	}
 
 	if err := r.Request.Spec.DataConfig.Validate(); err != nil {
+		glog.Warning("Got invalid raid config")
 		return cStorPoolClusterRecommendation
 	}
 
@@ -80,7 +82,8 @@ func (r *cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]t
 		return cStorPoolClusterRecommendation
 	}
 
-	deviceTypeNodeBlockDeviceMap := bdutil.GetTopologyMapGroupByDeviceTypeAndBlockSize(availableBlockDeviceList)
+	deviceTypeNodeBlockDeviceMap := bdutil.
+		GetTopologyMapGroupByDeviceTypeAndBlockSize(availableBlockDeviceList)
 	if len(deviceTypeNodeBlockDeviceMap) == 0 {
 		return cStorPoolClusterRecommendation
 	}
@@ -222,8 +225,10 @@ func (cbd capacityBlockDevices) getPoolInstance(requestedCapacity int64, raidCon
 
 	// Calculate pool instance capacity
 	noOfGroups := int64(len(prevDataDevices)) / raidConfig.GroupDeviceCount
-	instanceCapacity, err := resource.ParseQuantity(fmt.Sprintf("%d", (noOfGroups * raidConfig.GetDataDeviceCount() * blockDeviceCapacity)))
+	instanceCapacity, err := resource.ParseQuantity(
+		fmt.Sprintf("%d", (noOfGroups * raidConfig.GetDataDeviceCount() * blockDeviceCapacity)))
 	if err != nil {
+		glog.Warningf("Unable to parse size: Error %v", err)
 		return types.PoolInstanceConfig{}
 	}
 

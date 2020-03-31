@@ -234,15 +234,26 @@ func HasFileSystem(obj unstructured.Unstructured) (bool, error) {
 	return true, nil
 }
 
-// GetDeviceType return device type HDD or SSD. If not present
-// it returns an error.
+// GetDeviceType returns device type ie - sparse, disk, partition, lvm, raid.
+// If not present it returns an error.
 func GetDeviceType(obj unstructured.Unstructured) (string, error) {
 	if obj.GetKind() != string(types.KindBlockDevice) {
 		return "",
-			errors.Errorf("Can not check file system: Expected kind %q got %q",
+			errors.Errorf("Can not get device type: Expected kind %q got %q",
 				types.KindBlockDevice, obj.GetKind())
 	}
 	return unstruct.GetString(&obj, "spec", "details", "deviceType")
+}
+
+// GetDriveType returns drive type ie - HDD or SSD. If not present
+// it returns an error.
+func GetDriveType(obj unstructured.Unstructured) (string, error) {
+	if obj.GetKind() != string(types.KindBlockDevice) {
+		return "",
+			errors.Errorf("Can not get drive type: Expected kind %q got %q",
+				types.KindBlockDevice, obj.GetKind())
+	}
+	return unstruct.GetString(&obj, "spec", "details", "driveType")
 }
 
 // IsEligibleForCStorPool checks eligibility criteria to create a cStor pool.
