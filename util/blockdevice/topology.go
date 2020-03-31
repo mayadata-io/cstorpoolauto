@@ -19,24 +19,26 @@ package blockdevice
 import (
 	"fmt"
 
+	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"mayadata.io/cstorpoolauto/types"
 )
 
 const (
-	// DeviceKindSSD represents device kind of SSD devices.
-	DeviceKindSSD string = "SSD"
-	// DeviceKindHDD represents device kind of HDD devices.
-	DeviceKindHDD string = "HDD"
-	// DeviceKindUnKnown represents unknown device type.
-	DeviceKindUnKnown string = "Unknown"
+	// DriveTypeSSD represents SSD drive devices.
+	DriveTypeSSD string = "SSD"
+	// DriveTypeHDD represents HDD drive devices.
+	DriveTypeHDD string = "HDD"
+	// DriveTypeUnKnown represents unknown drive type.
+	DriveTypeUnKnown string = "Unknown"
+	// DeviceTypeUnKnown represents unknown device type.
+	DeviceTypeUnKnown string = "Unknown"
 )
 
 // MetaInfo contains identity of block device and some
 // meta information for a block device.
 type MetaInfo struct {
-	NodeName string
 	HostName string
 	Identity *types.Reference
 	Capacity *resource.Quantity
@@ -45,32 +47,33 @@ type MetaInfo struct {
 /*
 GetTopologyMapGroupByDeviceTypeAndBlockSize function builds a map using
 list of block devices. Block devices are grouped by device kind and blocksize
-ie - HDD, SSD-16384, HDD-4096, HDD-512 or SSD, SSD-4096, SSD-16384 and in
-one group all the block devices are arranged by node name.
+ie - disk-HDD, disk-SSD-16384, disk-HDD-4096, disk-HDD-512 or disk-SSD,
+disk-SSD-4096, disk-SSD-16384 and in one group all the block devices are arranged
+by node name.
 
-Top level key is contains DeviceType-PhysicalSectorSize
+Top level key is contains DeviceType-DriveType-PhysicalSectorSize
 
 1. initial stage it will be a list of block devices.
 []blockdevice
 
 2. At last it will be converted into below map -
 
-- HDD:
+- disk-HDD:
 	- node-1 []blockdevice
 	- node-3 []blockdevice
-- HDD-4096:
+- disk-HDD-4096:
 	- node-1 []blockdevice
 	- node-2 []blockdevice
-- HDD-16384:
+- disk-HDD-16384:
 	- node-2 []blockdevice
 	- node-3 []blockdevice
-- SSD:
+- disk-SSD:
 	- node-1 []blockdevice
 	- node-2 []blockdevice
-- SSD-4096:
+- disk-SSD-4096:
 	- node-1 []blockdevice
 	- node-2 []blockdevice
-- SSD-16384:
+- disk-SSD-16384:
 	- node-1 []blockdevice
 	- node-3 []blockdevice
 
@@ -81,21 +84,13 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 
 	for _, bd := range bdList.Items {
 
-		// Block device should be associated with a node if node name is missing or
-		// we got any error during fetching node name then we can not use that to
-		// create topology map.
-		nodeName, err := GetNodeNameOrError(bd)
-		if err != nil {
-			// TODO log the error
-			continue
-		}
-
 		// Host device should be associated with a node if host name is missing or
 		// we got any error during fetching host name then we can not use that to
 		// create topology map.
 		hostName, err := GetHostNameOrError(bd)
 		if err != nil {
-			// TODO log the error
+			glog.Warningf("Block device %s will not consider for recommendation : host name not present",
+				bd.GetName())
 			continue
 		}
 
@@ -103,25 +98,43 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 		// we can not use that block device to create topology map.
 		capacity, err := GetCapacity(bd)
 		if err != nil {
-			// TODO log the error
+			glog.Warningf("Block device %s will not consider for recommendation : capacity not present",
+				bd.GetName())
 			continue
 		}
 
-		// Device type represents block device type ie - (HDD, SSD)
-		// If Device type is empty or we got any error during fetching this then
+		// Device type represents block device type ie - (sparse, disk, partition, lvm, raid)
+		// If device type is empty or we got any error during fetching this then
 		// add that block device in unknown group.
 		deviceType, err := GetDeviceType(bd)
 		if err != nil {
+			glog.Warningf("Block device %s will not consider for recommendation : device type not present",
+				bd.GetName())
 			continue
 		}
 		// If deviceType is empty then add it to unknown device type group
 		if deviceType == "" {
-			deviceType = DeviceKindUnKnown
+			deviceType = DeviceTypeUnKnown
 		}
+
+		// Drive type represents block device drive type ie - (HDD, SSD)
+		// If drive type is empty or we got any error during fetching this then
+		// add that block device in unknown group.
+		driveType, err := GetDriveType(bd)
+		if err != nil {
+			glog.Warningf("Block device %s will not consider for recommendation : drive type not present",
+				bd.GetName())
+			continue
+		}
+		// If deviceType is empty then add it to unknown device type group
+		if driveType == "" {
+			driveType = DriveTypeUnKnown
+		}
+
+		deviceType = deviceType + "-" + driveType
 
 		// metaInfo contains some metadata of a block device with it's identity.
 		metaInfo := MetaInfo{
-			NodeName: nodeName,
 			HostName: hostName,
 			Capacity: &capacity,
 			Identity: &types.Reference{
@@ -134,7 +147,8 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 		}
 
 		// deviceTypeList contains top level keys in this topology
-		// ie - HDD, SSD-16384, HDD-4096, HDD-512 or SSD, SSD-4096, SSD-16384
+		// ie - disk-HDD, disk-SSD-16384, disk-HDD-4096, disk-HDD-512
+		// or disk-SSD, disk-SSD-4096, disk-SSD-16384
 		deviceTypeList := make([]string, 0)
 		deviceTypeList = append(deviceTypeList, deviceType)
 
@@ -149,9 +163,9 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 		for _, bdType := range deviceTypeList {
 
 			// nodeBlockDeviceMap contains block devices grouped by node.
-			// If for any device type (HDD, SSD-16384, HDD-4096, HDD-512
-			// or SSD, SSD-4096, SSD-16384) this map is not present then
-			// create it.
+			// If for any device type (disk-HDD, disk-SSD-16384, disk-HDD-4096,
+			// disk-HDD-512 or disk-SSD, disk-SSD-4096, disk-SSD-16384) this
+			// map is not present then create it.
 			nodeBlockDeviceMap, ok := deviceTypeNodeBlockDeviceMap[bdType]
 			if !ok {
 				nodeBlockDeviceMap = make(map[string][]MetaInfo)

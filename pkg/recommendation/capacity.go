@@ -19,6 +19,7 @@ package recommendation
 import (
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -188,7 +189,7 @@ func (cc capacityCount) getCapacityRecommendation(
 	// If invalid raid config is passed then it will not return error.
 	// It only logs the error and return empty struct
 	if err := raidConfig.Validate(); err != nil {
-		// TODO log the error.
+		glog.Warning("Got invalid raid config")
 		return result
 	}
 
@@ -205,7 +206,7 @@ func (cc capacityCount) getCapacityRecommendation(
 		newMin, err := resource.ParseQuantity(fmt.Sprintf("%d",
 			capacity*raidConfig.GetDataDeviceCount()))
 		if err != nil {
-			// TODO log the error
+			glog.Warningf("Unable to parse size: Error %v", err)
 			continue
 		}
 		if result.MaxCapacity.IsZero() || result.MinCapacity.Cmp(newMin) > 0 {
@@ -223,7 +224,7 @@ func (cc capacityCount) getCapacityRecommendation(
 		newMax, err := resource.ParseQuantity(fmt.Sprintf("%d",
 			capacity*noOfRaidGroup*raidConfig.GetDataDeviceCount()))
 		if err != nil {
-			// TODO log the error
+			glog.Warningf("Unable to parse size: Error %v", err)
 			continue
 		}
 		if result.MaxCapacity.IsZero() || result.MaxCapacity.Cmp(newMax) < 0 {
@@ -267,7 +268,7 @@ func (ncc nodeCapacityCount) getCapacityRecommendation(
 	// If invalid raid config passed then it will not return error.
 	// It only logs the error and return empty struct
 	if err := raidConfig.Validate(); err != nil {
-		// TODO log the error.
+		glog.Warning("Got invalid raid config")
 		return result
 	}
 
