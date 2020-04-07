@@ -1,6 +1,6 @@
 def ORG = "mayadataio"
 def REPO = "cstorpoolauto"
-
+def TAG = ""
 pipeline {
     agent any
     stages {
@@ -37,7 +37,7 @@ pipeline {
             steps {
               script {
 		             withCredentials([usernamePassword( credentialsId: 'docke_cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                            if(env.TAG){
+                            if(env.BRANCH_NAME == TAG){
                                      echo "Pushing the image with the tag..."
                                      sh "docker login -u${USERNAME} -p${PASSWORD} "
 			                         sh "docker tag ${ORG}/${REPO}:ci-${GIT_SHA} ${ORG}/${REPO}:${TAG} && docker push ${ORG}/${REPO}:${TAG}"
