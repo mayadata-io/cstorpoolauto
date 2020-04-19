@@ -1,5 +1,5 @@
 ## Introduction
-CSPC operator which is a component of OpenEBS. Its a alpha feature, and new version of existing [SPC](https://docs.openebs.io/docs/next/ugcstor.html#creating-cStor-storage-pools).
+CSPC operator which is a component of OpenEBS, is a alpha feature and new version of existing [SPC](https://docs.openebs.io/docs/next/ugcstor.html#creating-cStor-storage-pools).
 To provision volumes on CSPC, CSI operators from OpenEBS need to be used. More details about CSPC and CSI which are in alpha version can be found [here](https://docs.openebs.io/docs/next/alphafeatures.html).
 
 Performing operations (be it creation, monitoring, pool expansions, disk replacements etc)  on CSPC (or) SPC yamls involves good amount of admin involvement.
