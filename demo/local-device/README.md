@@ -1,9 +1,22 @@
+## Introduction
+CSPC operator which is a component of OpenEBS. Its a alpha feature, and new version of existing [SPC](https://docs.openebs.io/docs/next/ugcstor.html#creating-cStor-storage-pools).
+To provision volumes on CSPC, CSI operators from OpenEBS need to be used. More details about CSPC and CSI which are in alpha version can be found [here](https://docs.openebs.io/docs/next/alphafeatures.html).
+
+Performing operations (be it creation, monitoring, pool expansions, disk replacements etc)  on CSPC (or) SPC yamls involves good amount of admin involvement.
+
+This CStorPoolAuto Data Agility Operator (DAO) makes ease of above mentiond operators on CSPC.
+All the steps that admin need to perform are:
+- set label on Block Device CRs
+- Create `CStorClusterConfig` CR by mentioning above label
+
+
 ### Prerequisite
-OpenEBS must be installed.
+
 ### Install cspc-operator
-To provision a CSPC using dao you need to install  [cspc-operator](https://docs.openebs.io/docs/next/alphafeatures.html#install-openebs-cspc-operator) from alpha feature.
+Steps to install  [cspc-operator](https://docs.openebs.io/docs/next/alphafeatures.html#install-openebs-cspc-operator) are here.
+
 ### Install cstorpoolauto DAO operator
-Sample cstorpoolauto DAO operator yaml is given below.
+cstorpoolauto DAO operator yaml is given below.
 
 NOTE:- you can install it in any namespace.
 ```yaml
@@ -102,12 +115,12 @@ spec:
         - --cache-flush-interval=240s
         - --metac-config-path=/etc/config/metac/localdevice/
  ```
- ### Steps to create a cspc
- Label the selected block devices using which you want to create a CSPC.
+ ### Steps to create cspc in auto way
+1. Label the selected block devices on which you want to create CStor pools. Block devices that you labeled can be across nodes also.
  
  NOTE:- each selected block device should be in `Active` and `Unclaimed` state and there should not be any file system.
  
- Modify and apply the `CStorClusterConfig`. One sample `CStorClusterConfig` is given below.
+2. Apply the `CStorClusterConfig` CR. Mention the label used on step 1 in this CR. One sample `CStorClusterConfig` CR is given below, where label is `mirror-pool: mysql`.
  
  NOTE:- You need to create `CStorClusterConfig` in the same namespace in which `OpenEBS` is installed.
  ```yaml
@@ -119,13 +132,15 @@ metadata:
 spec:
   diskConfig:
     local:
+      # Selected block devices should labeled with `mirror-pool=mysql`
+      # If you lobal your block devices with different key and value
+      # then update matchLabels accordingly.
       blockDeviceSelector:
         selectorTerms:
         - matchLabels:
             mirror-pool: mysql
-            # Selected block devices should labeled with `mirror-pool=mysql`
-            # If you lobal your block devices with different key and value
-            # then update matchLabels accordingly.
   poolConfig:
     raidType: mirror
 ```
+
+With this, DAO operator creates CSPC with required disk details and defaults.
