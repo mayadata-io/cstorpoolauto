@@ -144,6 +144,9 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 			},
 		}
 
+		// deviceTypeList contains top level keys in this topology
+		// ie - disk-HDD, disk-SSD-16384, disk-HDD-4096, disk-HDD-512
+		// or disk-SSD, disk-SSD-4096, disk-SSD-16384
 		bdType := deviceType + "-" + driveType
 
 		// get the physical block size if error is nil and it is not zero
