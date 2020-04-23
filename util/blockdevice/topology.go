@@ -131,8 +131,6 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 			driveType = DriveTypeUnKnown
 		}
 
-		deviceType = deviceType + "-" + driveType
-
 		// metaInfo contains some metadata of a block device with it's identity.
 		metaInfo := MetaInfo{
 			HostName: hostName,
@@ -149,43 +147,37 @@ func GetTopologyMapGroupByDeviceTypeAndBlockSize(
 		// deviceTypeList contains top level keys in this topology
 		// ie - disk-HDD, disk-SSD-16384, disk-HDD-4096, disk-HDD-512
 		// or disk-SSD, disk-SSD-4096, disk-SSD-16384
-		deviceTypeList := make([]string, 0)
-		deviceTypeList = append(deviceTypeList, deviceType)
+		bdType := deviceType + "-" + driveType
 
 		// get the physical block size if error is nil and it is not zero
 		// then add a top level key for it.
 		physicalBlockSize, err := GetPhysicalSectorSize(bd)
 		if err == nil && !physicalBlockSize.IsZero() {
-			deviceTypeList = append(deviceTypeList, fmt.Sprintf("%s-%s", deviceType, physicalBlockSize.String()))
+			bdType = fmt.Sprintf("%s-%s", bdType, physicalBlockSize.String())
 		}
 
-		// For all the top level key update the map.
-		for _, bdType := range deviceTypeList {
-
-			// nodeBlockDeviceMap contains block devices grouped by node.
-			// If for any device type (disk-HDD, disk-SSD-16384, disk-HDD-4096,
-			// disk-HDD-512 or disk-SSD, disk-SSD-4096, disk-SSD-16384) this
-			// map is not present then create it.
-			nodeBlockDeviceMap, ok := deviceTypeNodeBlockDeviceMap[bdType]
-			if !ok {
-				nodeBlockDeviceMap = make(map[string][]MetaInfo)
-			}
-
-			// blockDeviceList contains block devices associated with a node.
-			// If for any node this list is not present then create it.
-			blockDeviceList, ok := nodeBlockDeviceMap[hostName]
-			if !ok {
-				blockDeviceList = make([]MetaInfo, 0)
-			}
-			blockDeviceList = append(blockDeviceList, metaInfo)
-
-			// update block device list for a node
-			nodeBlockDeviceMap[hostName] = blockDeviceList
-
-			// update node block device map for a given block device type
-			deviceTypeNodeBlockDeviceMap[bdType] = nodeBlockDeviceMap
-
+		// nodeBlockDeviceMap contains block devices grouped by node.
+		// If for any device type (disk-HDD, disk-SSD-16384, disk-HDD-4096,
+		// disk-HDD-512 or disk-SSD, disk-SSD-4096, disk-SSD-16384) this
+		// map is not present then create it.
+		nodeBlockDeviceMap, ok := deviceTypeNodeBlockDeviceMap[bdType]
+		if !ok {
+			nodeBlockDeviceMap = make(map[string][]MetaInfo)
 		}
+
+		// blockDeviceList contains block devices associated with a node.
+		// If for any node this list is not present then create it.
+		blockDeviceList, ok := nodeBlockDeviceMap[hostName]
+		if !ok {
+			blockDeviceList = make([]MetaInfo, 0)
+		}
+		blockDeviceList = append(blockDeviceList, metaInfo)
+
+		// update block device list for a node
+		nodeBlockDeviceMap[hostName] = blockDeviceList
+
+		// update node block device map for a given block device type
+		deviceTypeNodeBlockDeviceMap[bdType] = nodeBlockDeviceMap
 	}
 
 	return deviceTypeNodeBlockDeviceMap
