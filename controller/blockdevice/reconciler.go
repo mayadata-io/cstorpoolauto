@@ -23,10 +23,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"openebs.io/metac/controller/generic"
 
-	"mayadata.io/cstorpoolauto/unstruct"
+	"mayadata.io/cstorpoolauto/common/metac"
+	stringcommon "mayadata.io/cstorpoolauto/common/string"
 	"mayadata.io/cstorpoolauto/types"
-	"mayadata.io/cstorpoolauto/util/metac"
-	stringutil "mayadata.io/cstorpoolauto/util/string"
+	"mayadata.io/cstorpoolauto/unstruct"
 )
 
 type reconcileErrHandler struct {
@@ -46,7 +46,7 @@ func (h *reconcileErrHandler) handle(err error) {
 	)
 
 	conds, mergeErr :=
-	unstruct.MergeStatusConditions(
+		unstruct.MergeStatusConditions(
 			h.storage,
 			types.MakeStorageToBlockDeviceAssociationErrCond(err),
 		)
@@ -428,7 +428,7 @@ func (p *StorageToBlockDeviceAssociator) isBlockDeviceMatchWithPVName(
 			)
 			continue
 		}
-		linkList := stringutil.List(links)
+		linkList := stringcommon.List(links)
 		if linkList.Contains(pvName) {
 			glog.V(3).Infof("BlockDevice %s %s matches PV %s: Links [%s]",
 				device.GetNamespace(), device.GetName(),

@@ -24,10 +24,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
+	"mayadata.io/cstorpoolauto/common/metac"
+	stringcommon "mayadata.io/cstorpoolauto/common/string"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/unstruct"
-	"mayadata.io/cstorpoolauto/util/metac"
-	stringutil "mayadata.io/cstorpoolauto/util/string"
 )
 
 // reconcileErrHandler logs the error & updates these errors
@@ -476,7 +476,7 @@ func (p *Planner) initStorageSetToObservedBlockDevices() error {
 // devices in the same order they are observed in CStorPoolCluster
 //
 // TODO:
-//	Make use of util/cstorpoolcluster/helper methods
+//	Make use of common/cstorpoolcluster/helper methods
 func (p *Planner) initNodeToObservedCSPCDevices() error {
 	// currentNodeName holds the current node name of the
 	// CStorPoolCluster nodes that are under iteration
@@ -550,7 +550,7 @@ func (p *Planner) initNodeToDesiredCSPCDevices() error {
 		}
 		observedCSPCDevices := p.nodeNameToObservedCSPCDevices[nodeName]
 		p.nodeNameToDesiredCSPCDevices[nodeName] =
-			stringutil.NewEquality(observedCSPCDevices, observedBlockDevices).Merge()
+			stringcommon.NewEquality(observedCSPCDevices, observedBlockDevices).Merge()
 	}
 	return nil
 }
@@ -650,7 +650,7 @@ func (p *Planner) buildDesiredPools() []interface{} {
 }
 
 // TODO (@amitkumardas):
-//  Make use of util/cstorpoolcluster/builder.go methods
+//  Make use of common/cstorpoolcluster/builder.go methods
 func (p *Planner) getDesiredCStorPoolCluster() *unstructured.Unstructured {
 	cspc := &unstructured.Unstructured{}
 	cspc.SetUnstructuredContent(map[string]interface{}{

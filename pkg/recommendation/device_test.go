@@ -69,6 +69,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -121,6 +122,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -173,6 +175,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{},
 										"filesystem":     map[string]interface{}{},
@@ -224,6 +227,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -257,6 +261,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -274,7 +279,7 @@ func TestGetRecommendation(t *testing.T) {
 				},
 			},
 			response: map[string]types.CStorPoolClusterRecommendation{
-				"HDD": {
+				"HDD-disk": {
 					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
@@ -348,6 +353,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -381,6 +387,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -434,6 +441,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -467,6 +475,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -520,6 +529,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -553,6 +563,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -570,7 +581,7 @@ func TestGetRecommendation(t *testing.T) {
 				},
 			},
 			response: map[string]types.CStorPoolClusterRecommendation{
-				"HDD": {
+				"HDD-disk": {
 					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
@@ -644,6 +655,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -677,6 +689,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -710,6 +723,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -743,6 +757,7 @@ func TestGetRecommendation(t *testing.T) {
 										},
 										"details": map[string]interface{}{
 											"deviceType": "HDD",
+											"driveType":  "disk",
 										},
 										"nodeAttributes": map[string]interface{}{
 											"nodeName": "node-1",
@@ -760,7 +775,7 @@ func TestGetRecommendation(t *testing.T) {
 				},
 			},
 			response: map[string]types.CStorPoolClusterRecommendation{
-				"HDD": {
+				"HDD-disk": {
 					RequestSpec: types.CStorPoolClusterRecommendationRequestSpec{
 						PoolCapacity: poolCapacity,
 						DataConfig: types.RaidGroupConfig{
@@ -881,6 +896,7 @@ func TestNewRequestForDevice(t *testing.T) {
 									},
 									"details": map[string]interface{}{
 										"deviceType": "",
+										"driveType":  "disk",
 									},
 									"nodeAttributes": map[string]interface{}{
 										"nodeName": "node-1",
@@ -931,6 +947,7 @@ func TestNewRequestForDevice(t *testing.T) {
 									},
 									"details": map[string]interface{}{
 										"deviceType": "",
+										"driveType":  "disk",
 									},
 									"nodeAttributes": map[string]interface{}{
 										"nodeName": "node-1",

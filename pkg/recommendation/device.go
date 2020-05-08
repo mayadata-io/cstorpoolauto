@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"mayadata.io/cstorpoolauto/common/blockdevice"
 	"mayadata.io/cstorpoolauto/types"
-	bdutil "mayadata.io/cstorpoolauto/util/blockdevice"
 )
 
 // cStorPoolClusterRecommendationRequest is used to request the device
@@ -73,7 +73,7 @@ func (r *cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]t
 	availableBlockDeviceList := unstructured.UnstructuredList{}
 	availableBlockDeviceList.Object = r.Data.BlockDeviceList.Object
 	for _, bd := range r.Data.BlockDeviceList.Items {
-		isEligible, err := bdutil.IsEligibleForCStorPool(bd)
+		isEligible, err := blockdevice.IsEligibleForCStorPool(bd)
 		if err == nil && isEligible {
 			availableBlockDeviceList.Items = append(availableBlockDeviceList.Items, bd)
 		}
@@ -82,7 +82,7 @@ func (r *cStorPoolClusterRecommendationRequest) GetRecommendation() map[string]t
 		return cStorPoolClusterRecommendation
 	}
 
-	deviceTypeNodeBlockDeviceMap := bdutil.
+	deviceTypeNodeBlockDeviceMap := blockdevice.
 		GetTopologyMapGroupByDeviceTypeAndBlockSize(availableBlockDeviceList)
 	if len(deviceTypeNodeBlockDeviceMap) == 0 {
 		return cStorPoolClusterRecommendation
@@ -162,7 +162,7 @@ func (ncb nodeCapacityBlockDevices) getDeviceRecommendation(requestedCapacity re
 
 // capacityBlockDevices contains a key with capacity of block device and
 // value with all the block devices of that capacity.
-type capacityBlockDevices map[int64][]bdutil.MetaInfo
+type capacityBlockDevices map[int64][]blockdevice.MetaInfo
 
 func (cbd capacityBlockDevices) getPoolInstance(requestedCapacity int64, raidConfig types.RaidGroupConfig) types.PoolInstanceConfig {
 	// To sort map storing (ascending order) keys in a seperate data structure.
@@ -260,16 +260,16 @@ func (ncb nodeCapacityBlockDevices) update(key string, value capacityBlockDevice
 
 // getOrDefault returns the value from the map for given key.
 // It returns default value if key is absent
-func (cbd capacityBlockDevices) getOrDefault(key int64) []bdutil.MetaInfo {
+func (cbd capacityBlockDevices) getOrDefault(key int64) []blockdevice.MetaInfo {
 	value, found := cbd[key]
 	if !found {
-		value = make([]bdutil.MetaInfo, 0)
+		value = make([]blockdevice.MetaInfo, 0)
 		cbd[key] = value
 	}
 	return value
 }
 
 // updates the map with given key and value
-func (cbd capacityBlockDevices) update(key int64, value []bdutil.MetaInfo) {
+func (cbd capacityBlockDevices) update(key int64, value []blockdevice.MetaInfo) {
 	cbd[key] = value
 }

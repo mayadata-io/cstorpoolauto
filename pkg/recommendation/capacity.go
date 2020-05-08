@@ -24,8 +24,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"mayadata.io/cstorpoolauto/common/blockdevice"
 	"mayadata.io/cstorpoolauto/types"
-	bdutil "mayadata.io/cstorpoolauto/util/blockdevice"
 )
 
 // capacityRecommendationRequest contains Block device list
@@ -83,7 +83,7 @@ func (r *capacityRecommendationRequest) GetRecommendation() map[string]CapacityR
 	eligibleBlockDeviceList := unstructured.UnstructuredList{}
 	eligibleBlockDeviceList.Object = r.BlockDeviceList.Object
 	for _, bd := range r.BlockDeviceList.Items {
-		isEligible, err := bdutil.IsEligibleForCStorPool(bd)
+		isEligible, err := blockdevice.IsEligibleForCStorPool(bd)
 		if err == nil && isEligible {
 			eligibleBlockDeviceList.Items = append(eligibleBlockDeviceList.Items, bd)
 		}
@@ -94,7 +94,7 @@ func (r *capacityRecommendationRequest) GetRecommendation() map[string]CapacityR
 
 	// Make topology map using eligible block devices.
 	// If topology is empty then return empty map in response.
-	deviceTypeNodeBlockDeviceMap := bdutil.GetTopologyMapGroupByDeviceTypeAndBlockSize(eligibleBlockDeviceList)
+	deviceTypeNodeBlockDeviceMap := blockdevice.GetTopologyMapGroupByDeviceTypeAndBlockSize(eligibleBlockDeviceList)
 	if len(deviceTypeNodeBlockDeviceMap) == 0 {
 		return resultMap
 	}

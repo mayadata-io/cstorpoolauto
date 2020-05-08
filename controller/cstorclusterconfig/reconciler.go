@@ -24,9 +24,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"openebs.io/metac/controller/generic"
 
+	"mayadata.io/cstorpoolauto/common/metac"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/unstruct"
-	"mayadata.io/cstorpoolauto/util/metac"
 )
 
 const (

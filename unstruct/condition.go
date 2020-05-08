@@ -17,7 +17,7 @@ limitations under the License.
 package unstruct
 
 import (
-	"mayadata.io/cstorpoolauto/util/pointer"
+	"mayadata.io/cstorpoolauto/common/pointer"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
