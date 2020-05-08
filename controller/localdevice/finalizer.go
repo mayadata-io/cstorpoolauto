@@ -22,8 +22,8 @@ import (
 	"github.com/golang/glog"
 	"openebs.io/metac/controller/generic"
 
-	ccc "mayadata.io/cstorpoolauto/util/cstorclusterconfig"
-	metacutil "mayadata.io/cstorpoolauto/util/metac"
+	ccc "mayadata.io/cstorpoolauto/common/cstorclusterconfig"
+	metaccommon "mayadata.io/cstorpoolauto/common/metac"
 )
 
 type finalizer struct {
@@ -38,7 +38,7 @@ type finalizer struct {
 
 func (f *finalizer) validateArgs() {
 	// validation failure of request &/ response is a fatal error
-	f.fatal = metacutil.ValidateGenericControllerArgs(f.request, f.response)
+	f.fatal = metaccommon.ValidateGenericControllerArgs(f.request, f.response)
 }
 
 func (f *finalizer) skipIfNotLocalDisk() {
@@ -96,7 +96,7 @@ func (f *finalizer) logFinalizeFinish() {
 		f.request.Watch.GetKind(),
 		f.request.Watch.GetNamespace(),
 		f.request.Watch.GetName(),
-		metacutil.GetDetailsFromResponse(f.response),
+		metaccommon.GetDetailsFromResponse(f.response),
 	)
 }
 

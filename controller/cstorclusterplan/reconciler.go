@@ -23,9 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"openebs.io/metac/controller/generic"
 
+	"mayadata.io/cstorpoolauto/common/metac"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/unstruct"
-	"mayadata.io/cstorpoolauto/util/metac"
 )
 
 type reconcileErrHandler struct {

@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	stringcommon "mayadata.io/cstorpoolauto/common/string"
 	"mayadata.io/cstorpoolauto/types"
-	stringutil "mayadata.io/cstorpoolauto/util/string"
 )
 
 func TestNewHelper(t *testing.T) {
@@ -235,7 +235,7 @@ func TestHelperGetAllHostNames(t *testing.T) {
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
-			if stringutil.NewEquality(got, mock.expect).IsDiff() {
+			if stringcommon.NewEquality(got, mock.expect).IsDiff() {
 				t.Fatalf("Expected no diff got diff: got [%+v]", got)
 			}
 		})
@@ -273,7 +273,7 @@ func TestHelperGetAllHostNamesOrCached(t *testing.T) {
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
-			if stringutil.NewEquality(got, mock.expect).IsDiff() {
+			if stringcommon.NewEquality(got, mock.expect).IsDiff() {
 				t.Fatalf("Expected no diff got diff: got [%+v]", got)
 			}
 		})
@@ -429,7 +429,7 @@ func TestHelperGroupBlockDeviceNamesByHostName(t *testing.T) {
 			}
 			for host, expectDevices := range mock.expect {
 				gotDevices := got[host]
-				if stringutil.NewEquality(gotDevices, expectDevices).IsDiff() {
+				if stringcommon.NewEquality(gotDevices, expectDevices).IsDiff() {
 					t.Fatalf(
 						"Expected no diff:\nhost %q\ngot devices [%+v]\nexpect devices [%+v]",
 						host, gotDevices, expectDevices,
@@ -486,7 +486,7 @@ func TestHelperGroupBlockDeviceNamesByHostNameOrCached(t *testing.T) {
 			}
 			for host, expectDevices := range mock.expect {
 				gotDevices := got[host]
-				if stringutil.NewEquality(gotDevices, expectDevices).IsDiff() {
+				if stringcommon.NewEquality(gotDevices, expectDevices).IsDiff() {
 					t.Fatalf(
 						"Expected no diff:\nhost %q\ngot devices [%+v]\nexpect devices [%+v]",
 						host, gotDevices, expectDevices,

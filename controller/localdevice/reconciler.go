@@ -25,12 +25,12 @@ import (
 	metac "openebs.io/metac/apis/metacontroller/v1alpha1"
 	"openebs.io/metac/controller/generic"
 
+	bd "mayadata.io/cstorpoolauto/common/blockdevice"
+	ccc "mayadata.io/cstorpoolauto/common/cstorclusterconfig"
+	cspc "mayadata.io/cstorpoolauto/common/cstorpoolcluster"
+	metaccommon "mayadata.io/cstorpoolauto/common/metac"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/unstruct"
-	bd "mayadata.io/cstorpoolauto/util/blockdevice"
-	ccc "mayadata.io/cstorpoolauto/util/cstorclusterconfig"
-	cspc "mayadata.io/cstorpoolauto/util/cstorpoolcluster"
-	metacutil "mayadata.io/cstorpoolauto/util/metac"
 )
 
 type syncer struct {
@@ -49,7 +49,7 @@ type syncer struct {
 
 func (s *syncer) validateArgs() {
 	// validation failure of request &/ response is a fatal error
-	s.fatal = metacutil.ValidateGenericControllerArgs(s.request, s.response)
+	s.fatal = metaccommon.ValidateGenericControllerArgs(s.request, s.response)
 }
 
 func (s *syncer) skipIfNotLocalDisk() {
@@ -158,7 +158,7 @@ func (s *syncer) logSyncFinish() {
 		s.request.Watch.GetKind(),
 		s.request.Watch.GetNamespace(),
 		s.request.Watch.GetName(),
-		metacutil.GetDetailsFromResponse(s.response),
+		metaccommon.GetDetailsFromResponse(s.response),
 	)
 }
 

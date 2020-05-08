@@ -22,8 +22,8 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	stringcommon "mayadata.io/cstorpoolauto/common/string"
 	"mayadata.io/cstorpoolauto/types"
-	stringutil "mayadata.io/cstorpoolauto/util/string"
 )
 
 // Builder helps building an unstructured instance of
@@ -158,7 +158,7 @@ func (b *Builder) mapHostNameToFinalDeviceNamesIfNotSet() {
 		//	This is very important logic that can reduce the disruptions to a pool.
 		// This is handled by placing the blockdevice name(s) at their old position(s).
 		b.hostNameToFinalDeviceNames[hostName] =
-			stringutil.NewEquality(observedDeviceNames, desiredDeviceNames).Merge()
+			stringcommon.NewEquality(observedDeviceNames, desiredDeviceNames).Merge()
 	}
 }
 

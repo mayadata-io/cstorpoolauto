@@ -26,7 +26,7 @@ COPY Makefile Makefile
 COPY cmd/ cmd/
 COPY unstruct/ unstruct/
 COPY types/ types/
-COPY util/ util/
+COPY common/ common/
 COPY controller/ controller/
 
 # test cstorpoolauto
@@ -59,7 +59,7 @@ COPY Makefile Makefile
 COPY cmd/ cmd/
 COPY unstruct/ unstruct/
 COPY types/ types/
-COPY util/ util/
+COPY common/ common/
 COPY controller/ controller/
 
 # build cstorpoolauto binary

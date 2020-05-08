@@ -20,9 +20,9 @@ import (
 	"reflect"
 	"testing"
 
+	stringcommon "mayadata.io/cstorpoolauto/common/string"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/unstruct"
-	stringutil "mayadata.io/cstorpoolauto/util/string"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1212,7 +1212,7 @@ func TestPlannerInitNodeToDesiredCSPCDevices(t *testing.T) {
 			}
 			for node, gotDevices := range p.nodeNameToDesiredCSPCDevices {
 				expectDevices := mock.expectNodeNameToCSPCDevices[node]
-				_, adds, deletes := stringutil.NewEquality(expectDevices, gotDevices).Diff()
+				_, adds, deletes := stringcommon.NewEquality(expectDevices, gotDevices).Diff()
 				if len(adds) != 0 || len(deletes) != 0 {
 					t.Fatalf(
 						"Expected devices [%+v] got [%+v] at node %s",
@@ -1330,7 +1330,7 @@ func TestPlannerInitStorageSetToObservedBlockDevices(t *testing.T) {
 							len(expectDevices), len(gotDevices),
 						)
 					}
-					eq := stringutil.NewEquality(expectDevices, gotDevices)
+					eq := stringcommon.NewEquality(expectDevices, gotDevices)
 					_, adds, removals := eq.Diff()
 					if len(adds) != 0 || len(removals) != 0 {
 						t.Fatalf(
