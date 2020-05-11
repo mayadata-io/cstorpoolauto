@@ -27,7 +27,7 @@ import (
 
 	bd "mayadata.io/cstorpoolauto/common/blockdevice"
 	ccc "mayadata.io/cstorpoolauto/common/cstorclusterconfig"
-	cspc "mayadata.io/cstorpoolauto/common/cstorpoolcluster"
+	cspc "mayadata.io/cstorpoolauto/common/cstorpoolcluster/v1alpha1"
 	metaccommon "mayadata.io/cstorpoolauto/common/metac"
 	"mayadata.io/cstorpoolauto/types"
 	"mayadata.io/cstorpoolauto/unstruct"
