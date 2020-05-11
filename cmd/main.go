@@ -25,7 +25,7 @@ import (
 	"mayadata.io/cstorpoolauto/controller/cstorclusterplan"
 	"mayadata.io/cstorpoolauto/controller/cstorclusterstorageset"
 	"mayadata.io/cstorpoolauto/controller/cstorpoolcluster"
-	localdevice "mayadata.io/cstorpoolauto/controller/localdevice/v1alpha1"
+	localdevicev1alpha1 "mayadata.io/cstorpoolauto/controller/localdevice/v1alpha1"
 )
 
 // main function is the entry point of this binary.
@@ -48,8 +48,8 @@ func main() {
 	generic.AddToInlineRegistry("sync/cstorclusterstorageset", cstorclusterstorageset.Sync)
 	generic.AddToInlineRegistry("sync/blockdevice", blockdevice.Sync)
 	generic.AddToInlineRegistry("sync/cstorpoolcluster", cstorpoolcluster.Sync)
-	generic.AddToInlineRegistry("sync/localdevice", localdevice.Sync)
-	generic.AddToInlineRegistry("finalize/localdevice", localdevice.Finalize)
+	generic.AddToInlineRegistry("sync/localdevicev1alpha1", localdevicev1alpha1.Sync)
+	generic.AddToInlineRegistry("finalize/localdevicev1alpha1", localdevicev1alpha1.Finalize)
 
 	start.Start()
 }

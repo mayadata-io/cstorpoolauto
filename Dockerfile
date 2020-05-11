@@ -2,6 +2,7 @@
 # Test cstorpoolauto binary
 # --------------------------
 FROM golang:1.13.5 as tester
+LABEL type=intermediate-container
 
 WORKDIR /mayadata.io/cstorpoolauto/
 
@@ -36,6 +37,7 @@ RUN make test
 # Build cstorpoolauto binary
 # --------------------------
 FROM golang:1.13.5 as builder
+LABEL type=intermediate-container
 
 WORKDIR /mayadata.io/cstorpoolauto/
 

@@ -35,6 +35,7 @@ test:
 .PHONY: image
 image:
 	docker build -t $(REGISTRY)/$(IMG_NAME):$(PACKAGE_VERSION) .
+	docker image prune -f --filter label=type=intermediate-container
 
 .PHONY: push
 push: image
