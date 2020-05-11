@@ -25,7 +25,7 @@ import (
 	"mayadata.io/cstorpoolauto/controller/cstorclusterplan"
 	"mayadata.io/cstorpoolauto/controller/cstorclusterstorageset"
 	"mayadata.io/cstorpoolauto/controller/cstorpoolcluster"
-	"mayadata.io/cstorpoolauto/controller/localdevice"
+	localdevice "mayadata.io/cstorpoolauto/controller/localdevice/v1alpha1"
 )
 
 // main function is the entry point of this binary.
