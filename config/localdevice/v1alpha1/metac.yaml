@@ -1,12 +1,15 @@
 apiVersion: metac.openebs.io/v1alpha1
 kind: GenericController
 metadata:
-  name: sync-localdevice
+  name: sync-localdevice-v1alpha1
   namespace: cspauto
 spec:
   watch:
     apiVersion: dao.mayadata.io/v1alpha1
     resource: cstorclusterconfigs
+    labelSelector:
+      matchLabels:
+        cspc.openebs.io/version: v1alpha1
   attachments:
     - apiVersion: openebs.io/v1alpha1
       resource: blockdevices
@@ -33,12 +36,15 @@ spec:
 apiVersion: metac.openebs.io/v1alpha1
 kind: GenericController
 metadata:
-  name: finalize-localdevice
+  name: finalize-localdevice-v1alpha1
   namespace: cspauto
 spec:
   watch:
     apiVersion: dao.mayadata.io/v1alpha1
     resource: cstorclusterconfigs
+    labelSelector:
+      matchLabels:
+        cspc.openebs.io/version: v1alpha1
   attachments:
     - apiVersion: openebs.io/v1alpha1
       resource: cstorpoolclusters
