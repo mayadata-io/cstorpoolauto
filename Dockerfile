@@ -76,7 +76,7 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 
 COPY config/metac.yaml /etc/config/metac/metac.yaml
-COPY config/localdevice/v1alpha1/metac.yaml /etc/config/metac/localdevice/v1alpha1/metac.yaml
+COPY config/localdevice/metac.yaml /etc/config/metac/localdevice/metac.yaml
 COPY --from=builder /mayadata.io/cstorpoolauto/cstorpoolauto /usr/bin/
 
 USER nonroot:nonroot

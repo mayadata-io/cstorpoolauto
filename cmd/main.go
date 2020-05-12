@@ -25,6 +25,7 @@ import (
 	"mayadata.io/cstorpoolauto/controller/cstorclusterplan"
 	"mayadata.io/cstorpoolauto/controller/cstorclusterstorageset"
 	"mayadata.io/cstorpoolauto/controller/cstorpoolcluster"
+	"mayadata.io/cstorpoolauto/controller/localdevice"
 	localdevicev1alpha1 "mayadata.io/cstorpoolauto/controller/localdevice/v1alpha1"
 )
 
@@ -50,6 +51,8 @@ func main() {
 	generic.AddToInlineRegistry("sync/cstorpoolcluster", cstorpoolcluster.Sync)
 	generic.AddToInlineRegistry("sync/localdevicev1alpha1", localdevicev1alpha1.Sync)
 	generic.AddToInlineRegistry("finalize/localdevicev1alpha1", localdevicev1alpha1.Finalize)
+	generic.AddToInlineRegistry("sync/localdevice", localdevice.Sync)
+	generic.AddToInlineRegistry("finalize/localdevice", localdevice.Finalize)
 
 	start.Start()
 }
