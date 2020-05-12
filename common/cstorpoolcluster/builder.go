@@ -223,6 +223,12 @@ func (b *Builder) buildDesiredRAIDGroupsByHostName(nodeName string) []interface{
 		var raidGroupList []interface{}
 		var raidGroup []string
 
+		// Stripe pool contains only one raid group.
+		if b.DesiredRAIDType == types.PoolRAIDTypeStripe {
+			raidGroupList = append(raidGroupList, buildSingleRAIDGroup(deviceNames))
+			return raidGroupList
+		}
+
 		diskCountByRAIDType :=
 			int(types.RAIDTypeToDefaultMinDiskCount[b.DesiredRAIDType])
 		for idx, deviceName := range deviceNames {
@@ -235,7 +241,6 @@ func (b *Builder) buildDesiredRAIDGroupsByHostName(nodeName string) []interface{
 			// 	- Mirror has 2 disks per raid group
 			//	- RAIDZ has 3 disks per raid group
 			//  - RAIDZ2 has 6 disks per raid group
-			//  - Stripe has 1 disk per raid group
 			if (idx+1)%diskCountByRAIDType == 0 {
 				raidGroupList = append(raidGroupList, buildSingleRAIDGroup(raidGroup))
 				// reset the raidGroup to make way to build next raidGroup for this pool

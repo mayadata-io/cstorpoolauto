@@ -284,10 +284,6 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 											map[string]interface{}{
 												"blockDeviceName": "bd1",
 											},
-										},
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd2",
 											},
@@ -338,10 +334,6 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 											map[string]interface{}{
 												"blockDeviceName": "bd1",
 											},
-										},
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd3",
 											},
@@ -395,10 +387,6 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 											map[string]interface{}{
 												"blockDeviceName": "bd21",
 											},
-										},
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd23",
 											},
@@ -421,10 +409,6 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 											map[string]interface{}{
 												"blockDeviceName": "bd1",
 											},
-										},
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd3",
 											},

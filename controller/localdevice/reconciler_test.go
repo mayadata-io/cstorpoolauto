@@ -1715,10 +1715,6 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 											map[string]interface{}{
 												"blockDeviceName": "bd10",
 											},
-										},
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd11",
 											},
@@ -1741,10 +1737,6 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 											map[string]interface{}{
 												"blockDeviceName": "bd20",
 											},
-										},
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd21",
 											},
