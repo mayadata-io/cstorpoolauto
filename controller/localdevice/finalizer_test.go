@@ -471,7 +471,7 @@ func TestFinalize(t *testing.T) {
 				},
 				Attachments: common.MakeAnyUnstructRegistry(
 					[]*unstructured.Unstructured{
-						&unstructured.Unstructured{
+						{
 							Object: map[string]interface{}{
 								"kind":       "CStorPoolCluster",
 								"apiVersion": "openebs.io/v1alpha1",

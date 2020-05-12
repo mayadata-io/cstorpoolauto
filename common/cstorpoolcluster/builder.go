@@ -215,10 +215,6 @@ func (b *Builder) buildDesiredRAIDGroupsByHostName(nodeName string) []interface{
 	// local function to build a raid group
 	buildSingleRAIDGroup := func(deviceNames []string) interface{} {
 		return map[string]interface{}{
-			"type":         string(b.DesiredRAIDType),
-			"isWriteCache": false,
-			"isSpare":      false,
-			"isReadCache":  false,
 			"blockDevices": buildBlockDevices(deviceNames),
 		}
 	}
@@ -259,11 +255,11 @@ func (b *Builder) buildDesiredPoolByHostName(hostName string) interface{} {
 		"nodeSelector": map[string]interface{}{
 			"kubernetes.io/hostname": hostName,
 		},
-		"raidGroups": b.buildDesiredRAIDGroupsByHostName(hostName),
+		"dataRaidGroups": b.buildDesiredRAIDGroupsByHostName(hostName),
 		"poolConfig": map[string]interface{}{
-			"defaultRaidGroupType": string(b.DesiredRAIDType),
-			"overProvisioning":     false,
-			"compression":          "off",
+			"dataRaidGroupType": string(b.DesiredRAIDType),
+			"thickProvision":    false,
+			"compression":       "off",
 		},
 	}
 }
@@ -308,7 +304,7 @@ func (b *Builder) BuildDesiredState() (*unstructured.Unstructured, error) {
 		cspc.SetLabels(b.DesiredLabels)
 	}
 	// below is the right way to set APIVersion & Kind
-	cspc.SetAPIVersion(string(types.APIVersionOpenEBSV1Alpha1))
+	cspc.SetAPIVersion(string(types.APIVersionCStorOpenEBSV1))
 	cspc.SetKind(string(types.KindCStorPoolCluster))
 	return cspc, nil
 }

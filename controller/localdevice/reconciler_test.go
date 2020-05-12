@@ -329,8 +329,8 @@ func TestSyncerSkipIfEmptyAttachments(t *testing.T) {
 				request: &generic.SyncHookRequest{
 					Attachments: common.AnyUnstructRegistry(
 						map[string]map[string]*unstructured.Unstructured{
-							"gvk1": map[string]*unstructured.Unstructured{},
-							"gvk2": map[string]*unstructured.Unstructured{
+							"gvk1": {},
+							"gvk2": {
 								"nsname1": nil,
 							},
 						},
@@ -345,11 +345,11 @@ func TestSyncerSkipIfEmptyAttachments(t *testing.T) {
 				request: &generic.SyncHookRequest{
 					Attachments: common.AnyUnstructRegistry(
 						map[string]map[string]*unstructured.Unstructured{
-							"gvk1": map[string]*unstructured.Unstructured{},
-							"gvk2": map[string]*unstructured.Unstructured{
+							"gvk1": {},
+							"gvk2": {
 								"nsname1": nil,
 							},
-							"gvk3": map[string]*unstructured.Unstructured{
+							"gvk3": {
 								"nsname1": &unstructured.Unstructured{
 									Object: map[string]interface{}{},
 								},
@@ -407,7 +407,7 @@ func TestSyncerRegisterAttachments(t *testing.T) {
 				request: &generic.SyncHookRequest{
 					Attachments: common.AnyUnstructRegistry(
 						map[string]map[string]*unstructured.Unstructured{
-							"gvk1": map[string]*unstructured.Unstructured{
+							"gvk1": {
 								"nsname1": &unstructured.Unstructured{
 									Object: map[string]interface{}{
 										"kind": string(types.KindBlockDevice),
@@ -427,7 +427,7 @@ func TestSyncerRegisterAttachments(t *testing.T) {
 				request: &generic.SyncHookRequest{
 					Attachments: common.AnyUnstructRegistry(
 						map[string]map[string]*unstructured.Unstructured{
-							"gvk1": map[string]*unstructured.Unstructured{
+							"gvk1": {
 								"nsname1": &unstructured.Unstructured{
 									Object: map[string]interface{}{
 										"kind": string(types.KindBlockDevice),
@@ -467,7 +467,7 @@ func TestSyncerRegisterAttachments(t *testing.T) {
 					},
 					Attachments: common.AnyUnstructRegistry(
 						map[string]map[string]*unstructured.Unstructured{
-							"gvk1": map[string]*unstructured.Unstructured{
+							"gvk1": {
 								"nsname1": &unstructured.Unstructured{
 									Object: map[string]interface{}{
 										"kind": string(types.KindBlockDevice),
@@ -479,7 +479,7 @@ func TestSyncerRegisterAttachments(t *testing.T) {
 									},
 								},
 							},
-							"gvk2": map[string]*unstructured.Unstructured{
+							"gvk2": {
 								"nsname1": &unstructured.Unstructured{
 									Object: map[string]interface{}{
 										"kind": string(types.KindCStorPoolCluster),
@@ -512,7 +512,7 @@ func TestSyncerRegisterAttachments(t *testing.T) {
 					},
 					Attachments: common.AnyUnstructRegistry(
 						map[string]map[string]*unstructured.Unstructured{
-							"gvk1": map[string]*unstructured.Unstructured{
+							"gvk1": {
 								"nsname1": &unstructured.Unstructured{
 									Object: map[string]interface{}{
 										"kind": string(types.KindBlockDevice),
@@ -524,7 +524,7 @@ func TestSyncerRegisterAttachments(t *testing.T) {
 									},
 								},
 							},
-							"gvk2": map[string]*unstructured.Unstructured{
+							"gvk2": {
 								"nsname1": &unstructured.Unstructured{
 									Object: map[string]interface{}{
 										"kind": string(types.KindCStorPoolCluster),
@@ -609,7 +609,7 @@ func TestSyncerReconcile(t *testing.T) {
 					},
 				},
 				blockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{},
+					{},
 				},
 			},
 			isErr: true,
@@ -647,7 +647,7 @@ func TestSyncerReconcile(t *testing.T) {
 					},
 				},
 				blockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -690,7 +690,7 @@ func TestSyncerReconcile(t *testing.T) {
 					},
 				},
 				blockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -739,7 +739,7 @@ func TestSyncerReconcile(t *testing.T) {
 					},
 				},
 				blockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -751,7 +751,7 @@ func TestSyncerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -807,7 +807,7 @@ func TestSyncerReconcile(t *testing.T) {
 					},
 				},
 				blockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -819,7 +819,7 @@ func TestSyncerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -831,7 +831,7 @@ func TestSyncerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -843,7 +843,7 @@ func TestSyncerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -899,7 +899,7 @@ func TestSyncerReconcile(t *testing.T) {
 					},
 				},
 				blockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -911,7 +911,7 @@ func TestSyncerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -923,7 +923,7 @@ func TestSyncerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -935,7 +935,7 @@ func TestSyncerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -947,7 +947,7 @@ func TestSyncerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -959,7 +959,7 @@ func TestSyncerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1024,7 +1024,7 @@ func TestReconcilerIsObservedBlockDeviceCountMatchRAIDType(t *testing.T) {
 			reconciler: &Reconciler{
 				ObservedCStorClusterConfig: nil,
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"},
+					"node-001": {"bd1"},
 				},
 			},
 			isErr: true,
@@ -1042,7 +1042,7 @@ func TestReconcilerIsObservedBlockDeviceCountMatchRAIDType(t *testing.T) {
 					},
 				},
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"},
+					"node-001": {"bd1"},
 				},
 			},
 			isErr: true,
@@ -1060,7 +1060,7 @@ func TestReconcilerIsObservedBlockDeviceCountMatchRAIDType(t *testing.T) {
 					},
 				},
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"},
+					"node-001": {"bd1", "bd2"},
 				},
 			},
 			isErr: false,
@@ -1078,8 +1078,8 @@ func TestReconcilerIsObservedBlockDeviceCountMatchRAIDType(t *testing.T) {
 					},
 				},
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"},
-					"node-002": []string{"bd21", "bd22", "bd23"},
+					"node-001": {"bd1", "bd2"},
+					"node-002": {"bd21", "bd22", "bd23"},
 				},
 			},
 			isErr: true,
@@ -1097,7 +1097,7 @@ func TestReconcilerIsObservedBlockDeviceCountMatchRAIDType(t *testing.T) {
 					},
 				},
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"},
+					"node-001": {"bd1"},
 				},
 			},
 			isErr: false,
@@ -1115,8 +1115,8 @@ func TestReconcilerIsObservedBlockDeviceCountMatchRAIDType(t *testing.T) {
 					},
 				},
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"},
-					"node-002": []string{"bd21"},
+					"node-001": {"bd1", "bd2"},
+					"node-002": {"bd21"},
 				},
 			},
 			isErr: false,
@@ -1134,8 +1134,8 @@ func TestReconcilerIsObservedBlockDeviceCountMatchRAIDType(t *testing.T) {
 					},
 				},
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3"},
-					"node-002": []string{"bd21", "bd22", "bd23"},
+					"node-001": {"bd1", "bd2", "bd3"},
+					"node-002": {"bd21", "bd22", "bd23"},
 				},
 			},
 			isErr: false,
@@ -1153,8 +1153,8 @@ func TestReconcilerIsObservedBlockDeviceCountMatchRAIDType(t *testing.T) {
 					},
 				},
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3"},
-					"node-002": []string{"bd21", "bd22"},
+					"node-001": {"bd1", "bd2", "bd3"},
+					"node-002": {"bd21", "bd22"},
 				},
 			},
 			isErr: true,
@@ -1199,7 +1199,7 @@ func TestReconcilerMapHostNameToSelectedBlockDevices(t *testing.T) {
 		"1 invalid kind observed device": {
 			reconciler: &Reconciler{
 				selectedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": "Junk",
 						},
@@ -1211,7 +1211,7 @@ func TestReconcilerMapHostNameToSelectedBlockDevices(t *testing.T) {
 		"1 valid kind observed device && empty hostname": {
 			reconciler: &Reconciler{
 				selectedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 						},
@@ -1223,7 +1223,7 @@ func TestReconcilerMapHostNameToSelectedBlockDevices(t *testing.T) {
 		"1 valid kind observed device && valid hostname": {
 			reconciler: &Reconciler{
 				selectedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1246,7 +1246,7 @@ func TestReconcilerMapHostNameToSelectedBlockDevices(t *testing.T) {
 		"2 valid kind observed devices && valid, invalid hostname": {
 			reconciler: &Reconciler{
 				selectedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1258,7 +1258,7 @@ func TestReconcilerMapHostNameToSelectedBlockDevices(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1275,7 +1275,7 @@ func TestReconcilerMapHostNameToSelectedBlockDevices(t *testing.T) {
 		"2 valid kind observed devices && valid single hostname": {
 			reconciler: &Reconciler{
 				selectedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1287,7 +1287,7 @@ func TestReconcilerMapHostNameToSelectedBlockDevices(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1310,7 +1310,7 @@ func TestReconcilerMapHostNameToSelectedBlockDevices(t *testing.T) {
 		"2 valid kind observed devices && valid hostnames": {
 			reconciler: &Reconciler{
 				selectedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1322,7 +1322,7 @@ func TestReconcilerMapHostNameToSelectedBlockDevices(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1448,24 +1448,20 @@ func TestReconcilerWalkObservedCStorPoolCluster(t *testing.T) {
 							"pools": []interface{}{
 								map[string]interface{}{
 									"poolConfig": map[string]interface{}{
-										"defaultRaidGroupType": "stripe",
-										"overProvisioning":     false,
-										"compression":          "off",
+										"dataRaidGroupType": "stripe",
+										"thickProvision":    false,
+										"compression":       "off",
 									},
 									"nodeSelector": map[string]interface{}{
 										"kubernetes.io/hostname": "node-201",
 									},
-									"raidGroups": []interface{}{
+									"dataRaidGroups": []interface{}{
 										map[string]interface{}{
 											"blockDevices": []interface{}{
 												map[string]interface{}{
 													"blockDeviceName": "bd-7",
 												},
 											},
-											"type":         "stripe",
-											"isWriteCache": false,
-											"isSpare":      false,
-											"isReadCache":  false,
 										},
 									},
 								},
@@ -1476,7 +1472,7 @@ func TestReconcilerWalkObservedCStorPoolCluster(t *testing.T) {
 			},
 			expectHostNames: []string{"node-201"},
 			expectHostToDeviceNames: map[string][]string{
-				"node-201": []string{"bd-7"},
+				"node-201": {"bd-7"},
 			},
 			isErr: false,
 		},
@@ -1489,37 +1485,33 @@ func TestReconcilerWalkObservedCStorPoolCluster(t *testing.T) {
 							"pools": []interface{}{
 								map[string]interface{}{
 									"poolConfig": map[string]interface{}{
-										"defaultRaidGroupType": "stripe",
-										"overProvisioning":     false,
-										"compression":          "off",
+										"dataRaidGroupType": "stripe",
+										"thickProvision":    false,
+										"compression":       "off",
 									},
 									"nodeSelector": map[string]interface{}{
 										"kubernetes.io/hostname": "node-101",
 									},
-									"raidGroups": []interface{}{
+									"dataRaidGroups": []interface{}{
 										map[string]interface{}{
 											"blockDevices": []interface{}{
 												map[string]interface{}{
 													"blockDeviceName": "bd-8",
 												},
 											},
-											"type":         "stripe",
-											"isWriteCache": false,
-											"isSpare":      false,
-											"isReadCache":  false,
 										},
 									},
 								},
 								map[string]interface{}{
 									"poolConfig": map[string]interface{}{
-										"defaultRaidGroupType": "stripe",
-										"overProvisioning":     false,
-										"compression":          "off",
+										"dataRaidGroupType": "stripe",
+										"thickProvision":    false,
+										"compression":       "off",
 									},
 									"nodeSelector": map[string]interface{}{
 										"kubernetes.io/hostname": "node-201",
 									},
-									"raidGroups": []interface{}{
+									"dataRaidGroups": []interface{}{
 										map[string]interface{}{
 											"blockDevices": []interface{}{
 												map[string]interface{}{
@@ -1529,10 +1521,6 @@ func TestReconcilerWalkObservedCStorPoolCluster(t *testing.T) {
 													"blockDeviceName": "bd-77",
 												},
 											},
-											"type":         "stripe",
-											"isWriteCache": false,
-											"isSpare":      false,
-											"isReadCache":  false,
 										},
 									},
 								},
@@ -1543,8 +1531,8 @@ func TestReconcilerWalkObservedCStorPoolCluster(t *testing.T) {
 			},
 			expectHostNames: []string{"node-101", "node-201"},
 			expectHostToDeviceNames: map[string][]string{
-				"node-101": []string{"bd-8"},
-				"node-201": []string{"bd-7", "bd-77"},
+				"node-101": {"bd-8"},
+				"node-201": {"bd-7", "bd-77"},
 			},
 			isErr: false,
 		},
@@ -1604,19 +1592,19 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 				},
 				observedHostNamesInCSPC: []string{"node-001", "node-002"},
 				hostNameToObservedCSPCDeviceNames: map[string][]string{
-					"node-001": []string{"bd10"},
-					"node-002": []string{"bd20"},
+					"node-001": {"bd10"},
+					"node-002": {"bd20"},
 				},
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd10", "bd11"},
-					"node-002": []string{"bd20", "bd21"},
+					"node-001": {"bd10", "bd11"},
+					"node-002": {"bd20", "bd21"},
 				},
 				raidType: types.PoolRAIDTypeMirror,
 			},
 			expectCSPC: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": types.APIVersionOpenEBSV1Alpha1,
+					"apiVersion": types.APIVersionCStorOpenEBSV1,
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -1629,14 +1617,14 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -1646,23 +1634,19 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 												"blockDeviceName": "bd11",
 											},
 										},
-										"type":         "mirror",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-002",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -1672,10 +1656,6 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 												"blockDeviceName": "bd21",
 											},
 										},
-										"type":         "mirror",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -1697,19 +1677,19 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 				},
 				observedHostNamesInCSPC: []string{"node-001", "node-002"},
 				hostNameToObservedCSPCDeviceNames: map[string][]string{
-					"node-001": []string{"bd10"},
-					"node-002": []string{"bd20"},
+					"node-001": {"bd10"},
+					"node-002": {"bd20"},
 				},
 				hostNameToSelectedBlockDeviceNames: map[string][]string{
-					"node-001": []string{"bd10", "bd11"},
-					"node-002": []string{"bd20", "bd21"},
+					"node-001": {"bd10", "bd11"},
+					"node-002": {"bd20", "bd21"},
 				},
 				raidType: types.PoolRAIDTypeStripe,
 			},
 			expectCSPC: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": types.APIVersionOpenEBSV1Alpha1,
+					"apiVersion": types.APIVersionCStorOpenEBSV1,
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -1722,24 +1702,20 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "stripe",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "stripe",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd10",
 											},
 										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 									map[string]interface{}{
 										"blockDevices": []interface{}{
@@ -1747,33 +1723,25 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 												"blockDeviceName": "bd11",
 											},
 										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "stripe",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "stripe",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-002",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd20",
 											},
 										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 									map[string]interface{}{
 										"blockDevices": []interface{}{
@@ -1781,10 +1749,6 @@ func TestReconcilerBuildDesiredCStorPoolCluster(t *testing.T) {
 												"blockDeviceName": "bd21",
 											},
 										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -1834,7 +1798,7 @@ func TestReconcilerReconcile(t *testing.T) {
 		"nil ObservedCStorClusterConfig": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{},
 					},
 				},
@@ -1845,7 +1809,7 @@ func TestReconcilerReconcile(t *testing.T) {
 		"invalid ObservedCStorClusterConfig": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{},
 					},
 				},
@@ -1860,7 +1824,7 @@ func TestReconcilerReconcile(t *testing.T) {
 		"expect mirror cspc when observed cspc is nil": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1871,7 +1835,7 @@ func TestReconcilerReconcile(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -1915,7 +1879,7 @@ func TestReconcilerReconcile(t *testing.T) {
 			expectCSPC: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": types.APIVersionOpenEBSV1Alpha1,
+					"apiVersion": types.APIVersionCStorOpenEBSV1,
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -1928,14 +1892,14 @@ func TestReconcilerReconcile(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -1945,10 +1909,6 @@ func TestReconcilerReconcile(t *testing.T) {
 												"blockDeviceName": "bd2",
 											},
 										},
-										"type":         "mirror",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -2002,7 +1962,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 		"no blockdevice selector": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2021,7 +1981,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 		"select all blockdevices": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2033,7 +1993,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2077,7 +2037,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 				},
 			},
 			expectBlockDevices: []*unstructured.Unstructured{
-				&unstructured.Unstructured{
+				{
 					Object: map[string]interface{}{
 						"kind": string(types.KindBlockDevice),
 						"metadata": map[string]interface{}{
@@ -2089,7 +2049,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 						},
 					},
 				},
-				&unstructured.Unstructured{
+				{
 					Object: map[string]interface{}{
 						"kind": string(types.KindBlockDevice),
 						"metadata": map[string]interface{}{
@@ -2107,7 +2067,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 		"passing path based blockdevice selector term": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2119,7 +2079,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2158,7 +2118,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 				},
 			},
 			expectBlockDevices: []*unstructured.Unstructured{
-				&unstructured.Unstructured{
+				{
 					Object: map[string]interface{}{
 						"kind": string(types.KindBlockDevice),
 						"metadata": map[string]interface{}{
@@ -2176,7 +2136,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 		"failing path based blockdevice selector term": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2188,7 +2148,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2231,7 +2191,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 		"passing label based blockdevice selector term": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2246,7 +2206,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2288,7 +2248,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 				},
 			},
 			expectBlockDevices: []*unstructured.Unstructured{
-				&unstructured.Unstructured{
+				{
 					Object: map[string]interface{}{
 						"kind": string(types.KindBlockDevice),
 						"metadata": map[string]interface{}{
@@ -2309,7 +2269,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 		"failing label based blockdevice selector term": {
 			reconciler: &Reconciler{
 				ObservedBlockDevices: []*unstructured.Unstructured{
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
@@ -2324,7 +2284,7 @@ func TestReconcilerSelectFromObservedBlockDevices(t *testing.T) {
 							},
 						},
 					},
-					&unstructured.Unstructured{
+					{
 						Object: map[string]interface{}{
 							"kind": string(types.KindBlockDevice),
 							"metadata": map[string]interface{}{
