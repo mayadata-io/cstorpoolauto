@@ -30,7 +30,7 @@ vendor: go.mod go.sum
 
 .PHONY: test
 test: 
-	@go test ./...
+	@go test -cover ./...
 
 .PHONY: image
 image:
