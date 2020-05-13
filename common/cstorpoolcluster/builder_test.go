@@ -783,3 +783,269 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildDesiredRAIDGroupsByHostName(t *testing.T) {
+	var tests = map[string]struct {
+		builder *Builder
+		expect  interface{}
+	}{
+		"stripe with  n disks where n=1 disks": {
+			builder: &Builder{
+				DesiredRAIDType: types.PoolRAIDTypeStripe,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+					},
+				},
+			},
+		},
+		"stripe with  n disks where n>1 disks": {
+			builder: &Builder{
+				DesiredRAIDType: types.PoolRAIDTypeStripe,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+					},
+				},
+			},
+		},
+		"mirror with  2n disks where n=1 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeMirror,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+					},
+				},
+			},
+		},
+		"mirror with  2n disks where n>1 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeMirror,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3", "bd4"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+					},
+				},
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd4",
+						},
+					},
+				},
+			},
+		},
+		"raidz with 2n+1 disks where n=1 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+					},
+				},
+			},
+		},
+		"raidz with 2n+1 disks where n>1 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+					},
+				},
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd4",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd5",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd6",
+						},
+					},
+				},
+			},
+		},
+		"raidz2 with 2n+2 disks where n=2 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeRAIDZ2,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd4",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd5",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd6",
+						},
+					},
+				},
+			},
+		},
+		"raidz2 with 2n+2 disks where n>2 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeRAIDZ2,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5", "bd6", "bd7", "bd8", "bd9", "bd10", "bd11", "bd12"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd4",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd5",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd6",
+						},
+					},
+				},
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd7",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd8",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd9",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd10",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd11",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd12",
+						},
+					},
+				},
+			},
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			b := mock.builder
+			got := b.buildDesiredRAIDGroupsByHostName("node-001")
+			if !reflect.DeepEqual(got, mock.expect) {
+				t.Fatalf("Expected no diff got\n%s", cmp.Diff(got, mock.expect))
+			}
+		})
+	}
+}
