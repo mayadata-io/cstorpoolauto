@@ -223,7 +223,7 @@ func (b *Builder) buildDesiredRAIDGroupsByHostName(nodeName string) []interface{
 		var raidGroupList []interface{}
 		var raidGroup []string
 
-		// Stripe pool contains only one raid group.
+		// Stripe pool implies only one raid group that contains all the disks
 		if b.DesiredRAIDType == types.PoolRAIDTypeStripe {
 			raidGroupList = append(raidGroupList, buildSingleRAIDGroup(deviceNames))
 			return raidGroupList
