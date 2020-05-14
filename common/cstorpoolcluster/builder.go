@@ -215,10 +215,6 @@ func (b *Builder) buildDesiredRAIDGroupsByHostName(nodeName string) []interface{
 	// local function to build a raid group
 	buildSingleRAIDGroup := func(deviceNames []string) interface{} {
 		return map[string]interface{}{
-			"type":         string(b.DesiredRAIDType),
-			"isWriteCache": false,
-			"isSpare":      false,
-			"isReadCache":  false,
 			"blockDevices": buildBlockDevices(deviceNames),
 		}
 	}
@@ -226,6 +222,12 @@ func (b *Builder) buildDesiredRAIDGroupsByHostName(nodeName string) []interface{
 	buildAllRAIDGroupsPerHost := func(deviceNames []string) []interface{} {
 		var raidGroupList []interface{}
 		var raidGroup []string
+
+		// Stripe pool implies only one raid group that contains all the disks
+		if b.DesiredRAIDType == types.PoolRAIDTypeStripe {
+			raidGroupList = append(raidGroupList, buildSingleRAIDGroup(deviceNames))
+			return raidGroupList
+		}
 
 		diskCountByRAIDType :=
 			int(types.RAIDTypeToDefaultMinDiskCount[b.DesiredRAIDType])
@@ -239,7 +241,6 @@ func (b *Builder) buildDesiredRAIDGroupsByHostName(nodeName string) []interface{
 			// 	- Mirror has 2 disks per raid group
 			//	- RAIDZ has 3 disks per raid group
 			//  - RAIDZ2 has 6 disks per raid group
-			//  - Stripe has 1 disk per raid group
 			if (idx+1)%diskCountByRAIDType == 0 {
 				raidGroupList = append(raidGroupList, buildSingleRAIDGroup(raidGroup))
 				// reset the raidGroup to make way to build next raidGroup for this pool
@@ -259,11 +260,11 @@ func (b *Builder) buildDesiredPoolByHostName(hostName string) interface{} {
 		"nodeSelector": map[string]interface{}{
 			"kubernetes.io/hostname": hostName,
 		},
-		"raidGroups": b.buildDesiredRAIDGroupsByHostName(hostName),
+		"dataRaidGroups": b.buildDesiredRAIDGroupsByHostName(hostName),
 		"poolConfig": map[string]interface{}{
-			"defaultRaidGroupType": string(b.DesiredRAIDType),
-			"overProvisioning":     false,
-			"compression":          "off",
+			"dataRaidGroupType": string(b.DesiredRAIDType),
+			"thickProvision":    false,
+			"compression":       "off",
 		},
 	}
 }
@@ -308,7 +309,7 @@ func (b *Builder) BuildDesiredState() (*unstructured.Unstructured, error) {
 		cspc.SetLabels(b.DesiredLabels)
 	}
 	// below is the right way to set APIVersion & Kind
-	cspc.SetAPIVersion(string(types.APIVersionOpenEBSV1Alpha1))
+	cspc.SetAPIVersion(string(types.APIVersionCStorOpenEBSV1))
 	cspc.SetKind(string(types.KindCStorPoolCluster))
 	return cspc, nil
 }

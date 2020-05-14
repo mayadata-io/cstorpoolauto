@@ -107,7 +107,7 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeMirror,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"},
+					"node-001": {"bd1"},
 				},
 			},
 			isErr: true,
@@ -118,7 +118,7 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeMirror,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3"},
+					"node-001": {"bd1", "bd2", "bd3"},
 				},
 			},
 			isErr: true,
@@ -129,7 +129,7 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"},
+					"node-001": {"bd1"},
 				},
 			},
 			isErr: true,
@@ -140,7 +140,7 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3", "bd4"},
+					"node-001": {"bd1", "bd2", "bd3", "bd4"},
 				},
 			},
 			isErr: true,
@@ -151,7 +151,7 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"},
+					"node-001": {"bd1", "bd2"},
 				},
 			},
 			isErr: true,
@@ -162,7 +162,7 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3", "bd4", "bd5"},
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5"},
 				},
 			},
 			isErr: true,
@@ -173,8 +173,8 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
-					"node-002": []string{"bd21", "bd22", "bd23", "bd24", "bd25"},
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
+					"node-002": {"bd21", "bd22", "bd23", "bd24", "bd25"},
 				},
 			},
 			isErr: true,
@@ -188,7 +188,7 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+					"apiVersion": string(types.APIVersionCStorOpenEBSV1),
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -206,13 +206,13 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeMirror,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"},
+					"node-001": {"bd1", "bd2"},
 				},
 			},
 			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+					"apiVersion": string(types.APIVersionCStorOpenEBSV1),
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -221,14 +221,14 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -238,10 +238,6 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 												"blockDeviceName": "bd2",
 											},
 										},
-										"type":         "mirror",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -257,16 +253,16 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeStripe,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"}, // bd2 is new
+					"node-001": {"bd1", "bd2"}, // bd2 is new
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"}, // bd1 is existing
+					"node-001": {"bd1"}, // bd1 is existing
 				},
 			},
 			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+					"apiVersion": string(types.APIVersionCStorOpenEBSV1),
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -275,35 +271,23 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "stripe",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "stripe",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd1",
 											},
-										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd2",
 											},
 										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -319,16 +303,16 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeStripe,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd3"}, // bd3 is new
+					"node-001": {"bd1", "bd3"}, // bd3 is new
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"}, // bd1 & bd2 are existing
+					"node-001": {"bd1", "bd2"}, // bd1 & bd2 are existing
 				},
 			},
 			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+					"apiVersion": string(types.APIVersionCStorOpenEBSV1),
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -337,35 +321,23 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "stripe",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "stripe",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd1",
 											},
-										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd3",
 											},
 										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -382,18 +354,18 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				DesiredRAIDType:  types.PoolRAIDTypeStripe,
 				OrderedHostNames: []string{"node-002", "node-001"}, // reversed order
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd3"},   // bd3 is new
-					"node-002": []string{"bd21", "bd23"}, // bd23 is new
+					"node-001": {"bd1", "bd3"},   // bd3 is new
+					"node-002": {"bd21", "bd23"}, // bd23 is new
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"},   // bd1 & bd2 are existing
-					"node-002": []string{"bd21", "bd22"}, // bd21 & bd22 are existing
+					"node-001": {"bd1", "bd2"},   // bd1 & bd2 are existing
+					"node-002": {"bd21", "bd22"}, // bd21 & bd22 are existing
 				},
 			},
 			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+					"apiVersion": string(types.APIVersionCStorOpenEBSV1),
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -402,69 +374,45 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "stripe",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "stripe",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-002",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd21",
 											},
-										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd23",
 											},
 										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "stripe",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "stripe",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd1",
 											},
-										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
-									},
-									map[string]interface{}{
-										"blockDevices": []interface{}{
 											map[string]interface{}{
 												"blockDeviceName": "bd3",
 											},
 										},
-										"type":         "stripe",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -481,18 +429,18 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				DesiredRAIDType:  types.PoolRAIDTypeMirror,
 				OrderedHostNames: []string{"node-001", "node-002"},
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd3"},   // bd3 is new
-					"node-002": []string{"bd21", "bd23"}, // bd23 is new
+					"node-001": {"bd1", "bd3"},   // bd3 is new
+					"node-002": {"bd21", "bd23"}, // bd23 is new
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"},   // bd1 & bd2 are existing
-					"node-002": []string{"bd21", "bd22"}, // bd21 & bd22 are existing
+					"node-001": {"bd1", "bd2"},   // bd1 & bd2 are existing
+					"node-002": {"bd21", "bd22"}, // bd21 & bd22 are existing
 				},
 			},
 			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+					"apiVersion": string(types.APIVersionCStorOpenEBSV1),
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -501,14 +449,14 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -518,23 +466,19 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 												"blockDeviceName": "bd3",
 											},
 										},
-										"type":         "mirror",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-002",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -544,10 +488,6 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 												"blockDeviceName": "bd23",
 											},
 										},
-										"type":         "mirror",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -563,10 +503,10 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeMirror,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd3", "bd4"}, // bd3 & bd4 are new
+					"node-001": {"bd1", "bd3", "bd4"}, // bd3 & bd4 are new
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2"}, // bd1 & bd2 are existing
+					"node-001": {"bd1", "bd2"}, // bd1 & bd2 are existing
 				},
 			},
 			isErr: true,
@@ -577,16 +517,16 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeMirror,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd3"}, // bd2 is removed
+					"node-001": {"bd1", "bd3"}, // bd2 is removed
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3"}, // bd1, bd2 & bd3 are existing
+					"node-001": {"bd1", "bd2", "bd3"}, // bd1, bd2 & bd3 are existing
 				},
 			},
 			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+					"apiVersion": string(types.APIVersionCStorOpenEBSV1),
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -595,14 +535,14 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -612,10 +552,6 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 												"blockDeviceName": "bd3",
 											},
 										},
-										"type":         "mirror",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -631,10 +567,10 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd3", "bd4"}, // bd3 & bd4 are new
+					"node-001": {"bd3", "bd4"}, // bd3 & bd4 are new
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"}, // bd1 is existing
+					"node-001": {"bd1"}, // bd1 is existing
 				},
 			},
 			isErr: true,
@@ -645,10 +581,10 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3", "bd4"}, // bd2, bd3 & bd4 are new
+					"node-001": {"bd1", "bd2", "bd3", "bd4"}, // bd2, bd3 & bd4 are new
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"}, // bd1 is existing
+					"node-001": {"bd1"}, // bd1 is existing
 				},
 			},
 			isErr: true,
@@ -659,10 +595,10 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeRAIDZ2,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3", "bd4"}, // bd2, bd3 & bd4 are new
+					"node-001": {"bd1", "bd2", "bd3", "bd4"}, // bd2, bd3 & bd4 are new
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"}, // bd1 is existing
+					"node-001": {"bd1"}, // bd1 is existing
 				},
 			},
 			isErr: true,
@@ -673,16 +609,16 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				Namespace:       "test",
 				DesiredRAIDType: types.PoolRAIDTypeRAIDZ2,
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"}, // bd1 is existing
+					"node-001": {"bd1"}, // bd1 is existing
 				},
 			},
 			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+					"apiVersion": string(types.APIVersionCStorOpenEBSV1),
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -691,14 +627,14 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "raidz2",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "raidz2",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -720,10 +656,6 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 												"blockDeviceName": "bd6",
 											},
 										},
-										"type":         "raidz2",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -740,18 +672,18 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 				DesiredRAIDType:  types.PoolRAIDTypeRAIDZ2,
 				OrderedHostNames: []string{"node-002", "node-001"},
 				HostNameToDesiredDeviceNames: map[string][]string{
-					"node-001": []string{"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
-					"node-002": []string{"bd21", "bd22", "bd23", "bd24", "bd25", "bd26"},
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
+					"node-002": {"bd21", "bd22", "bd23", "bd24", "bd25", "bd26"},
 				},
 				HostNameToObservedDeviceNames: map[string][]string{
-					"node-001": []string{"bd1"},  // bd1 is existing
-					"node-002": []string{"bd21"}, // bd21 is existing
+					"node-001": {"bd1"},  // bd1 is existing
+					"node-002": {"bd21"}, // bd21 is existing
 				},
 			},
 			expect: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind":       string(types.KindCStorPoolCluster),
-					"apiVersion": string(types.APIVersionOpenEBSV1Alpha1),
+					"apiVersion": string(types.APIVersionCStorOpenEBSV1),
 					"metadata": map[string]interface{}{
 						"name":      "test",
 						"namespace": "test",
@@ -760,14 +692,14 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 						"pools": []interface{}{
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "raidz2",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "raidz2",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-002",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -789,23 +721,19 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 												"blockDeviceName": "bd26",
 											},
 										},
-										"type":         "raidz2",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "raidz2",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "raidz2",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -827,10 +755,6 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 												"blockDeviceName": "bd6",
 											},
 										},
-										"type":         "raidz2",
-										"isWriteCache": false,
-										"isSpare":      false,
-										"isReadCache":  false,
 									},
 								},
 							},
@@ -853,6 +777,272 @@ func TestBuilderBuildDesiredState(t *testing.T) {
 			if !mock.isErr && err != nil {
 				t.Fatalf("Expected no error got [%+v]", err)
 			}
+			if !reflect.DeepEqual(got, mock.expect) {
+				t.Fatalf("Expected no diff got\n%s", cmp.Diff(got, mock.expect))
+			}
+		})
+	}
+}
+
+func TestBuildDesiredRAIDGroupsByHostName(t *testing.T) {
+	var tests = map[string]struct {
+		builder *Builder
+		expect  interface{}
+	}{
+		"stripe with  n disks where n=1 disks": {
+			builder: &Builder{
+				DesiredRAIDType: types.PoolRAIDTypeStripe,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+					},
+				},
+			},
+		},
+		"stripe with  n disks where n>1 disks": {
+			builder: &Builder{
+				DesiredRAIDType: types.PoolRAIDTypeStripe,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+					},
+				},
+			},
+		},
+		"mirror with  2n disks where n=1 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeMirror,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+					},
+				},
+			},
+		},
+		"mirror with  2n disks where n>1 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeMirror,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3", "bd4"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+					},
+				},
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd4",
+						},
+					},
+				},
+			},
+		},
+		"raidz with 2n+1 disks where n=1 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+					},
+				},
+			},
+		},
+		"raidz with 2n+1 disks where n>1 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeRAIDZ,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+					},
+				},
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd4",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd5",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd6",
+						},
+					},
+				},
+			},
+		},
+		"raidz2 with 2n+2 disks where n=2 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeRAIDZ2,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5", "bd6"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd4",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd5",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd6",
+						},
+					},
+				},
+			},
+		},
+		"raidz2 with 2n+2 disks where n>2 disks": {
+			builder: &Builder{
+				Name:            "test",
+				Namespace:       "test",
+				DesiredRAIDType: types.PoolRAIDTypeRAIDZ2,
+				hostNameToFinalDeviceNames: map[string][]string{
+					"node-001": {"bd1", "bd2", "bd3", "bd4", "bd5", "bd6", "bd7", "bd8", "bd9", "bd10", "bd11", "bd12"},
+				},
+			},
+			expect: []interface{}{
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd1",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd2",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd3",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd4",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd5",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd6",
+						},
+					},
+				},
+				map[string]interface{}{
+					"blockDevices": []interface{}{
+						map[string]interface{}{
+							"blockDeviceName": "bd7",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd8",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd9",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd10",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd11",
+						},
+						map[string]interface{}{
+							"blockDeviceName": "bd12",
+						},
+					},
+				},
+			},
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			b := mock.builder
+			got := b.buildDesiredRAIDGroupsByHostName("node-001")
 			if !reflect.DeepEqual(got, mock.expect) {
 				t.Fatalf("Expected no diff got\n%s", cmp.Diff(got, mock.expect))
 			}

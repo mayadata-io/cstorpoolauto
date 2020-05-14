@@ -143,12 +143,12 @@ func (h *Helper) GroupBlockDeviceNamesByHostName() (map[string][]string, error) 
 	}
 	// local function to get blockdevices per pool
 	getBlockDevicesPerPool := func(obj *unstructured.Unstructured) error {
-		raidGroups, err := unstruct.GetSliceOrError(obj, "spec", "raidGroups")
+		dataRaidGroups, err := unstruct.GetSliceOrError(obj, "spec", "dataRaidGroups")
 		if err != nil {
 			return err
 		}
 		// iterate through each raidgroup
-		return unstruct.SliceIterator(raidGroups).ForEach(getBlockDevicesPerRAIDGroup)
+		return unstruct.SliceIterator(dataRaidGroups).ForEach(getBlockDevicesPerRAIDGroup)
 	}
 	// logic starts here
 	pools, err := unstruct.GetSliceOrError(h.CStorPoolCluster, "spec", "pools")

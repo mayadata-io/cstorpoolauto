@@ -92,15 +92,15 @@ func TestHelperGetAllHostNames(t *testing.T) {
 							// pool on node-001
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								// 3 raidGroups per pool
-								"raidGroups": []interface{}{
+								// 3 dataRaidGroups per pool
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -110,7 +110,6 @@ func TestHelperGetAllHostNames(t *testing.T) {
 												"blockDeviceName": "bd12",
 											},
 										},
-										"type": "mirror",
 									},
 									map[string]interface{}{
 										"blockDevices": []interface{}{
@@ -121,7 +120,6 @@ func TestHelperGetAllHostNames(t *testing.T) {
 												"blockDeviceName": "bd14",
 											},
 										},
-										"type": "mirror",
 									},
 									map[string]interface{}{
 										"blockDevices": []interface{}{
@@ -132,22 +130,21 @@ func TestHelperGetAllHostNames(t *testing.T) {
 												"blockDeviceName": "bd16",
 											},
 										},
-										"type": "mirror",
 									},
 								},
 							},
 							// pool on node-002
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-002",
 								},
-								// 3 raidGroups per pool
-								"raidGroups": []interface{}{
+								// 3 dataRaidGroups per pool
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -157,7 +154,6 @@ func TestHelperGetAllHostNames(t *testing.T) {
 												"blockDeviceName": "bd22",
 											},
 										},
-										"type": "mirror",
 									},
 									map[string]interface{}{
 										"blockDevices": []interface{}{
@@ -168,7 +164,6 @@ func TestHelperGetAllHostNames(t *testing.T) {
 												"blockDeviceName": "bd24",
 											},
 										},
-										"type": "mirror",
 									},
 									map[string]interface{}{
 										"blockDevices": []interface{}{
@@ -179,7 +174,6 @@ func TestHelperGetAllHostNames(t *testing.T) {
 												"blockDeviceName": "bd26",
 											},
 										},
-										"type": "mirror",
 									},
 								},
 							},
@@ -202,7 +196,7 @@ func TestHelperGetAllHostNames(t *testing.T) {
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								"raidGroups": []interface{}{},
+								"dataRaidGroups": []interface{}{},
 							},
 						},
 					},
@@ -295,15 +289,15 @@ func TestHelperGroupBlockDeviceNamesByHostName(t *testing.T) {
 							// pool on node-001
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-001",
 								},
-								// 3 raidGroups per pool
-								"raidGroups": []interface{}{
+								// 3 dataRaidGroups per pool
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -313,7 +307,6 @@ func TestHelperGroupBlockDeviceNamesByHostName(t *testing.T) {
 												"blockDeviceName": "bd12",
 											},
 										},
-										"type": "mirror",
 									},
 									map[string]interface{}{
 										"blockDevices": []interface{}{
@@ -324,7 +317,6 @@ func TestHelperGroupBlockDeviceNamesByHostName(t *testing.T) {
 												"blockDeviceName": "bd14",
 											},
 										},
-										"type": "mirror",
 									},
 									map[string]interface{}{
 										"blockDevices": []interface{}{
@@ -335,22 +327,21 @@ func TestHelperGroupBlockDeviceNamesByHostName(t *testing.T) {
 												"blockDeviceName": "bd16",
 											},
 										},
-										"type": "mirror",
 									},
 								},
 							},
 							// pool on node-002
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-002",
 								},
-								// 2 raidGroups per pool
-								"raidGroups": []interface{}{
+								// 2 dataRaidGroups per pool
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -360,7 +351,6 @@ func TestHelperGroupBlockDeviceNamesByHostName(t *testing.T) {
 												"blockDeviceName": "bd22",
 											},
 										},
-										"type": "mirror",
 									},
 									map[string]interface{}{
 										"blockDevices": []interface{}{
@@ -371,22 +361,21 @@ func TestHelperGroupBlockDeviceNamesByHostName(t *testing.T) {
 												"blockDeviceName": "bd24",
 											},
 										},
-										"type": "mirror",
 									},
 								},
 							},
 							// pool on node-003
 							map[string]interface{}{
 								"poolConfig": map[string]interface{}{
-									"defaultRaidGroupType": "mirror",
-									"overProvisioning":     false,
-									"compression":          "off",
+									"dataRaidGroupType": "mirror",
+									"thickProvision":    false,
+									"compression":       "off",
 								},
 								"nodeSelector": map[string]interface{}{
 									"kubernetes.io/hostname": "node-003",
 								},
-								// 1 raidGroups per pool
-								"raidGroups": []interface{}{
+								// 1 dataRaidGroups per pool
+								"dataRaidGroups": []interface{}{
 									map[string]interface{}{
 										"blockDevices": []interface{}{
 											map[string]interface{}{
@@ -396,7 +385,6 @@ func TestHelperGroupBlockDeviceNamesByHostName(t *testing.T) {
 												"blockDeviceName": "bd32",
 											},
 										},
-										"type": "mirror",
 									},
 								},
 							},
@@ -406,9 +394,9 @@ func TestHelperGroupBlockDeviceNamesByHostName(t *testing.T) {
 			},
 			isErr: false,
 			expect: map[string][]string{
-				"node-001": []string{"bd11", "bd12", "bd13", "bd14", "bd15", "bd16"},
-				"node-002": []string{"bd21", "bd22", "bd23", "bd24"},
-				"node-003": []string{"bd31", "bd32"},
+				"node-001": {"bd11", "bd12", "bd13", "bd14", "bd15", "bd16"},
+				"node-002": {"bd21", "bd22", "bd23", "bd24"},
+				"node-003": {"bd31", "bd32"},
 			},
 		},
 	}
@@ -448,21 +436,21 @@ func TestHelperGroupBlockDeviceNamesByHostNameOrCached(t *testing.T) {
 	}{
 		"cspc - 1 cached host": {
 			cached: map[string][]string{
-				"node-001": []string{"bd1"},
+				"node-001": {"bd1"},
 			},
 			expect: map[string][]string{
-				"node-001": []string{"bd1"},
+				"node-001": {"bd1"},
 			},
 			isErr: false,
 		},
 		"cspc - 2 cached hosts": {
 			cached: map[string][]string{
-				"node-001": []string{"bd1"},
-				"node-002": []string{"bd2"},
+				"node-001": {"bd1"},
+				"node-002": {"bd2"},
 			},
 			expect: map[string][]string{
-				"node-001": []string{"bd1"},
-				"node-002": []string{"bd2"},
+				"node-001": {"bd1"},
+				"node-002": {"bd2"},
 			},
 			isErr: false,
 		},

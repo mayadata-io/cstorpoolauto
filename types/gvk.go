@@ -25,9 +25,17 @@ const (
 	// custom resources defined in openebs
 	GroupOpenEBSIO string = "openebs.io"
 
+	// GroupCStorOpenEBSIO refers to the group for all
+	// custom resources defined for cStor
+	GroupCStorOpenEBSIO string = "cstor.openebs.io"
+
 	// VersionV1Alpha1 refers to v1alpha1 version of the
 	// custom resources used here
 	VersionV1Alpha1 string = "v1alpha1"
+
+	// VersionV1 refers to v1version of the custom resources
+	// used here
+	VersionV1 string = "v1"
 
 	// APIVersionDAOMayaDataV1Alpha1 refers to v1alpha1 api
 	// version of DAO based custom resources
@@ -36,6 +44,10 @@ const (
 	// APIVersionOpenEBSV1Alpha1 refers to v1alpha1 api
 	// version of openebs based custom resources
 	APIVersionOpenEBSV1Alpha1 string = GroupOpenEBSIO + "/" + VersionV1Alpha1
+
+	// APIVersionCStorOpenEBSV1 refers to v1 api version of cStor
+	// based custom resources present in OpenEBS project
+	APIVersionCStorOpenEBSV1 string = GroupCStorOpenEBSIO + "/" + VersionV1
 )
 
 // Kind is a custom datatype to refer to kubernetes native

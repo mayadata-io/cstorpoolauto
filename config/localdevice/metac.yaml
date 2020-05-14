@@ -79,7 +79,7 @@ spec:
   attachments:
     - apiVersion: openebs.io/v1alpha1
       resource: blockdevices
-    - apiVersion: openebs.io/v1alpha1
+    - apiVersion: cstor.openebs.io/v1
       resource: cstorpoolclusters
       updateStrategy:
         method: InPlace
@@ -112,7 +112,7 @@ spec:
       matchLabels:
         cspc.openebs.io/version: v1
   attachments:
-    - apiVersion: openebs.io/v1alpha1
+    - apiVersion: cstor.openebs.io/v1
       resource: cstorpoolclusters
       advancedSelector:
         selectorTerms:
