@@ -8,8 +8,9 @@ spec:
     apiVersion: dao.mayadata.io/v1alpha1
     resource: cstorclusterconfigs
     labelSelector:
-      matchLabels:
-        cspc.openebs.io/version: v1alpha1
+      matchExpressions:
+        - key: cspc.openebs.io/version
+          operator: DoesNotExist
   attachments:
     - apiVersion: openebs.io/v1alpha1
       resource: blockdevices
@@ -43,8 +44,9 @@ spec:
     apiVersion: dao.mayadata.io/v1alpha1
     resource: cstorclusterconfigs
     labelSelector:
-      matchLabels:
-        cspc.openebs.io/version: v1alpha1
+      matchExpressions:
+        - key: cspc.openebs.io/version
+          operator: DoesNotExist
   attachments:
     - apiVersion: openebs.io/v1alpha1
       resource: cstorpoolclusters
