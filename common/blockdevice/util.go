@@ -256,6 +256,18 @@ func GetDriveType(obj unstructured.Unstructured) (string, error) {
 	return unstruct.GetString(&obj, "spec", "details", "driveType")
 }
 
+// IsReserved checks if block device is resrved or not
+// using openebs.io/block-device-tag label
+func IsReserved(obj unstructured.Unstructured) (bool, error) {
+	if obj.GetKind() != string(types.KindBlockDevice) {
+		return false,
+			errors.Errorf("Can not check block device is reserved or not: Expected kind %q got %q",
+				types.KindBlockDevice, obj.GetKind())
+	}
+	_, ok := obj.GetLabels()["openebs.io/block-device-tag"]
+	return ok, nil
+}
+
 // IsEligibleForCStorPool checks eligibility criteria to create a cStor pool.
 // Block device should be active and unclaimed and there should be no file
 // system present.
@@ -296,6 +308,16 @@ func IsEligibleForCStorPool(obj unstructured.Unstructured) (bool, error) {
 		return false, errors.Wrap(err, "Can not check eligibility for cStor pool.")
 	}
 	if hasFileSystem {
+		return false, nil
+	}
+
+	// IsReserved checks is block device is reserved or not. If it is reserved
+	// then we can not use that block device to create a CStor pool
+	reserved, err := IsReserved(obj)
+	if err != nil {
+		return false, errors.Wrap(err, "Can not check eligibility for cStor pool.")
+	}
+	if reserved {
 		return false, nil
 	}
 

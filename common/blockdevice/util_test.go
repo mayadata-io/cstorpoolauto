@@ -1022,3 +1022,84 @@ func TestGetDeviceType(t *testing.T) {
 		})
 	}
 }
+
+func TestIsReserved(t *testing.T) {
+	var tests = map[string]struct {
+		src        unstructured.Unstructured
+		isReserved bool
+		isErr      bool
+	}{
+		"nil object": {
+			src: unstructured.Unstructured{
+				Object: nil,
+			},
+			isErr: true,
+		},
+		"empty object": {
+			src:   unstructured.Unstructured{},
+			isErr: true,
+		},
+		"kind mismatch error": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "test",
+				},
+			},
+			isErr: true,
+		},
+		"nil label": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind":     string(types.KindBlockDevice),
+					"metadata": map[string]interface{}{},
+				},
+			},
+			isErr:      false,
+			isReserved: false,
+		},
+		"reserved bd": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"metadata": map[string]interface{}{
+						"labels": map[string]interface{}{
+							"openebs.io/block-device-tag": "test",
+						},
+					},
+				},
+			},
+			isErr:      false,
+			isReserved: true,
+		},
+		"non reserved bd": {
+			src: unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": string(types.KindBlockDevice),
+					"metadata": map[string]interface{}{
+						"labels": map[string]interface{}{
+							"label": "test",
+						},
+					},
+				},
+			},
+			isErr:      false,
+			isReserved: false,
+		},
+	}
+	for name, mock := range tests {
+		name := name
+		mock := mock
+		t.Run(name, func(t *testing.T) {
+			result, err := IsReserved(mock.src)
+			if mock.isErr && err == nil {
+				t.Fatalf("Expected error got none")
+			}
+			if !mock.isErr && err != nil {
+				t.Fatalf("Expected no error got [%+v]", err)
+			}
+			if !mock.isErr && result != mock.isReserved {
+				t.Fatalf("Expected status %t got %t", mock.isReserved, result)
+			}
+		})
+	}
+}
