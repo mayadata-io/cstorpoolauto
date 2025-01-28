@@ -3,8 +3,8 @@ module mayadata.io/cstorpoolauto
 go 1.13
 
 require (
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/google/go-cmp v0.4.0
+	github.com/golang/glog v1.2.4
+	github.com/google/go-cmp v0.6.0
 	github.com/pkg/errors v0.9.1
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.17.3 // indirect
